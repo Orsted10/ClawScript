@@ -55,27 +55,39 @@ Token Lexer::scanToken() {
         case '%': return Token(TokenType::Percent, "%", line_);
         
         case '=':
-            return Token(match('=') ? TokenType::EqualEqual : TokenType::Equal,
-                        source_.substr(start_, current_ - start_), line_);
+            if (match('=')) {
+                return Token(TokenType::EqualEqual, "==", line_);
+            }
+            return Token(TokenType::Equal, "=", line_);
         
         case '!':
-            return Token(match('=') ? TokenType::BangEqual : TokenType::Bang,
-                        source_.substr(start_, current_ - start_), line_);
+            if (match('=')) {
+                return Token(TokenType::BangEqual, "!=", line_);
+            }
+            return Token(TokenType::Bang, "!", line_);
         
         case '<':
-            return Token(match('=') ? TokenType::LessEqual : TokenType::Less,
-                        source_.substr(start_, current_ - start_), line_);
+            if (match('=')) {
+                return Token(TokenType::LessEqual, "<=", line_);
+            }
+            return Token(TokenType::Less, "<", line_);
         
         case '>':
-            return Token(match('=') ? TokenType::GreaterEqual : TokenType::Greater,
-                        source_.substr(start_, current_ - start_), line_);
+            if (match('=')) {
+                return Token(TokenType::GreaterEqual, ">=", line_);
+            }
+            return Token(TokenType::Greater, ">", line_);
         
         case '&':
-            if (match('&')) return Token(TokenType::And, "&&", line_);
+            if (match('&')) {
+                return Token(TokenType::And, "&&", line_);
+            }
             break;
         
         case '|':
-            if (match('|')) return Token(TokenType::Or, "||", line_);
+            if (match('|')) {
+                return Token(TokenType::Or, "||", line_);
+            }
             break;
     }
     

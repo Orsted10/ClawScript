@@ -54,12 +54,24 @@ TEST(Lexer, Comparisons) {
     auto tokens = lexer.tokenize();
     
     EXPECT_EQ(tokens[0].type, volt::TokenType::EqualEqual);
+    EXPECT_EQ(tokens[0].lexeme, "==");  // ← ADD THIS
+    
     EXPECT_EQ(tokens[1].type, volt::TokenType::BangEqual);
+    EXPECT_EQ(tokens[1].lexeme, "!=");  // ← ADD THIS
+    
     EXPECT_EQ(tokens[2].type, volt::TokenType::Less);
+    EXPECT_EQ(tokens[2].lexeme, "<");   // ← ADD THIS
+    
     EXPECT_EQ(tokens[3].type, volt::TokenType::LessEqual);
+    EXPECT_EQ(tokens[3].lexeme, "<=");  // ← ADD THIS
+    
     EXPECT_EQ(tokens[4].type, volt::TokenType::Greater);
+    EXPECT_EQ(tokens[4].lexeme, ">");   // ← ADD THIS
+    
     EXPECT_EQ(tokens[5].type, volt::TokenType::GreaterEqual);
+    EXPECT_EQ(tokens[5].lexeme, ">=");  // ← ADD THIS
 }
+
 
 TEST(Lexer, BooleanLiterals) {
     volt::Lexer lexer("true false nil");
