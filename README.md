@@ -11,7 +11,8 @@
 
 VoltScript is an **educational, from-scratch programming language implementation** written in **modern C++ (C++20)**.
 
-The goal is not to clone an existing language, but to **understand how real programming languages are built internally** — step by step — while keeping the design clean, readable, and extendable.
+The goal is not to clone an existing language, but to **understand how real programming languages are built internally**
+— step by step — while keeping the design clean, readable, and extendable.
 
 This project focuses on:
 - correctness over shortcuts  
