@@ -364,5 +364,3 @@ MIT License — free to learn from, fork, and build upon.
 **VoltScript ⚡**
 From tokens → trees → execution
 `v0.4.0 — Interpreter milestone complete`
-
-```
