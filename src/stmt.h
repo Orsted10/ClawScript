@@ -81,4 +81,25 @@ struct ForStmt : Stmt {
           body(std::move(b)) {}
 };
 
+// Function declaration: fn name(params...) { body }
+struct FnStmt : Stmt {
+    std::string name;
+    std::vector<std::string> parameters;
+    std::vector<StmtPtr> body;
+    
+    FnStmt(std::string n, 
+           std::vector<std::string> params,
+           std::vector<StmtPtr> b)
+        : name(std::move(n)), 
+          parameters(std::move(params)),
+          body(std::move(b)) {}
+};
+
+// Return statement: return expr;
+struct ReturnStmt : Stmt {
+    ExprPtr value;  // can be null (just "return;")
+    
+    explicit ReturnStmt(ExprPtr v) : value(std::move(v)) {}
+};
+
 } // namespace volt

@@ -1,16 +1,37 @@
 #include "interpreter.h"
+#include "callable.h"
 #include <cmath>
 #include <iostream>
+#include <chrono>
 
 namespace volt {
 
 Interpreter::Interpreter() 
     : environment_(std::make_shared<Environment>()),
-      globals_(environment_) {}
+      globals_(environment_) {
+    // Register built-in functions
+    defineNatives();
+}
 
 void Interpreter::reset() {
     environment_ = std::make_shared<Environment>();
     globals_ = environment_;
+    defineNatives();
+}
+
+// Register native functions (built into the language)
+void Interpreter::defineNatives() {
+    // clock() - returns current time in seconds
+    globals_->define("clock", std::make_shared<NativeFunction>(
+        0,
+        [](const std::vector<Value>&) -> Value {
+            auto now = std::chrono::system_clock::now();
+            auto duration = now.time_since_epoch();
+            auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+            return static_cast<double>(millis) / 1000.0;
+        },
+        "clock"
+    ));
 }
 
 // ========================================
@@ -32,6 +53,10 @@ void Interpreter::execute(Stmt* stmt) {
         executeWhileStmt(whileStmt);
     } else if (auto* forStmt = dynamic_cast<ForStmt*>(stmt)) {
         executeForStmt(forStmt);
+    } else if (auto* fnStmt = dynamic_cast<FnStmt*>(stmt)) {
+        executeFnStmt(fnStmt);
+    } else if (auto* returnStmt = dynamic_cast<ReturnStmt*>(stmt)) {
+        executeReturnStmt(returnStmt);
     } else {
         throw std::runtime_error("Unknown statement type");
     }
@@ -139,6 +164,30 @@ void Interpreter::executeForStmt(ForStmt* stmt) {
     }
 }
 
+void Interpreter::executeFnStmt(FnStmt* stmt) {
+    // Create a function object that captures the current environment
+    // This is what makes closures work!
+    auto function = std::make_shared<VoltFunction>(stmt, environment_);
+    
+    // Define the function in the current scope
+    // Note: We define it AFTER creating the closure, but that's okay
+    // because the function name isn't in scope inside its own body
+    // (unless you reference it for recursion, which we handle specially)
+    environment_->define(stmt->name, function);
+}
+
+void Interpreter::executeReturnStmt(ReturnStmt* stmt) {
+    Value value = nullptr;
+    
+    if (stmt->value) {
+        value = evaluate(stmt->value.get());
+    }
+    
+    // Throw a special exception to unwind the call stack
+    // This is caught in VoltFunction::call()
+    throw ReturnValue(value);
+}
+
 // ========================================
 // EXPRESSION EVALUATION
 // ========================================
@@ -239,19 +288,12 @@ Value Interpreter::evaluateBinary(BinaryExpr* expr) {
             checkNumberOperands(expr->op, left, right);
             return asNumber(left) * asNumber(right);
         
-        case TokenType::Slash: {
+        case TokenType::Slash:
             checkNumberOperands(expr->op, left, right);
             if (asNumber(right) == 0.0) {
                 throw RuntimeError(expr->op, "Division by zero");
             }
-            double result = asNumber(left) / asNumber(right);
-            
-            // Truncate towards zero (integer division behavior)
-            if (std::floor(result) == result) {
-                return result;  // Already an integer
-            }
-            return result;
-        }
+            return asNumber(left) / asNumber(right);
         
         case TokenType::Percent:
             checkNumberOperands(expr->op, left, right);
@@ -287,6 +329,7 @@ Value Interpreter::evaluateBinary(BinaryExpr* expr) {
 Value Interpreter::evaluateLogical(LogicalExpr* expr) {
     Value left = evaluate(expr->left.get());
     
+    // Short-circuit evaluation
     if (expr->op.type == TokenType::Or) {
         if (isTruthy(left)) return left;
     } else {
@@ -301,8 +344,36 @@ Value Interpreter::evaluateGrouping(GroupingExpr* expr) {
 }
 
 Value Interpreter::evaluateCall(CallExpr* expr) {
-    throw RuntimeError(Token(TokenType::LeftParen, "(", 0), 
-                      "Function calls not yet implemented");
+    // Evaluate the callee (the thing being called)
+    Value callee = evaluate(expr->callee.get());
+    
+    // Evaluate all the arguments
+    std::vector<Value> arguments;
+    for (const auto& arg : expr->arguments) {
+        arguments.push_back(evaluate(arg.get()));
+    }
+    
+    // Make sure it's actually a function
+    if (!isCallable(callee)) {
+        throw RuntimeError(
+            Token(TokenType::LeftParen, "(", 0),
+            "Can only call functions and classes"
+        );
+    }
+    
+    auto function = std::get<std::shared_ptr<Callable>>(callee);
+    
+    // Check arity (number of arguments)
+    if (static_cast<int>(arguments.size()) != function->arity()) {
+        throw RuntimeError(
+            Token(TokenType::LeftParen, "(", 0),
+            "Expected " + std::to_string(function->arity()) + 
+            " arguments but got " + std::to_string(arguments.size())
+        );
+    }
+    
+    // Call the function!
+    return function->call(*this, arguments);
 }
 
 Value Interpreter::evaluateAssign(AssignExpr* expr) {
@@ -311,7 +382,7 @@ Value Interpreter::evaluateAssign(AssignExpr* expr) {
     try {
         environment_->assign(expr->name, value);
     } catch (const std::runtime_error&) {
-        // Variable doesn't exist, define it
+        // If variable doesn't exist, create it (implicit declaration)
         environment_->define(expr->name, value);
     }
     

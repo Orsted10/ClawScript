@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(VoltScript VERSION 0.5.0 LANGUAGES CXX)
+project(VoltScript VERSION 0.6.0 LANGUAGES CXX)
 
 # C++20 Standard
 set(CMAKE_CXX_STANDARD 20)
@@ -26,6 +26,7 @@ set(VOLT_SOURCES
     src/parser.cpp
     src/value.cpp
     src/environment.cpp
+    src/callable.cpp
     src/interpreter.cpp
 )
 
@@ -34,8 +35,6 @@ add_executable(volt
     src/main.cpp
     ${VOLT_SOURCES}
 )
-
-target_include_directories(volt PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 # ==============================================================================
 # TESTING
@@ -67,10 +66,10 @@ if(VOLT_BUILD_TESTS)
         tests/test_parser.cpp
         tests/test_evaluator.cpp
         tests/test_interpreter.cpp
+        tests/test_functions.cpp
         ${VOLT_SOURCES}
     )
     
-    target_include_directories(volt_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
     target_link_libraries(volt_tests GTest::gtest_main)
     
     # Add test manually (instead of gtest_discover_tests)
@@ -83,7 +82,7 @@ endif()
 
 message(STATUS "")
 message(STATUS "========================================")
-message(STATUS "VoltScript Milestone 5 - Statements")
+message(STATUS "VoltScript Milestone 6 - Functions")
 message(STATUS "========================================")
 message(STATUS "Version:        ${PROJECT_VERSION}")
 message(STATUS "Build type:     ${CMAKE_BUILD_TYPE}")

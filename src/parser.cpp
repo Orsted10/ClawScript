@@ -34,6 +34,8 @@ ExprPtr Parser::parseExpression() {
 StmtPtr Parser::statement() {
     if (match(TokenType::Print)) return printStatement();
     if (match(TokenType::Let)) return letStatement();
+    if (match(TokenType::Fn)) return fnStatement();
+    if (match(TokenType::Return)) return returnStatement();
     if (match(TokenType::If)) return ifStatement();
     if (match(TokenType::While)) return whileStatement();
     if (match(TokenType::For)) return forStatement();
@@ -58,6 +60,54 @@ StmtPtr Parser::letStatement() {
     
     consume(TokenType::Semicolon, "Expected ';' after variable declaration");
     return std::make_unique<LetStmt>(std::string(name.lexeme), std::move(initializer));
+}
+
+StmtPtr Parser::fnStatement() {
+    Token name = consume(TokenType::Identifier, "Expected function name");
+    
+    consume(TokenType::LeftParen, "Expected '(' after function name");
+    
+    // Parse parameters
+    std::vector<std::string> parameters;
+    if (!check(TokenType::RightParen)) {
+        do {
+            if (parameters.size() >= 255) {
+                error("Can't have more than 255 parameters");
+            }
+            
+            Token param = consume(TokenType::Identifier, "Expected parameter name");
+            parameters.push_back(std::string(param.lexeme));
+        } while (match(TokenType::Comma));
+    }
+    
+    consume(TokenType::RightParen, "Expected ')' after parameters");
+    consume(TokenType::LeftBrace, "Expected '{' before function body");
+    
+    // Parse body (statements until we hit closing brace)
+    std::vector<StmtPtr> body;
+    while (!check(TokenType::RightBrace) && !isAtEnd()) {
+        body.push_back(statement());
+    }
+    
+    consume(TokenType::RightBrace, "Expected '}' after function body");
+    
+    return std::make_unique<FnStmt>(
+        std::string(name.lexeme),
+        std::move(parameters),
+        std::move(body)
+    );
+}
+
+StmtPtr Parser::returnStatement() {
+    ExprPtr value = nullptr;
+    
+    // "return;" is valid (returns nil)
+    if (!check(TokenType::Semicolon)) {
+        value = expression();
+    }
+    
+    consume(TokenType::Semicolon, "Expected ';' after return value");
+    return std::make_unique<ReturnStmt>(std::move(value));
 }
 
 StmtPtr Parser::ifStatement() {
@@ -248,6 +298,7 @@ ExprPtr Parser::unary() {
 ExprPtr Parser::call() {
     ExprPtr expr = primary();
     
+    // Handle chained calls: foo()()()
     while (match(TokenType::LeftParen)) {
         expr = finishCall(std::move(expr));
     }
@@ -260,6 +311,9 @@ ExprPtr Parser::finishCall(ExprPtr callee) {
     
     if (!check(TokenType::RightParen)) {
         do {
+            if (arguments.size() >= 255) {
+                error("Can't have more than 255 arguments");
+            }
             arguments.push_back(expression());
         } while (match(TokenType::Comma));
     }

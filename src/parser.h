@@ -26,6 +26,8 @@ private:
     StmtPtr statement();
     StmtPtr printStatement();
     StmtPtr letStatement();
+    StmtPtr fnStatement();       // NEW!
+    StmtPtr returnStatement();   // NEW!
     StmtPtr ifStatement();
     StmtPtr whileStatement();
     StmtPtr forStatement();

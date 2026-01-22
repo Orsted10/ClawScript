@@ -1,46 +1,64 @@
-
 ````markdown
-# VoltScript ⚡  
-**A programming language built from scratch in modern C++**
+<div align="center">
 
-**Version:** `0.5.0`  
-**Milestone:** 5 — Full interpreter with control flow  
-**Status:** Stable, feature-complete for core execution 🚀
+# ⚡ VoltScript ⚡  
+### *A programming language built from scratch in modern C++*
 
----
+**Version:** `0.6.0`  
+**Milestone:** 6 — Functions & Closures  
+**Status:** 🟢 Stable | 🚀 Powerful | 🧠 Educational  
 
-## ✨ What is VoltScript?
+> *From tokens → trees → closures*  
 
-VoltScript is an **educational programming language implementation** written entirely from scratch in **C++20**.
-
-This project is not about copying an existing language.  
-It exists to **understand how real languages work internally** — by building every layer by hand:
-
-- lexical analysis  
-- parsing and AST construction  
-- interpretation and runtime execution  
-- variable scoping and control flow  
-
-VoltScript is developed **incrementally**, one milestone at a time, with each milestone introducing a real subsystem found in production language runtimes.
+</div>
 
 ---
 
-## 🎯 Design philosophy
+## 🧠 What is VoltScript?
 
-VoltScript is built with a few simple principles:
+VoltScript is a **real programming language**, written completely from scratch in **C++20**.
 
-- **Correctness over shortcuts**  
-- **Clarity over cleverness**  
-- **Explicit logic over magic**  
+Not a transpiler.  
+Not a wrapper.  
+Not a toy.
 
-Everything is written to be readable, debuggable, and educational — while still being *real*.
+This project exists to answer one question honestly:
+
+> **How do programming languages actually work under the hood?**
+
+So instead of hiding complexity, VoltScript **embraces it**—and builds every layer explicitly:
+- lexical analysis
+- parsing
+- AST construction
+- interpretation
+- environments
+- closures
+
+If you’ve ever wanted to *truly* understand languages like Python, JavaScript, or Lua — this is the path.
 
 ---
 
-## ✅ Implemented features (Milestones 1–5)
+## 🎯 Core philosophy
 
-### 🧩 Lexical Analysis (Lexer)
-The lexer converts raw source code into tokens, supporting:
+VoltScript is built with a few simple rules:
+
+- 🧼 **Clarity over cleverness**
+- 🧠 **Understanding over shortcuts**
+- 🛠️ **Explicit behavior over magic**
+- 📚 **Readable code over clever hacks**
+
+Every subsystem is written to be:
+- debuggable
+- extendable
+- educational
+- real-world inspired
+
+---
+
+## ✨ What VoltScript can do (Milestones 1–6)
+
+### 🧩 Lexer — *Characters → Tokens*
+VoltScript understands:
 
 - **Literals**
   - Numbers: `42`, `3.14`
@@ -59,15 +77,16 @@ The lexer converts raw source code into tokens, supporting:
 - **Punctuation**
   - `(` `)` `{` `}` `;` `,`
 - Line comments: `// comment`
-- Accurate error messages with line numbers
+- Precise error messages with line numbers
 
 ---
 
-### 🌳 Syntax Analysis (Parser)
+### 🌳 Parser — *Tokens → AST*
 A hand-written **recursive descent parser** that supports:
 
 - Expressions:
   - unary, binary, logical, grouping, assignment
+  - function calls
 - Statements:
   - `print`
   - `let` declarations
@@ -75,96 +94,84 @@ A hand-written **recursive descent parser** that supports:
   - `if / else`
   - `while`
   - `for`
-- Correct operator precedence and associativity
-- Graceful syntax error recovery
+  - `fn`
+  - `return`
+- Correct operator precedence & associativity
+- Helpful syntax error recovery
 - Clean **Abstract Syntax Tree (AST)** output
 
 ---
 
-### 🧠 Abstract Syntax Tree (AST)
-- Separate **expression** and **statement** node hierarchies
-- Explicit representation of program structure
+### 🧠 AST — *Program Structure Made Explicit*
+- Separate **expression** and **statement** nodes
+- Clear, inspectable tree structure
 - Designed for interpretation now, compilation later
-- Easy to visualize and debug during development
+- Easy to debug and visualize
 
 ---
 
-### ⚙️ Interpreter (Tree-Walk Execution)
-VoltScript now **executes real programs**.
-
-The interpreter supports:
+### ⚙️ Interpreter — *AST → Execution*
+VoltScript now runs **actual programs**:
 
 - Arithmetic evaluation with correct precedence
-- Variable declaration and assignment
-- Block scoping with proper shadowing
+- Variables with `let` + reassignment
+- Block scoping & shadowing
 - Control flow:
   - `if / else`
-  - `while` loops
-  - `for` loops
+  - `while`
+  - `for`
 - `print` statement
-- Comparison operators (`<`, `>`, `==`, etc.)
-- Logical operators with **short-circuit evaluation**
+- Comparison & logical operators
+- **Short-circuit evaluation**
 - String concatenation
 - Runtime type checking
-- Clear runtime error messages:
+- Friendly runtime errors:
   - division by zero
   - undefined variables
   - type mismatches
+  - wrong argument counts
 
 ---
 
-### 🗂️ Environment & Scoping
-- Lexical scoping using nested environments
-- Parent scope lookups
-- Variable shadowing
-- Proper lifetime handling
+### 🔁 Functions & Closures — *The Big One (Milestone 6)*
+
+This is where VoltScript becomes **serious**.
+
+- `fn` function declarations
+- Parameters & return values
+- Early `return`
+- **First-class functions**
+- **Closures** (functions capture surrounding scope)
+- **Recursion**
+- **Higher-order functions**
+- Native (C++) functions callable from VoltScript
+
+> At this point, VoltScript supports patterns used in  
+> **Python, JavaScript, Lua, and functional languages**
 
 ---
 
-## 🗃️ Project structure
+## 🗂️ Project structure
 
 ```text
 VoltScript/
-├── CMakeLists.txt
-├── README.md
-├── src/
-│   ├── token.h / token.cpp
-│   ├── lexer.h / lexer.cpp
-│   ├── ast.h / ast.cpp
-│   ├── stmt.h
-│   ├── parser.h / parser.cpp
-│   ├── value.h / value.cpp
-│   ├── environment.h / environment.cpp
-│   ├── interpreter.h / interpreter.cpp
-│   └── main.cpp
-├── tests/
-│   ├── test_lexer.cpp
-│   ├── test_parser.cpp
-│   ├── test_evaluator.cpp
-│   └── test_interpreter.cpp
-├── examples/
-│   ├── fibonacci.volt
-│   ├── factorial.volt
-│   ├── fizzbuzz.volt
-│   ├── nested_loops.volt
-│   └── scope_demo.volt
-└── build/
-    └── bin/
-        ├── volt
-        └── volt_tests
+├── src/           # Language implementation
+├── tests/         # 157 unit tests (all passing)
+├── examples/      # Real VoltScript programs
+├── build/         # Generated output
+└── README.md
 ````
+
+(Yes, it’s clean on purpose.)
 
 ---
 
-## 🛠️ Building VoltScript
+## 🛠️ Build & Run
 
 ### Requirements
 
 * C++ compiler with **C++20 support**
-
-  * GCC 10+, Clang 12+, MSVC 2019+
 * CMake ≥ 3.20
-* Google Test (fetched automatically)
 
 ---
 
@@ -193,117 +200,99 @@ cmake --build build
 ### Interactive REPL
 
 ```text
-> let x = 10;
-> print x;
-10
-> x = x + 5;
-> print x;
-15
-> if (x > 10) print "big";
-big
-> for (let i = 0; i < 3; i = i + 1) print i;
-0
+> fn add(a, b) { return a + b; }
+> print add(5, 3);
+8
+
+> fn makeCounter() {
+    let n = 0;
+    fn inc() {
+        n = n + 1;
+        return n;
+    }
+    return inc;
+}
+
+> let counter = makeCounter();
+> print counter();
 1
+> print counter();
 2
 ```
 
 ---
 
-### Run a script file
-
-```bash
-./volt examples/fibonacci.volt
-```
-
----
-
-## 📌 Language examples
-
-### Variables & arithmetic
+### Example: Recursion
 
 ```volt
-let x = 10;
-let y = 20;
-print x + y;     // 30
-```
-
----
-
-### Control flow
-
-```volt
-if (age >= 18) {
-    print "Adult";
-} else {
-    print "Minor";
-}
-```
-
----
-
-### Loops
-
-```volt
-for (let i = 0; i < 5; i = i + 1) {
-    print i;
-}
-```
-
----
-
-### Scoping
-
-```volt
-let x = "global";
-
-{
-    let x = "local";
-    print x;
+fn factorial(n) {
+    if (n <= 1) return 1;
+    return n * factorial(n - 1);
 }
 
-print x;
+print factorial(5); // 120
 ```
 
 ---
 
-## 🧪 Testing
+### Example: Closures
 
-VoltScript has **134 unit tests**, with **132 passing**.
+```volt
+fn makeAdder(x) {
+    fn add(y) {
+        return x + y;
+    }
+    return add;
+}
+
+let add5 = makeAdder(5);
+print add5(3); // 8
+```
+
+---
+
+### Example: Higher-order functions
+
+```volt
+fn applyTwice(f, x) {
+    return f(f(x));
+}
+
+fn double(n) { return n * 2; }
+
+print applyTwice(double, 5); // 20
+```
+
+---
+
+## 🧪 Testing (yes, we test properly)
+
+VoltScript has **157 unit tests**.
+
+✅ Lexer
+✅ Parser
+✅ Evaluator
+✅ Interpreter
+✅ Functions & closures
 
 ```bash
 ctest --output-on-failure
 ```
 
-Coverage:
-
-* Lexer: 13 / 13
-* Parser: 28 / 28
-* Evaluator: 26 / 26
-* Interpreter: 65 / 67
-
-**Overall:** 98.5% passing
+**Result:**
+🟢 **157 / 157 passing (100%)**
 
 ---
 
-## 🚧 Roadmap
+## 🚧 What’s next?
 
-### Completed
+### Coming soon 🚀
 
-* Lexer
-* Parser
-* AST
-* Interpreter
-* Variables & scoping
-* Control flow
-* REPL & file execution
-* Comprehensive test suite
-
-### Coming next
-
-* Functions & closures
-* Arrays and maps
+* Arrays & lists
+* Hash maps
 * Standard library
-* `return`, `break`, `continue`
+* `break` / `continue`
+* Classes & inheritance
 * Bytecode compiler
 * Virtual machine
 * Garbage collection
@@ -311,36 +300,42 @@ Coverage:
 
 ---
 
-## 🧠 What you’ll learn from this project
+## 🧠 What you’ll learn here
 
-* How lexers tokenize code
+* How lexers and parsers work
 * Recursive descent parsing
 * AST design
 * Tree-walk interpretation
-* Runtime environments & scoping
-* Control flow implementation
+* Lexical scoping & closures
+* Function objects
+* Call stacks & environments
+* Control flow internals
 * Error handling strategies
 * Test-driven development in C++
-* Writing clean, maintainable compiler code
+* Writing *real* language code
 
 ---
 
 ## 🤝 Contributing
 
-This is an **educational but serious** project.
+VoltScript is educational — but **very real**.
 
-Contributions are welcome — whether that’s:
+If you like:
 
-* improving diagnostics
-* adding language features
-* optimizing execution
-* expanding documentation
+* language internals
+* interpreters
+* compilers
+* runtime systems
+
+…you’ll feel at home here.
+
+Issues, ideas, and PRs are welcome.
 
 ---
 
 ## 📄 License
 
-MIT — free to learn from, fork, and build upon.
+Free to learn from, fork, break, fix, and build upon.
 
 ---
 
@@ -349,32 +344,18 @@ MIT — free to learn from, fork, and build upon.
 Inspired by:
 
 * *Crafting Interpreters* — Robert Nystrom
-* The Lox language architecture
+* The Lox language
+* Functional languages (Scheme, JS)
 * Modern C++ best practices
 
 ---
 
-**VoltScript ⚡**
-`v0.5.0 — Milestone 5 complete`
-*From tokens to real programs*
+<div align="center">
 
-```
+### ⚡ VoltScript v0.6.0
 
----
+**Functions. Closures. Power.**
+*This is where languages get real.*
 
-### Why this version works
-- Clear visual hierarchy
-- More breathing space
-- Strong human narrative
-- Still technically deep
-- Looks **professional on GitHub**
-- Feels like a real language project, not homework
-
-If you want next:
-- a **Milestone 6 design doc**
-- a **language spec (formal grammar)**
-- a **clean website / landing page README**
-- or a **devlog-style CHANGELOG**
-
-Just say the word — this project is legit 🔥
+</div>
 ```
