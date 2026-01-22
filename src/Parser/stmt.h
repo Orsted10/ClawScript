@@ -67,6 +67,15 @@ struct WhileStmt : Stmt {
         : condition(std::move(cond)), body(std::move(b)) {}
 };
 
+// Run-Until statement: run { body } until (condition)
+struct RunUntilStmt : Stmt {
+    StmtPtr body;
+    ExprPtr condition;
+
+    RunUntilStmt(StmtPtr b, ExprPtr cond)
+        : body(std::move(b)), condition(std::move(cond)) {}
+};
+
 // For statement: for (init; condition; increment) body
 struct ForStmt : Stmt {
     StmtPtr initializer;  // can be null

@@ -1,0 +1,7 @@
+    src/token.cpp
+    src/lexer.cpp
+    src/ast.cpp
+    src/parser.cpp
+    src/value.cpp
+    src/environment.cpp
+    src/interpreter.cpp

@@ -4,6 +4,9 @@ cmake-build-*/
 bin/
 lib/
 
+# Dependencies?
+_deps/
+
 # IDE files
 .vscode/
 .idea/
@@ -28,3 +31,4 @@ Makefile
 
 # Test outputs
 Testing/
+

@@ -30,6 +30,8 @@ void Interpreter::execute(Stmt* stmt) {
         executeIfStmt(ifStmt);
     } else if (auto* whileStmt = dynamic_cast<WhileStmt*>(stmt)) {
         executeWhileStmt(whileStmt);
+    } else if (auto* runUntilStmt = dynamic_cast<RunUntilStmt*>(stmt)) {
+        executeRunUntilStmt(runUntilStmt);
     } else if (auto* forStmt = dynamic_cast<ForStmt*>(stmt)) {
         executeForStmt(forStmt);
     } else {
@@ -99,6 +101,12 @@ void Interpreter::executeWhileStmt(WhileStmt* stmt) {
     while (isTruthy(evaluate(stmt->condition.get()))) {
         execute(stmt->body.get());
     }
+}
+
+void Interpreter::executeRunUntilStmt(RunUntilStmt* stmt) {
+    do {
+        execute(stmt->body.get());
+    } while (!isTruthy(evaluate(stmt->condition.get())));
 }
 
 void Interpreter::executeForStmt(ForStmt* stmt) {

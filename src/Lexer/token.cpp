@@ -13,6 +13,8 @@ const char* tokenName(TokenType type) {
         case TokenType::Else: return "ELSE";
         case TokenType::While: return "WHILE";
         case TokenType::For: return "FOR";
+        case TokenType::Run: return "RUN";
+        case TokenType::Until: return "UNTIL";
         case TokenType::Fn: return "FN";
         case TokenType::Return: return "RETURN";
         case TokenType::True: return "TRUE";

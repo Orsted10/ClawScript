@@ -19,14 +19,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Source files
-set(VOLT_SOURCES
-    src/token.cpp
-    src/lexer.cpp
-    src/ast.cpp
-    src/parser.cpp
-    src/value.cpp
-    src/environment.cpp
-    src/interpreter.cpp
+file(GLOB_RECURSE VOLT_SOURCES
+    src/*.cpp
 )
 
 # Main executable
@@ -35,7 +29,12 @@ add_executable(volt
     ${VOLT_SOURCES}
 )
 
-target_include_directories(volt PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(volt PRIVATE 
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/Lexer
+    ${CMAKE_SOURCE_DIR}/src/Parser
+    ${CMAKE_SOURCE_DIR}/src/Interpreter
+)
 
 # ==============================================================================
 # TESTING

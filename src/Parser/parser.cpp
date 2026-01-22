@@ -36,6 +36,7 @@ StmtPtr Parser::statement() {
     if (match(TokenType::Let)) return letStatement();
     if (match(TokenType::If)) return ifStatement();
     if (match(TokenType::While)) return whileStatement();
+    if (match(TokenType::Run)) return runUntilStatement();
     if (match(TokenType::For)) return forStatement();
     if (match(TokenType::LeftBrace)) return blockStatement();
     
@@ -85,6 +86,18 @@ StmtPtr Parser::whileStatement() {
     StmtPtr body = statement();
     
     return std::make_unique<WhileStmt>(std::move(condition), std::move(body));
+}
+
+StmtPtr Parser::runUntilStatement() {
+    StmtPtr body = statement();
+
+    consume(TokenType::Until, "Expected 'until' after run body");
+    consume(TokenType::LeftParen, "Expected '(' after 'until'");
+    ExprPtr condition = expression();
+    consume(TokenType::RightParen, "Expected ')' after condition");
+    consume(TokenType::Semicolon, "Expected ';' after do-until loop");
+
+    return std::make_unique<RunUntilStmt>(std::move(body), std::move(condition));
 }
 
 StmtPtr Parser::forStatement() {

@@ -9,7 +9,7 @@ enum class TokenType {
     Number, String, Identifier,
     
     // Keywords
-    Let, If, Else, While, For, Fn, Return,
+    Let, If, Else, While, For, Run, Until, Fn, Return,
     True, False, Nil, Print,
     
     // Operators
