@@ -555,7 +555,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v6.5.0 ⚡
+### ⚡ VoltScript v0.6.5 ⚡
 
 **Functions. Closures. Arrays. Power.**  
 *This is where languages get real.*
