@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
-#include "../src/lexer.h"
-#include "../src/parser.h"
-#include "../src/ast.h"
+#include "lexer.h"
+#include "parser.h"
+#include "ast.h"
 
 // Helper function for expressions
 std::string parseExpr(const std::string& source) {

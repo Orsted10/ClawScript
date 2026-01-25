@@ -3,13 +3,13 @@
 # ⚡ VoltScript ⚡  
 ### *A programming language built from scratch in modern C++*
 
-**Version:** `0.6.5`  
-**Milestone:** Arrays & Enhanced Features  
+**Version:** `0.6.8`  
+**Milestone:** Arrays & Enhanced Error Reporting
 **Status:** 🟢 Production-Ready | 🚀 Feature-Rich | 🧠 Educational  
 
 > *From tokens → trees → closures → arrays*  
 
-[![Tests](https://img.shields.io/badge/tests-261%2F261-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-270%2F270-brightgreen)]()
 [![C++](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -34,6 +34,7 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - 🌳 Parsing with recursive descent
 - 🧠 AST construction
 - ⚙️ Tree-walk interpretation
+- 📍 Precise error reporting (Line/Col tracking)
 - 🔐 Lexical scoping & environments
 - 🔁 First-class functions & closures
 - 📦 Dynamic arrays with methods
@@ -60,7 +61,7 @@ Every subsystem is written to be:
 
 ---
 
-## ✨ Features (v0.6.5)
+## ✨ Features (v0.6.8)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -135,6 +136,7 @@ VoltScript runs **real programs** with:
 - ✅ **Compound assignment**: `x += 5`, `s *= 2`
 - ✅ **Increment/Decrement**: `++i`, `i--`, etc.
 - ✅ **Ternary operator**: `max = (a > b) ? a : b;`
+- ✅ **Precise error reporting**: Errors point to exact source tokens
 - ✅ Runtime type checking with friendly errors
 
 ---
@@ -157,6 +159,9 @@ Built-in functions:
 - `len(x)` — Length of string or array
 - `str(x)` — Convert to string
 - `num(x)` — Convert to number
+- `type(x)` — Get value type as string
+- `toUpper(s)` — Convert string to uppercase
+- `toLower(s)` — Convert string to lowercase
 
 ---
 
@@ -196,6 +201,7 @@ Array features:
 - ✅ `.length` property
 - ✅ `.push(value)` method
 - ✅ `.pop()` method
+- ✅ `.reverse()` method (in-place)
 - ✅ Trailing commas: `[1, 2, 3,]`
 - ✅ Bounds checking with helpful errors
 
@@ -224,7 +230,8 @@ VoltScript/
 │   ├── test_interpreter.cpp
 │   ├── test_functions.cpp
 │   ├── test_enhanced_features.cpp
-│   └── test_arrays.cpp    # 69 array tests!
+│   ├── test_arrays.cpp
+│   └── test_error_reporting.cpp
 ├── examples/               # Example programs
 ├── CMakeLists.txt
 └── README.md
@@ -273,7 +280,7 @@ cmake --build build --config Release
 ctest --output-on-failure --test-dir build
 ```
 
-**Result:** 🟢 **261 / 261 tests passing (100%)**
+**Result:** 🟢 **270 / 270 tests passing (100%)**
 
 ---
 
@@ -282,7 +289,7 @@ ctest --output-on-failure --test-dir build
 ### Interactive REPL
 
 ```text
-⚡ VoltScript v0.6.5 - Interactive REPL
+⚡ VoltScript v0.6.8 - Interactive REPL
 Type 'exit' or 'quit' to leave, 'clear' to reset
 
 > let arr = ;
@@ -456,9 +463,9 @@ print max();  // 9
 
 ---
 
-## 🧪 Testing (261 Tests!)
+## 🧪 Testing (270 Tests!)
 
-VoltScript has **comprehensive test coverage** with 261 unit tests:
+VoltScript has **comprehensive test coverage** with 270 unit tests:
 
 | Test Suite | Tests | Description |
 |-----------|-------|-------------|
@@ -467,8 +474,9 @@ VoltScript has **comprehensive test coverage** with 261 unit tests:
 | **Evaluator** | 26 | Expression evaluation |
 | **Interpreter** | 65 | Statement execution & control flow |
 | **Functions** | 27 | Functions, closures, recursion |
-| **Enhanced Features** | 33 | `break`, `continue`, `+=`, `++`, ternary |
-| **Arrays** | 69 | Array creation, access, methods, nested arrays |
+| **Enhanced Features** | 35 | `break`, `continue`, `+=`, `++`, `type()`, etc. |
+| **Arrays** | 71 | Creation, access, methods, `.reverse()` |
+| **Error Reporting** | 5 | Precise line/column tracking tests |
 
 ```bash
 # Run all tests
@@ -478,15 +486,23 @@ VoltScript has **comprehensive test coverage** with 261 unit tests:
 ctest --test-dir build --output-on-failure
 ```
 
-**Result:** ✅ **100% Pass Rate** (261/261)
+**Result:** ✅ **100% Pass Rate** (270/270)
 
 ---
 
 ## 🚀 What's Next?
 
-### Planned Features
+### Milestone 7: Objects & Hash Maps 🗺️
+*Core data structure for real programs & Foundation for OOP*
 
-- [ ] **Hash maps / Objects** — `{"key": "value"}`
+- [ ] **Hash maps / Dictionaries**: `let person = {"name": "Alice", "age": 25};`
+- [ ] **Property access**: `obj.name` and `obj["key"]` support
+- [ ] **Dynamic addition**: `obj.newProp = value`
+- [ ] **Nested objects**: `user.address.city`
+- [ ] **Object methods**: Support for `this` keyword and methods
+- [ ] **Built-ins**: `keys(obj)` and `values(obj)` functions
+
+### Future Roadmap
 - [ ] **String methods** — `.split()`, `.join()`, `.substring()`
 - [ ] **More array methods** — `.map()`, `.filter()`, `.reduce()`
 - [ ] **Classes & inheritance**
@@ -555,7 +571,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.6.5 ⚡
+### ⚡ VoltScript v0.6.8 ⚡
 
 **Functions. Closures. Arrays. Power.**  
 *This is where languages get real.*

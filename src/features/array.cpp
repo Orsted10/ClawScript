@@ -1,6 +1,7 @@
 #include "array.h"
 #include <sstream>
 #include <stdexcept>
+#include <algorithm>
 
 namespace volt {
 
@@ -34,6 +35,10 @@ Value VoltArray::pop() {
     Value last = elements_.back();
     elements_.pop_back();
     return last;
+}
+
+void VoltArray::reverse() {
+    std::reverse(elements_.begin(), elements_.end());
 }
 
 std::string VoltArray::toString() const {

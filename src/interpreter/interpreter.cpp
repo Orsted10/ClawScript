@@ -158,6 +158,46 @@ void Interpreter::defineNatives() {
         },
         "fileExists"
     ));
+    
+    // toUpper(str) - convert string to uppercase
+    globals_->define("toUpper", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("toUpper() requires a string");
+            std::string s = asString(args[0]);
+            for (auto& c : s) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+            return s;
+        },
+        "toUpper"
+    ));
+    
+    // toLower(str) - convert string to lowercase
+    globals_->define("toLower", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("toLower() requires a string");
+            std::string s = asString(args[0]);
+            for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            return s;
+        },
+        "toLower"
+    ));
+    
+    // type(val) - get type of value as string
+    globals_->define("type", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            const Value& v = args[0];
+            if (isNil(v)) return "nil";
+            if (isBool(v)) return "bool";
+            if (isNumber(v)) return "number";
+            if (isString(v)) return "string";
+            if (isCallable(v)) return "function";
+            if (isArray(v)) return "array";
+            return "unknown";
+        },
+        "type"
+    ));
 }
 
 // ========================================
@@ -411,7 +451,7 @@ Value Interpreter::evaluateVariable(VariableExpr* expr) {
     try {
         return environment_->get(expr->name);
     } catch (const std::runtime_error& e) {
-        throw RuntimeError(Token(TokenType::Identifier, expr->name, 0, 0), e.what());
+        throw RuntimeError(expr->token, e.what());
     }
 }
 
@@ -519,7 +559,7 @@ Value Interpreter::evaluateCall(CallExpr* expr) {
     // Make sure it's actually a function
     if (!isCallable(callee)) {
         throw RuntimeError(
-            Token(TokenType::LeftParen, "(", 0, 0),
+            expr->token,
             "Can only call functions and classes"
         );
     }
@@ -529,7 +569,7 @@ Value Interpreter::evaluateCall(CallExpr* expr) {
     // Check arity (number of arguments)
     if (static_cast<int>(arguments.size()) != function->arity()) {
         throw RuntimeError(
-            Token(TokenType::LeftParen, "(", 0, 0),
+            expr->token,
             "Expected " + std::to_string(function->arity()) +
             " arguments but got " + std::to_string(arguments.size())
         );
@@ -551,7 +591,13 @@ Value Interpreter::evaluateAssign(AssignExpr* expr) {
 }
 
 Value Interpreter::evaluateCompoundAssign(CompoundAssignExpr* expr) {
-    Value current = environment_->get(expr->name);
+    Value current;
+    try {
+        current = environment_->get(expr->name);
+    } catch (const std::runtime_error& e) {
+        throw RuntimeError(expr->token, e.what());
+    }
+    
     Value operand = evaluate(expr->value.get());
     Value result;
     
@@ -586,12 +632,22 @@ Value Interpreter::evaluateCompoundAssign(CompoundAssignExpr* expr) {
             throw RuntimeError(expr->op, "Unknown compound assignment operator");
     }
     
-    environment_->assign(expr->name, result);
+    try {
+        environment_->assign(expr->name, result);
+    } catch (const std::runtime_error& e) {
+        throw RuntimeError(expr->token, e.what());
+    }
     return result;
 }
 
 Value Interpreter::evaluateUpdate(UpdateExpr* expr) {
-    Value current = environment_->get(expr->name);
+    Value current;
+    try {
+        current = environment_->get(expr->name);
+    } catch (const std::runtime_error& e) {
+        throw RuntimeError(expr->token, e.what());
+    }
+    
     if (!isNumber(current)) {
         throw RuntimeError(expr->op, "Operand must be a number for increment/decrement");
     }
@@ -604,7 +660,11 @@ Value Interpreter::evaluateUpdate(UpdateExpr* expr) {
         newValue = oldValue - 1;
     }
     
-    environment_->assign(expr->name, newValue);
+    try {
+        environment_->assign(expr->name, newValue);
+    } catch (const std::runtime_error& e) {
+        throw RuntimeError(expr->token, e.what());
+    }
     
     // Return old value for postfix, new value for prefix
     return expr->prefix ? newValue : oldValue;
@@ -639,12 +699,12 @@ Value Interpreter::evaluateIndex(IndexExpr* expr) {
     
     // Must be an array
     if (!isArray(object)) {
-        throw std::runtime_error("Can only index arrays");
+        throw RuntimeError(expr->token, "Can only index arrays");
     }
     
     // Index must be a number
     if (!isNumber(index)) {
-        throw std::runtime_error("Array index must be a number");
+        throw RuntimeError(expr->token, "Array index must be a number");
     }
     
     auto array = asArray(object);
@@ -652,7 +712,7 @@ Value Interpreter::evaluateIndex(IndexExpr* expr) {
     
     // Check bounds
     if (idx < 0 || idx >= array->length()) {
-        throw std::runtime_error("Array index out of bounds: " + std::to_string(idx));
+        throw RuntimeError(expr->token, "Array index out of bounds: " + std::to_string(idx));
     }
     
     return array->get(idx);
@@ -665,12 +725,12 @@ Value Interpreter::evaluateIndexAssign(IndexAssignExpr* expr) {
     
     // Must be an array
     if (!isArray(object)) {
-        throw std::runtime_error("Can only index arrays");
+        throw RuntimeError(expr->token, "Can only index arrays");
     }
     
     // Index must be a number
     if (!isNumber(index)) {
-        throw std::runtime_error("Array index must be a number");
+        throw RuntimeError(expr->token, "Array index must be a number");
     }
     
     auto array = asArray(object);
@@ -678,7 +738,7 @@ Value Interpreter::evaluateIndexAssign(IndexAssignExpr* expr) {
     
     // Check bounds
     if (idx < 0 || idx >= array->length()) {
-        throw std::runtime_error("Array index out of bounds: " + std::to_string(idx));
+        throw RuntimeError(expr->token, "Array index out of bounds: " + std::to_string(idx));
     }
     
     array->set(idx, value);
@@ -690,7 +750,7 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
     
     // Must be an array
     if (!isArray(object)) {
-        throw std::runtime_error("Only arrays have members");
+        throw RuntimeError(expr->token, "Only arrays have members");
     }
     
     auto array = asArray(object);
@@ -723,7 +783,19 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
         );
     }
     
-    throw std::runtime_error("Unknown array member: " + expr->member);
+    // Handle array.reverse
+    if (expr->member == "reverse") {
+        return std::make_shared<NativeFunction>(
+            0,
+            [array](const std::vector<Value>&) -> Value {
+                array->reverse();
+                return nullptr;
+            },
+            "reverse"
+        );
+    }
+    
+    throw RuntimeError(expr->token, "Unknown array member: " + expr->member);
 }
 
 void Interpreter::executeBreakStmt(BreakStmt*) {

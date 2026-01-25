@@ -45,7 +45,7 @@ public:
  */
 class VoltFunction : public Callable {
 public:
-    VoltFunction(class FnStmt* declaration, 
+    VoltFunction(struct FnStmt* declaration, 
                  std::shared_ptr<Environment> closure);
     
     Value call(Interpreter& interpreter, 
@@ -55,7 +55,7 @@ public:
     std::string toString() const override;
     
 private:
-    class FnStmt* declaration_;           // The function's AST node
+    struct FnStmt* declaration_;           // The function's AST node
     std::shared_ptr<Environment> closure_; // The environment where it was defined
 };
 

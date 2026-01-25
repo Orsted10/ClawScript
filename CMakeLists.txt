@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.6.5 LANGUAGES CXX)
+project(VoltScript VERSION 0.6.8 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,20 +14,26 @@ endif()
 option(BUILD_TESTS "Build tests" ON)
 
 # Include directories
-include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/lexer
+    ${CMAKE_SOURCE_DIR}/src/parser
+    ${CMAKE_SOURCE_DIR}/src/interpreter
+    ${CMAKE_SOURCE_DIR}/src/features
+)
 
 # Source files
 set(SOURCES
     src/main.cpp
-    src/token.cpp
-    src/lexer.cpp
-    src/ast.cpp
-    src/parser.cpp
-    src/value.cpp
-    src/environment.cpp
-    src/callable.cpp
-    src/interpreter.cpp
-    src/array.cpp
+    src/lexer/token.cpp
+    src/lexer/lexer.cpp
+    src/parser/ast.cpp
+    src/parser/parser.cpp
+    src/interpreter/value.cpp
+    src/interpreter/environment.cpp
+    src/features/callable.cpp
+    src/interpreter/interpreter.cpp
+    src/features/array.cpp
 )
 
 # Main executable
@@ -60,15 +66,15 @@ if(BUILD_TESTS)
     
     # Test sources
     set(TEST_SOURCES
-        src/token.cpp
-        src/lexer.cpp
-        src/ast.cpp
-        src/parser.cpp
-        src/value.cpp
-        src/environment.cpp
-        src/callable.cpp
-        src/interpreter.cpp
-        src/array.cpp
+        src/lexer/token.cpp
+        src/lexer/lexer.cpp
+        src/parser/ast.cpp
+        src/parser/parser.cpp
+        src/interpreter/value.cpp
+        src/interpreter/environment.cpp
+        src/features/callable.cpp
+        src/interpreter/interpreter.cpp
+        src/features/array.cpp
         tests/test_lexer.cpp
         tests/test_parser.cpp
         tests/test_evaluator.cpp
@@ -76,6 +82,7 @@ if(BUILD_TESTS)
         tests/test_functions.cpp
         tests/test_enhanced_features.cpp
         tests/test_arrays.cpp
+        tests/test_error_reporting.cpp
     )
     
     # Test executable

@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include "../src/lexer.h"
-#include "../src/parser.h"
-#include "../src/interpreter.h"
-#include "../src/value.h"
+#include "lexer.h"
+#include "parser.h"
+#include "interpreter.h"
+#include "value.h"
 #include <iostream>
 #include <sstream>
 
@@ -374,6 +374,24 @@ TEST(Arrays, PushAndPop) {
         "print arr;"
     );
     EXPECT_EQ(output, "20\n[10]\n");
+}
+
+TEST(Arrays, ReverseMethod) {
+    std::string output = runCode(
+        "let arr = [1, 2, 3, 4];"
+        "arr.reverse();"
+        "print arr;"
+    );
+    EXPECT_EQ(output, "[4, 3, 2, 1]\n");
+}
+
+TEST(Arrays, ReverseEmpty) {
+    std::string output = runCode(
+        "let arr = [];"
+        "arr.reverse();"
+        "print arr;"
+    );
+    EXPECT_EQ(output, "[]\n");
 }
 
 // ========================================

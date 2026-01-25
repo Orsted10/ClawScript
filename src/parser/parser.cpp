@@ -47,12 +47,14 @@ StmtPtr Parser::statement() {
 }
 
 StmtPtr Parser::printStatement() {
+    Token keyword = previous();
     ExprPtr expr = expression();
     consume(TokenType::Semicolon, "Expected ';' after value");
-    return std::make_unique<PrintStmt>(std::move(expr));
+    return std::make_unique<PrintStmt>(keyword, std::move(expr));
 }
 
 StmtPtr Parser::letStatement() {
+    Token keyword = previous();
     Token name = consume(TokenType::Identifier, "Expected variable name");
     
     ExprPtr initializer = nullptr;
@@ -61,10 +63,11 @@ StmtPtr Parser::letStatement() {
     }
     
     consume(TokenType::Semicolon, "Expected ';' after variable declaration");
-    return std::make_unique<LetStmt>(std::string(name.lexeme), std::move(initializer));
+    return std::make_unique<LetStmt>(name, std::move(initializer));
 }
 
 StmtPtr Parser::fnStatement() {
+    Token keyword = previous();
     Token name = consume(TokenType::Identifier, "Expected function name");
     
     consume(TokenType::LeftParen, "Expected '(' after function name");
@@ -94,13 +97,14 @@ StmtPtr Parser::fnStatement() {
     consume(TokenType::RightBrace, "Expected '}' after function body");
     
     return std::make_unique<FnStmt>(
-        std::string(name.lexeme),
+        name,
         std::move(parameters),
         std::move(body)
     );
 }
 
 StmtPtr Parser::returnStatement() {
+    Token keyword = previous();
     ExprPtr value = nullptr;
     
     // "return;" is valid (returns nil)
@@ -109,20 +113,23 @@ StmtPtr Parser::returnStatement() {
     }
     
     consume(TokenType::Semicolon, "Expected ';' after return value");
-    return std::make_unique<ReturnStmt>(std::move(value));
+    return std::make_unique<ReturnStmt>(keyword, std::move(value));
 }
 
 StmtPtr Parser::breakStatement() {
+    Token keyword = previous();
     consume(TokenType::Semicolon, "Expected ';' after 'break'");
-    return std::make_unique<BreakStmt>();
+    return std::make_unique<BreakStmt>(keyword);
 }
 
 StmtPtr Parser::continueStatement() {
+    Token keyword = previous();
     consume(TokenType::Semicolon, "Expected ';' after 'continue'");
-    return std::make_unique<ContinueStmt>();
+    return std::make_unique<ContinueStmt>(keyword);
 }
 
 StmtPtr Parser::ifStatement() {
+    Token keyword = previous();
     consume(TokenType::LeftParen, "Expected '(' after 'if'");
     ExprPtr condition = expression();
     consume(TokenType::RightParen, "Expected ')' after if condition");
@@ -134,22 +141,24 @@ StmtPtr Parser::ifStatement() {
         elseBranch = statement();
     }
     
-    return std::make_unique<IfStmt>(std::move(condition), 
+    return std::make_unique<IfStmt>(keyword, std::move(condition), 
                                      std::move(thenBranch), 
                                      std::move(elseBranch));
 }
 
 StmtPtr Parser::whileStatement() {
+    Token keyword = previous();
     consume(TokenType::LeftParen, "Expected '(' after 'while'");
     ExprPtr condition = expression();
     consume(TokenType::RightParen, "Expected ')' after condition");
     
     StmtPtr body = statement();
     
-    return std::make_unique<WhileStmt>(std::move(condition), std::move(body));
+    return std::make_unique<WhileStmt>(keyword, std::move(condition), std::move(body));
 }
 
 StmtPtr Parser::forStatement() {
+    Token keyword = previous();
     consume(TokenType::LeftParen, "Expected '(' after 'for'");
     
     // Initializer
@@ -178,13 +187,14 @@ StmtPtr Parser::forStatement() {
     
     StmtPtr body = statement();
     
-    return std::make_unique<ForStmt>(std::move(initializer),
+    return std::make_unique<ForStmt>(keyword, std::move(initializer),
                                       std::move(condition),
                                       std::move(increment),
                                       std::move(body));
 }
 
 StmtPtr Parser::blockStatement() {
+    Token brace = previous();
     std::vector<StmtPtr> statements;
     
     while (!check(TokenType::RightBrace) && !isAtEnd()) {
@@ -192,13 +202,14 @@ StmtPtr Parser::blockStatement() {
     }
     
     consume(TokenType::RightBrace, "Expected '}' after block");
-    return std::make_unique<BlockStmt>(std::move(statements));
+    return std::make_unique<BlockStmt>(brace, std::move(statements));
 }
 
 StmtPtr Parser::expressionStatement() {
     ExprPtr expr = expression();
+    Token tok = expr->token; // Use the expression's own token
     consume(TokenType::Semicolon, "Expected ';' after expression");
-    return std::make_unique<ExprStmt>(std::move(expr));
+    return std::make_unique<ExprStmt>(tok, std::move(expr));
 }
 
 // ========== EXPRESSION PARSING ==========
@@ -217,12 +228,13 @@ ExprPtr Parser::assignment() {
         
         // Variable assignment: x = 10
         if (auto* var = dynamic_cast<VariableExpr*>(expr.get())) {
-            return std::make_unique<AssignExpr>(var->name, std::move(value));
+            return std::make_unique<AssignExpr>(var->token, std::move(value));
         }
         
         // Array index assignment: arr[0] = 42  // NEW!
         if (auto* index = dynamic_cast<IndexExpr*>(expr.get())) {
             return std::make_unique<IndexAssignExpr>(
+                index->token,
                 std::move(index->object),
                 std::move(index->index),
                 std::move(value)
@@ -239,7 +251,7 @@ ExprPtr Parser::assignment() {
         ExprPtr value = assignment();
         
         if (auto* var = dynamic_cast<VariableExpr*>(expr.get())) {
-            return std::make_unique<CompoundAssignExpr>(var->name, op, std::move(value));
+            return std::make_unique<CompoundAssignExpr>(var->token, op, std::move(value));
         }
         
         error("Invalid compound assignment target");
@@ -252,11 +264,12 @@ ExprPtr Parser::ternary() {
     ExprPtr expr = logicalOr();
     
     if (match(TokenType::Question)) {
+        Token quest = previous();
         ExprPtr thenBranch = expression();  // Allow nested ternary
         consume(TokenType::Colon, "Expected ':' in ternary expression");
         ExprPtr elseBranch = ternary();  // Right-associative
         expr = std::make_unique<TernaryExpr>(
-            std::move(expr), std::move(thenBranch), std::move(elseBranch));
+            quest, std::move(expr), std::move(thenBranch), std::move(elseBranch));
     }
     
     return expr;
@@ -348,7 +361,8 @@ ExprPtr Parser::unary() {
         Token op = previous();
         // Next must be an identifier
         if (match(TokenType::Identifier)) {
-            return std::make_unique<UpdateExpr>(std::string(previous().lexeme), op, true);
+            Token nameTok = previous();
+            return std::make_unique<UpdateExpr>(nameTok, op, true);
         }
         error("Expected identifier after '" + std::string(op.lexeme) + "'");
         return nullptr;
@@ -364,7 +378,7 @@ ExprPtr Parser::postfix() {
     if (match({TokenType::PlusPlus, TokenType::MinusMinus})) {
         Token op = previous();
         if (auto* var = dynamic_cast<VariableExpr*>(expr.get())) {
-            return std::make_unique<UpdateExpr>(var->name, op, false);
+            return std::make_unique<UpdateExpr>(var->token, op, false);
         }
         error("Invalid postfix operand");
     }
@@ -382,7 +396,7 @@ ExprPtr Parser::call() {
             expr = finishIndexOrMember(std::move(expr));
         } else if (match(TokenType::Dot)) {  // NEW: Member access
             Token name = consume(TokenType::Identifier, "Expected property name after '.'");
-            expr = std::make_unique<MemberExpr>(std::move(expr), std::string(name.lexeme));
+            expr = std::make_unique<MemberExpr>(name, std::move(expr), std::string(name.lexeme));
         } else {
             break;
         }
@@ -392,6 +406,7 @@ ExprPtr Parser::call() {
 }
 
 ExprPtr Parser::finishCall(ExprPtr callee) {
+    Token paren = previous(); // This is the '('
     std::vector<ExprPtr> arguments;
     
     if (!check(TokenType::RightParen)) {
@@ -405,20 +420,17 @@ ExprPtr Parser::finishCall(ExprPtr callee) {
     
     consume(TokenType::RightParen, "Expected ')' after arguments");
     
-    return std::make_unique<CallExpr>(std::move(callee), std::move(arguments));
+    return std::make_unique<CallExpr>(paren, std::move(callee), std::move(arguments));
 }
 
-// ========================================
-// ARRAY PARSING - NEW METHODS!
-// ========================================
-
 ExprPtr Parser::arrayLiteral() {
+    Token bracket = previous(); // This is the '['
     std::vector<ExprPtr> elements;
     
     // Empty array: []
     if (check(TokenType::RightBracket)) {
         advance();
-        return std::make_unique<ArrayExpr>(std::move(elements));
+        return std::make_unique<ArrayExpr>(bracket, std::move(elements));
     }
     
     // Parse elements: [1, 2, 3]
@@ -431,51 +443,53 @@ ExprPtr Parser::arrayLiteral() {
     
     consume(TokenType::RightBracket, "Expected ']' after array elements");
     
-    return std::make_unique<ArrayExpr>(std::move(elements));
+    return std::make_unique<ArrayExpr>(bracket, std::move(elements));
 }
 
 
 ExprPtr Parser::finishIndexOrMember(ExprPtr object) {
-    // We've already consumed the '['
+    Token bracket = previous(); // This is the '['
     ExprPtr index = expression();
     consume(TokenType::RightBracket, "Expected ']' after array index");
     
-    // Create index expression (will be converted to assignment if needed in assignment())
-    return std::make_unique<IndexExpr>(std::move(object), std::move(index));
+    // Create index expression
+    return std::make_unique<IndexExpr>(bracket, std::move(object), std::move(index));
 }
-
-// ========================================
 
 ExprPtr Parser::primary() {
     if (match(TokenType::Number)) {
-        double value = std::stod(std::string(previous().lexeme));
-        return std::make_unique<LiteralExpr>(value);
+        Token tok = previous();
+        double value = std::stod(std::string(tok.lexeme));
+        return std::make_unique<LiteralExpr>(tok, value);
     }
     
     if (match(TokenType::String)) {
-        return std::make_unique<LiteralExpr>(previous().stringValue);
+        Token tok = previous();
+        return std::make_unique<LiteralExpr>(tok, tok.stringValue);
     }
     
     if (match(TokenType::True)) {
-        return std::make_unique<LiteralExpr>(true);
+        return std::make_unique<LiteralExpr>(previous(), true);
     }
     
     if (match(TokenType::False)) {
-        return std::make_unique<LiteralExpr>(false);
+        return std::make_unique<LiteralExpr>(previous(), false);
     }
     
     if (match(TokenType::Nil)) {
-        return LiteralExpr::nil();
+        return LiteralExpr::nil(previous());
     }
     
     if (match(TokenType::Identifier)) {
-        return std::make_unique<VariableExpr>(std::string(previous().lexeme));
+        Token tok = previous();
+        return std::make_unique<VariableExpr>(tok, std::string(tok.lexeme));
     }
     
     if (match(TokenType::LeftParen)) {
+        Token tok = previous();
         ExprPtr expr = expression();
         consume(TokenType::RightParen, "Expected ')' after expression");
-        return std::make_unique<GroupingExpr>(std::move(expr));
+        return std::make_unique<GroupingExpr>(tok, std::move(expr));
     }
     
     // Array literal: [1, 2, 3]  // NEW!

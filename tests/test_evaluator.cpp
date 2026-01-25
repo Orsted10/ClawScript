@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include "../src/lexer.h"
-#include "../src/parser.h"
-#include "../src/interpreter.h"
-#include "../src/value.h"
+#include "lexer.h"
+#include "parser.h"
+#include "interpreter.h"
+#include "value.h"
 
 // Helper function
 std::string evalExpr(const std::string& source) {

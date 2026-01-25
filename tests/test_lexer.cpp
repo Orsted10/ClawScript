@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../src/lexer.h"
+#include "lexer.h"
 
 TEST(Lexer, Numbers) {
     volt::Lexer lexer("42 3.14");

@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include "../src/lexer.h"
-#include "../src/parser.h"
-#include "../src/interpreter.h"
-#include "../src/value.h"
+#include "lexer.h"
+#include "parser.h"
+#include "interpreter.h"
+#include "value.h"
 #include <sstream>
 #include <iostream>
 
@@ -332,6 +332,26 @@ TEST(EnhancedFeatures, ClockFunction) {
         "print t > 0;"
     );
     EXPECT_EQ(output, "true\n");
+}
+
+TEST(EnhancedFeatures, UpperLowerFunctions) {
+    std::string output = runCode(
+        "print toUpper(\"hello\");"
+        "print toLower(\"WORLD\");"
+    );
+    EXPECT_EQ(output, "HELLO\nworld\n");
+}
+
+TEST(EnhancedFeatures, TypeFunction) {
+    std::string output = runCode(
+        "print type(42);"
+        "print type(\"hi\");"
+        "print type(true);"
+        "print type(nil);"
+        "print type([]);"
+        "fn f() {} print type(f);"
+    );
+    EXPECT_EQ(output, "number\nstring\nbool\nnil\narray\nfunction\n");
 }
 
 // ========================================

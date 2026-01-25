@@ -10,7 +10,7 @@ namespace volt {
  * VoltArray - Native array implementation
  * 
  * Arrays in VoltScript are:
- * - Dynamic (can grow/shrink)
+ * - Dynamic (can grow/shrink),
  * - Heterogeneous (can hold mixed types)
  * - Zero-indexed
  * - Have built-in methods (push, pop, length, etc.)
@@ -27,6 +27,7 @@ public:
     // Array operations
     void push(Value value);
     Value pop();
+    void reverse();
     size_t length() const { return elements_.size(); }
     
     // Iteration
