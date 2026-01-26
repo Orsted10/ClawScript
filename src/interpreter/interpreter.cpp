@@ -43,7 +43,7 @@ void Interpreter::defineNatives() {
         "clock"
     ));
     
-    // len(value) - returns length of string or array  // UPDATED!
+    // len(value) - returns length of string, array, or hash map  // ENHANCED!
     globals_->define("len", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
@@ -53,7 +53,10 @@ void Interpreter::defineNatives() {
             if (isArray(args[0])) {  // NEW!
                 return static_cast<double>(asArray(args[0])->length());
             }
-            throw std::runtime_error("len() requires a string or array argument");
+            if (isHashMap(args[0])) {  // NEW!
+                return static_cast<double>(asHashMap(args[0])->size());
+            }
+            throw std::runtime_error("len() requires a string, array, or hash map argument");
         },
         "len"
     ));
@@ -190,6 +193,75 @@ void Interpreter::defineNatives() {
         "toLower"
     ));
     
+    // upper(str) - convert string to uppercase (alias for toUpper)
+    globals_->define("upper", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("upper() requires a string");
+            std::string s = asString(args[0]);
+            for (auto& c : s) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+            return s;
+        },
+        "upper"
+    ));
+    
+    // lower(str) - convert string to lowercase (alias for toLower)
+    globals_->define("lower", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("lower() requires a string");
+            std::string s = asString(args[0]);
+            for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            return s;
+        },
+        "lower"
+    ));
+    
+    // substr(str, start, length) - extract substring  // NEW!
+    globals_->define("substr", std::make_shared<NativeFunction>(
+        3,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("substr() requires a string as first argument");
+            if (!isNumber(args[1])) throw std::runtime_error("substr() requires a number as start position");
+            if (!isNumber(args[2])) throw std::runtime_error("substr() requires a number as length");
+            
+            std::string s = asString(args[0]);
+            int start = static_cast<int>(asNumber(args[1]));
+            int length = static_cast<int>(asNumber(args[2]));
+            
+            if (start < 0) start = 0;
+            if (start >= static_cast<int>(s.length())) return std::string("");
+            if (length < 0) length = 0;
+            
+            if (start + length > static_cast<int>(s.length())) {
+                length = static_cast<int>(s.length()) - start;
+            }
+            
+            return s.substr(start, length);
+        },
+        "substr"
+    ));
+    
+    // indexOf(str, substr) - find first occurrence of substring  // NEW!
+    globals_->define("indexOf", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("indexOf() requires a string as first argument");
+            if (!isString(args[1])) throw std::runtime_error("indexOf() requires a string as second argument");
+            
+            std::string s = asString(args[0]);
+            std::string sub = asString(args[1]);
+            
+            size_t pos = s.find(sub);
+            if (pos == std::string::npos) {
+                return -1.0; // Return -1 if not found
+            }
+            
+            return static_cast<double>(pos);
+        },
+        "indexOf"
+    ));
+    
     // type(val) - get type of value as string
     globals_->define("type", std::make_shared<NativeFunction>(
         1,
@@ -227,6 +299,70 @@ void Interpreter::defineNatives() {
             return resultArray;
         },
         "keys"
+    ));
+    
+    // values(hashmap) - get all values from a hash map  // NEW!
+    globals_->define("values", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isHashMap(args[0])) {
+                throw std::runtime_error("values() requires a hashmap argument");
+            }
+            
+            auto map = asHashMap(args[0]);
+            auto valuesVec = map->getValues();
+            
+            // Create an array with the values
+            auto resultArray = std::make_shared<VoltArray>();
+            for (const auto& value : valuesVec) {
+                resultArray->push(value);
+            }
+            
+            return resultArray;
+        },
+        "values"
+    ));
+    
+    // has(hashmap, key) - check if a key exists in a hash map  // NEW!
+    globals_->define("has", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isHashMap(args[0])) {
+                throw std::runtime_error("has() requires a hashmap as first argument");
+            }
+            if (!isString(args[1]) && !isNumber(args[1]) && !isBool(args[1]) && !isNil(args[1])) {
+                throw std::runtime_error("has() requires a string, number, boolean, or nil as key");
+            }
+            
+            auto map = asHashMap(args[0]);
+            
+            // Convert key to string
+            std::string keyStr = valueToString(args[1]);
+            
+            return map->contains(keyStr);
+        },
+        "has"
+    ));
+    
+    // remove(hashmap, key) - remove a key-value pair from a hash map  // NEW!
+    globals_->define("remove", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isHashMap(args[0])) {
+                throw std::runtime_error("remove() requires a hashmap as first argument");
+            }
+            if (!isString(args[1]) && !isNumber(args[1]) && !isBool(args[1]) && !isNil(args[1])) {
+                throw std::runtime_error("remove() requires a string, number, boolean, or nil as key");
+            }
+            
+            auto map = asHashMap(args[0]);
+            
+            // Convert key to string
+            std::string keyStr = valueToString(args[1]);
+            
+            return map->remove(keyStr);  // Returns true if removed, false if not found
+        },
+        "remove"
     ));
     
     // values(hashmap) - get all values from a hash map  // NEW!
@@ -972,6 +1108,30 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
                     return resultArray;
                 },
                 "hashmap.values"
+            );
+        }
+        
+        if (expr->member == "has") {  // NEW!
+            return std::make_shared<NativeFunction>(
+                1,
+                [map](const std::vector<Value>& args) -> Value {
+                    // Convert key to string
+                    std::string keyStr = valueToString(args[0]);
+                    return map->contains(keyStr);
+                },
+                "hashmap.has"
+            );
+        }
+        
+        if (expr->member == "remove") {  // NEW!
+            return std::make_shared<NativeFunction>(
+                1,
+                [map](const std::vector<Value>& args) -> Value {
+                    // Convert key to string
+                    std::string keyStr = valueToString(args[0]);
+                    return map->remove(keyStr);  // Returns true if removed, false if not found
+                },
+                "hashmap.remove"
             );
         }
         

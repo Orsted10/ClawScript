@@ -61,7 +61,7 @@ Every subsystem is written to be:
 
 ---
 
-## ✨ Features (v0.7.0)
+## ✨ Features (v0.7.1)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -113,8 +113,8 @@ VoltScript runs **real programs** with:
 - ✅ Runtime type checking with friendly errors
 - ✅ **Hash Map support**: `{ "key": "value", "nested": { "prop": 42 } }`
 - ✅ **Hash Map operations**: Access with `map["key"]`, assignment with `map["key"] = value`
-- ✅ Built-in functions: `keys(map)`, `values(map)`
-- ✅ Hash Map member access: `map.size`, `map.keys()`, `map.values()`
+- ✅ Built-in functions: `keys(map)`, `values(map)`, `has(map, key)`, `remove(map, key)`
+- ✅ Hash Map member access: `map.size`, `map.keys()`, `map.values()`, `map.has(key)`, `map.remove(key)`
 
 ---
 
@@ -133,12 +133,20 @@ VoltScript supports **advanced function features**:
 
 Built-in functions:
 - `clock()` — Returns current timestamp
-- `len(x)` — Length of string or array
+- `len(x)` — Length of string, array, or hash map
 - `str(x)` — Convert to string
 - `num(x)` — Convert to number
 - `type(x)` — Get value type as string
 - `toUpper(s)` — Convert string to uppercase
 - `toLower(s)` — Convert string to lowercase
+- `upper(s)` — Convert string to uppercase (alias)
+- `lower(s)` — Convert string to lowercase (alias)
+- `substr(s, start, length)` — Extract substring
+- `indexOf(s, substr)` — Find substring position
+- `keys(map)` — Get hash map keys as array
+- `values(map)` — Get hash map values as array
+- `has(map, key)` — Check if key exists in hash map
+- `remove(map, key)` — Remove key-value pair from hash map
 
 ---
 
@@ -200,7 +208,7 @@ VoltScript/
 │   ├── array.{h,cpp}      # Array implementation
 │   ├── interpreter.{h,cpp}# Execution engine
 │   └── main.cpp           # REPL & file runner
-├── tests/                  # 261 comprehensive tests
+├── tests/                  # 333 comprehensive tests
 │   ├── test_lexer.cpp
 │   ├── test_parser.cpp
 │   ├── test_evaluator.cpp
@@ -210,6 +218,11 @@ VoltScript/
 │   ├── test_arrays.cpp
 │   └── test_error_reporting.cpp
 ├── examples/               # Example programs
+│   ├── calculator.volt      # Basic arithmetic
+│   ├── counter_closure.volt # Closure demonstration
+│   ├── fibonacci.volt       # Fibonacci sequence
+│   ├── hash_maps.volt       # Hash map usage
+│   └── enhanced_features.volt # New v0.7.1 features
 ├── CMakeLists.txt
 └── README.md
 ```
@@ -579,7 +592,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.7.0 ⚡
+### ⚡ VoltScript v0.7.1 ⚡
 
 **Functions. Closures. Arrays. Power.**  
 *This is where languages get real.*

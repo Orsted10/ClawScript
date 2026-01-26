@@ -84,6 +84,13 @@ struct VoltHashMap {
     bool operator==(const VoltHashMap& other) const {
         return data == other.data;
     }
+    
+    // Merge another hash map into this one
+    void merge(const VoltHashMap& other) {
+        for (const auto& [key, value] : other.data) {
+            data[key] = value;
+        }
+    }
 };
 
 } // namespace volt

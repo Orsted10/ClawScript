@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.7.0 LANGUAGES CXX)  # Milestone 7: Objects & Hash Maps
+project(VoltScript VERSION 0.7.1 LANGUAGES CXX)  # Milestone 7: Objects & Hash Maps
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -88,7 +88,9 @@ if(BUILD_TESTS)
         tests/test_arrays.cpp
         tests/test_error_reporting.cpp
         tests/test_run_until.cpp
-        tests/test_hash_maps.cpp  # NEW!
+        tests/test_hash_maps.cpp
+        tests/test_improved_hash_maps.cpp
+        tests/test_string_functions.cpp  # NEW!
     )
     
     # Test executable
@@ -109,7 +111,7 @@ if(BUILD_TESTS)
     include(GoogleTest)
     gtest_discover_tests(volt_tests)
     
-    message(STATUS "✅ Tests enabled (320 tests)")
+    message(STATUS "✅ Tests enabled (333 tests)")
 endif()
 
 # ========================================
