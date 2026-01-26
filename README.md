@@ -61,7 +61,7 @@ Every subsystem is written to be:
 
 ---
 
-## ✨ Features (v0.7.1)
+## ✨ Features (v0.7.2)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -143,10 +143,24 @@ Built-in functions:
 - `lower(s)` — Convert string to lowercase (alias)
 - `substr(s, start, length)` — Extract substring
 - `indexOf(s, substr)` — Find substring position
+- `trim(s)` — Remove whitespace from both ends
+- `split(s, delimiter)` — Split string into array
+- `replace(s, search, replacement)` — Replace all occurrences
+- `startsWith(s, prefix)` — Check if string starts with prefix
+- `endsWith(s, suffix)` — Check if string ends with suffix
 - `keys(map)` — Get hash map keys as array
 - `values(map)` — Get hash map values as array
 - `has(map, key)` — Check if key exists in hash map
 - `remove(map, key)` — Remove key-value pair from hash map
+- `abs(x)` — Absolute value
+- `sqrt(x)` — Square root
+- `pow(base, exponent)` — Power function
+- `min(a, b)` — Minimum of two values
+- `max(a, b)` — Maximum of two values
+- `round(x)` — Round to nearest integer
+- `floor(x)` — Round down to integer
+- `ceil(x)` — Round up to integer
+- `random()` — Random number between 0 and 1
 
 ---
 
@@ -208,7 +222,7 @@ VoltScript/
 │   ├── array.{h,cpp}      # Array implementation
 │   ├── interpreter.{h,cpp}# Execution engine
 │   └── main.cpp           # REPL & file runner
-├── tests/                  # 333 comprehensive tests
+├── tests/                  # 345 comprehensive tests
 │   ├── test_lexer.cpp
 │   ├── test_parser.cpp
 │   ├── test_evaluator.cpp
@@ -222,7 +236,8 @@ VoltScript/
 │   ├── counter_closure.volt # Closure demonstration
 │   ├── fibonacci.volt       # Fibonacci sequence
 │   ├── hash_maps.volt       # Hash map usage
-│   └── enhanced_features.volt # New v0.7.1 features
+│   ├── enhanced_features.volt # v0.7.1 features
+│   └── v072_enhancements.volt # New v0.7.2 features
 ├── CMakeLists.txt
 └── README.md
 ```
@@ -592,7 +607,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.7.1 ⚡
+### ⚡ VoltScript v0.7.2 ⚡
 
 **Functions. Closures. Arrays. Power.**  
 *This is where languages get real.*

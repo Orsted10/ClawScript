@@ -262,6 +262,221 @@ void Interpreter::defineNatives() {
         "indexOf"
     ));
     
+    // ==================== MATH FUNCTIONS (NEW FOR v0.7.2) ====================
+    
+    // abs(number) - absolute value
+    globals_->define("abs", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("abs() requires a number");
+            return std::abs(asNumber(args[0]));
+        },
+        "abs"
+    ));
+    
+    // sqrt(number) - square root
+    globals_->define("sqrt", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("sqrt() requires a number");
+            double val = asNumber(args[0]);
+            if (val < 0) throw std::runtime_error("sqrt() argument must be non-negative");
+            return std::sqrt(val);
+        },
+        "sqrt"
+    ));
+    
+    // pow(base, exponent) - power function
+    globals_->define("pow", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0]) || !isNumber(args[1])) {
+                throw std::runtime_error("pow() requires two numbers");
+            }
+            return std::pow(asNumber(args[0]), asNumber(args[1]));
+        },
+        "pow"
+    ));
+    
+    // min(a, b) - minimum of two values
+    globals_->define("min", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0]) || !isNumber(args[1])) {
+                throw std::runtime_error("min() requires two numbers");
+            }
+            return std::min(asNumber(args[0]), asNumber(args[1]));
+        },
+        "min"
+    ));
+    
+    // max(a, b) - maximum of two values
+    globals_->define("max", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0]) || !isNumber(args[1])) {
+                throw std::runtime_error("max() requires two numbers");
+            }
+            return std::max(asNumber(args[0]), asNumber(args[1]));
+        },
+        "max"
+    ));
+    
+    // round(number) - round to nearest integer
+    globals_->define("round", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("round() requires a number");
+            return std::round(asNumber(args[0]));
+        },
+        "round"
+    ));
+    
+    // floor(number) - round down to integer
+    globals_->define("floor", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("floor() requires a number");
+            return std::floor(asNumber(args[0]));
+        },
+        "floor"
+    ));
+    
+    // ceil(number) - round up to integer
+    globals_->define("ceil", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("ceil() requires a number");
+            return std::ceil(asNumber(args[0]));
+        },
+        "ceil"
+    ));
+    
+    // random() - random number between 0 and 1
+    globals_->define("random", std::make_shared<NativeFunction>(
+        0,
+        [](const std::vector<Value>&) -> Value {
+            return static_cast<double>(std::rand()) / RAND_MAX;
+        },
+        "random"
+    ));
+    
+    // ==================== STRING ENHANCEMENTS (NEW FOR v0.7.2) ====================
+    
+    // trim(str) - remove whitespace from both ends
+    globals_->define("trim", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("trim() requires a string");
+            std::string s = asString(args[0]);
+            
+            // Remove leading whitespace
+            size_t start = s.find_first_not_of(" \t\n\r\f\v");
+            if (start == std::string::npos) return std::string(""); // All whitespace
+            
+            // Remove trailing whitespace
+            size_t end = s.find_last_not_of(" \t\n\r\f\v");
+            
+            return s.substr(start, end - start + 1);
+        },
+        "trim"
+    ));
+    
+    // split(str, delimiter) - split string into array
+    globals_->define("split", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("split() requires a string as first argument");
+            if (!isString(args[1])) throw std::runtime_error("split() requires a string delimiter");
+            
+            std::string s = asString(args[0]);
+            std::string delim = asString(args[1]);
+            
+            auto resultArray = std::make_shared<VoltArray>();
+            
+            if (delim.empty()) {
+                // Split into individual characters
+                for (char c : s) {
+                    resultArray->push(std::string(1, c));
+                }
+            } else {
+                size_t start = 0;
+                size_t pos = s.find(delim);
+                
+                while (pos != std::string::npos) {
+                    resultArray->push(s.substr(start, pos - start));
+                    start = pos + delim.length();
+                    pos = s.find(delim, start);
+                }
+                resultArray->push(s.substr(start)); // Add remaining part
+            }
+            
+            return resultArray;
+        },
+        "split"
+    ));
+    
+    // replace(str, search, replacement) - replace all occurrences
+    globals_->define("replace", std::make_shared<NativeFunction>(
+        3,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("replace() requires a string as first argument");
+            if (!isString(args[1])) throw std::runtime_error("replace() requires a string to search for");
+            if (!isString(args[2])) throw std::runtime_error("replace() requires a string replacement");
+            
+            std::string s = asString(args[0]);
+            std::string search = asString(args[1]);
+            std::string replacement = asString(args[2]);
+            
+            if (search.empty()) return s; // Nothing to replace
+            
+            std::string result = s;
+            size_t pos = 0;
+            
+            while ((pos = result.find(search, pos)) != std::string::npos) {
+                result.replace(pos, search.length(), replacement);
+                pos += replacement.length();
+                
+                // Avoid infinite loop with empty replacement
+                if (replacement.empty()) pos++;
+            }
+            
+            return result;
+        },
+        "replace"
+    ));
+    
+    // startsWith(str, prefix) - check if string starts with prefix
+    globals_->define("startsWith", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("startsWith() requires a string as first argument");
+            if (!isString(args[1])) throw std::runtime_error("startsWith() requires a string prefix");
+            
+            std::string s = asString(args[0]);
+            std::string prefix = asString(args[1]);
+            
+            return s.length() >= prefix.length() && s.substr(0, prefix.length()) == prefix;
+        },
+        "startsWith"
+    ));
+    
+    // endsWith(str, suffix) - check if string ends with suffix
+    globals_->define("endsWith", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("endsWith() requires a string as first argument");
+            if (!isString(args[1])) throw std::runtime_error("endsWith() requires a string suffix");
+            
+            std::string s = asString(args[0]);
+            std::string suffix = asString(args[1]);
+            
+            return s.length() >= suffix.length() && 
+                   s.substr(s.length() - suffix.length()) == suffix;
+        },
+        "endsWith"
+    ));
+    
     // type(val) - get type of value as string
     globals_->define("type", std::make_shared<NativeFunction>(
         1,

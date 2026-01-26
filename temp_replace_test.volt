@@ -1,0 +1,1 @@
+print replace("banana", "ana", "ANA");
