@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.7.5 LANGUAGES CXX)  # Milestone 7: Objects & Hash Maps
+project(VoltScript VERSION 0.7.9 LANGUAGES CXX)  # Feature-Rich Release
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -78,7 +78,7 @@ if(BUILD_TESTS)
         src/features/callable.cpp
         src/interpreter/interpreter.cpp
         src/features/array.cpp
-        src/features/hashmap.cpp  # NEW!
+        src/features/hashmap.cpp
         tests/test_lexer.cpp
         tests/test_parser.cpp
         tests/test_evaluator.cpp
@@ -91,9 +91,15 @@ if(BUILD_TESTS)
         tests/test_hash_maps.cpp
         tests/test_improved_hash_maps.cpp
         tests/test_string_functions.cpp
-        tests/test_math_functions.cpp  # NEW!
-        tests/test_string_enhancements.cpp  # NEW!
-        tests/test_v075_simple.cpp  # NEW!
+        tests/test_math_functions.cpp
+        tests/test_string_enhancements.cpp
+        tests/test_v075_simple.cpp
+        tests/test_new_features.cpp
+        tests/test_array_advanced.cpp
+        tests/test_string_file_functions.cpp
+        tests/test_arrays_extended.cpp
+        tests/test_interpreter_edge_cases.cpp
+        tests/test_builtin_functions.cpp
     )
     
     # Test executable
@@ -114,7 +120,7 @@ if(BUILD_TESTS)
     include(GoogleTest)
     gtest_discover_tests(volt_tests)
     
-    message(STATUS "✅ Tests enabled (345 tests)")
+    message(STATUS "✅ Tests enabled (450+ tests)")
 endif()
 
 # ========================================
@@ -125,7 +131,7 @@ message(STATUS "")
 message(STATUS "========================================")
 message(STATUS "⚡ VoltScript v${PROJECT_VERSION}")
 message(STATUS "========================================")
-message(STATUS "Milestone:      Objects & Hash Maps 🗺️")
+message(STATUS "Milestone:      Feature-Rich Release 🚀")
 message(STATUS "Build type:     ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler:       ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "C++ Standard:   C++${CMAKE_CXX_STANDARD}")

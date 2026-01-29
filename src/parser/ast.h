@@ -127,7 +127,7 @@ struct TernaryExpr : Expr {
 };
 
 // ========================================
-// ARRAY EXPRESSIONS - NEW!
+// ARRAY EXPRESSIONS - Added!
 // ========================================
 
 // Array Literal: [1, 2, 3, "hello"]
@@ -157,7 +157,7 @@ struct IndexAssignExpr : Expr {
 };
 
 // ========================================
-// HASH MAP EXPRESSIONS - NEW!
+// HASH MAP EXPRESSIONS - Added!
 // ========================================
 
 // Hash Map Literal: {"key": "value", "age": 25}

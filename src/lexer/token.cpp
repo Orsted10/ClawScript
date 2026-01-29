@@ -49,11 +49,11 @@ const char* tokenName(TokenType type) {
         case TokenType::RightParen: return "RightParen";
         case TokenType::LeftBrace: return "LeftBrace";
         case TokenType::RightBrace: return "RightBrace";
-        case TokenType::LeftBracket: return "LeftBracket";   // NEW!
-        case TokenType::RightBracket: return "RightBracket"; // NEW!
+        case TokenType::LeftBracket: return "LeftBracket";   // Added!
+        case TokenType::RightBracket: return "RightBracket"; // Added!
         case TokenType::Semicolon: return "Semicolon";
         case TokenType::Comma: return "Comma";
-        case TokenType::Dot: return "Dot";  // NEW!
+        case TokenType::Dot: return "Dot";  // Added!
         case TokenType::Eof: return "Eof";
         case TokenType::Error: return "Error";
         default: return "Unknown";

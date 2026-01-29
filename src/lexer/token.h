@@ -31,9 +31,9 @@ enum class TokenType {
     // Punctuation
     LeftParen, RightParen,
     LeftBrace, RightBrace,
-    LeftBracket, RightBracket,  // NEW! for arrays [  ]
+    LeftBracket, RightBracket,  // Added for arrays [  ]
     Semicolon, Comma,
-    Dot,  // NEW! for array.length, array.push(), etc.
+    Dot,  // Added for array.length, array.push(), etc.
     
     // Special
     Eof, Error

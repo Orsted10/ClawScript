@@ -250,7 +250,7 @@ ExprPtr Parser::assignment() {
             return std::make_unique<AssignExpr>(var->token, std::move(value));
         }
         
-        // Array index assignment: arr[0] = 42  // NEW!
+        // Array index assignment: arr[0] = 42  // Added!
         if (auto* index = dynamic_cast<IndexExpr*>(expr.get())) {
             return std::make_unique<IndexAssignExpr>(
                 index->token,
@@ -465,7 +465,7 @@ ExprPtr Parser::arrayLiteral() {
     return std::make_unique<ArrayExpr>(bracket, std::move(elements));
 }
 
-// Hash map literal: {"key": "value", "age": 25}  // NEW!
+// Hash map literal: {"key": "value", "age": 25}  // Added!
 ExprPtr Parser::hashMapLiteral() {
     Token brace = previous(); // This is the '{'
     std::vector<std::pair<ExprPtr, ExprPtr>> keyValuePairs;
@@ -565,12 +565,12 @@ ExprPtr Parser::primary() {
         return std::make_unique<GroupingExpr>(tok, std::move(expr));
     }
     
-    // Array literal: [1, 2, 3]  // NEW!
+    // Array literal: [1, 2, 3]  // Added!
     if (match(TokenType::LeftBracket)) {
         return arrayLiteral();
     }
 
-    // Hash map literal: {"key": "value", "age": 25}  // NEW!
+    // Hash map literal: {"key": "value", "age": 25}  // Added!
     if (match(TokenType::LeftBrace)) {
         return hashMapLiteral();
     }

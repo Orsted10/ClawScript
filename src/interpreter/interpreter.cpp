@@ -4,22 +4,27 @@
 #include "ast.h"
 #include "value.h"
 #include "environment.h"
-#include "features/array.h"  // NEW!
-#include "features/hashmap.h"  // NEW!
+#include "features/array.h"  // Added!
+#include "features/hashmap.h"  // Added!
 #include <memory>
 #include <sstream>
 #include <fstream>
 #include <iomanip>
 #include <cmath>
-#include <iostream>  // NEW! For std::cout, std::cin
-#include <chrono>    // NEW! For clock() function
+#include <iostream>  // Added for std::cout, std::cin
+#include <chrono>    // Added for clock() function
+#include <sstream>   // Added for JSON encoding
+#include <iomanip>   // Added for JSON formatting
+#include <thread>    // Added for sleep function
+#include <fstream>   // Added for file operations
+#include <cstdio>    // Added for std::remove function
 
 namespace volt {
 
 Interpreter::Interpreter()
     : environment_(std::make_shared<Environment>()),
       globals_(environment_) {
-    // Register built-in functions
+    // Set up all the built-in functions that come with VoltScript
     defineNatives();
 }
 
@@ -43,17 +48,17 @@ void Interpreter::defineNatives() {
         "clock"
     ));
     
-    // len(value) - returns length of string, array, or hash map  // ENHANCED!
+    // len() - returns length of string, array, or hash map  // Added feature!
     globals_->define("len", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
             if (isString(args[0])) {
                 return static_cast<double>(asString(args[0]).length());
             }
-            if (isArray(args[0])) {  // NEW!
+            if (isArray(args[0])) {  // Added!
                 return static_cast<double>(asArray(args[0])->length());
             }
-            if (isHashMap(args[0])) {  // NEW!
+            if (isHashMap(args[0])) {  // Added!
                 return static_cast<double>(asHashMap(args[0])->size());
             }
             throw std::runtime_error("len() requires a string, array, or hash map argument");
@@ -217,7 +222,7 @@ void Interpreter::defineNatives() {
         "lower"
     ));
     
-    // substr(str, start, length) - extract substring  // NEW!
+    // substr() - grab a piece of a string  // Added!
     globals_->define("substr", std::make_shared<NativeFunction>(
         3,
         [](const std::vector<Value>& args) -> Value {
@@ -242,7 +247,7 @@ void Interpreter::defineNatives() {
         "substr"
     ));
     
-    // indexOf(str, substr) - find first occurrence of substring  // NEW!
+    // indexOf() - find where a substring appears in a string  // Added!
     globals_->define("indexOf", std::make_shared<NativeFunction>(
         2,
         [](const std::vector<Value>& args) -> Value {
@@ -262,7 +267,7 @@ void Interpreter::defineNatives() {
         "indexOf"
     ));
     
-    // ==================== MATH FUNCTIONS (NEW FOR v0.7.2) ====================
+    // ==================== BASIC MATH STUFF (NEW FOR v0.7.2) ====================
     
     // abs(number) - absolute value
     globals_->define("abs", std::make_shared<NativeFunction>(
@@ -361,7 +366,7 @@ void Interpreter::defineNatives() {
         "random"
     ));
     
-    // ==================== TRIGONOMETRIC FUNCTIONS (NEW FOR v0.7.5) ====================
+    // ==================== TRIGONOMETRY STUFF (NEW FOR v0.7.5) ====================
     
     // sin(x) - sine function
     globals_->define("sin", std::make_shared<NativeFunction>(
@@ -393,7 +398,7 @@ void Interpreter::defineNatives() {
         "tan"
     ));
     
-    // ==================== LOGARITHMIC FUNCTIONS (NEW FOR v0.7.5) ====================
+    // ==================== LOG AND EXPONENTIAL STUFF (NEW FOR v0.7.5) ====================
     
     // log(x) - natural logarithm
     globals_->define("log", std::make_shared<NativeFunction>(
@@ -417,7 +422,7 @@ void Interpreter::defineNatives() {
         "exp"
     ));
     
-    // ==================== DATE/TIME FUNCTIONS (NEW FOR v0.7.5) ====================
+    // ==================== TIME AND DATE STUFF (NEW FOR v0.7.5) ====================
     
     // now() - get current timestamp in milliseconds
     globals_->define("now", std::make_shared<NativeFunction>(
@@ -447,106 +452,28 @@ void Interpreter::defineNatives() {
         "formatDate"
     ));
     
-    // ==================== JSON FUNCTIONS (NEW FOR v0.7.5) ====================
+    // ==================== JSON HANDLING (NEW FOR v0.7.5) ====================
     
-    // jsonEncode(value) - encode value to JSON string (simple implementation)
+    // jsonEncode(value) - encode value to JSON string
     globals_->define("jsonEncode", std::make_shared<NativeFunction>(
         1,
-        [](const std::vector<Value>& args) -> Value {
-            // Simple JSON encoding
-            if (isNil(args[0])) return "null";
-            if (isBool(args[0])) return asBool(args[0]) ? "true" : "false";
-            if (isNumber(args[0])) {
-                double num = asNumber(args[0]);
-                if (num == static_cast<long long>(num)) {
-                    return std::to_string(static_cast<long long>(num));
-                } else {
-                    return std::to_string(num);
-                }
-            }
-            if (isString(args[0])) {
-                std::string str = asString(args[0]);
-                // Simple string escaping
-                std::string escaped;
-                escaped += "\"";
-                for (char c : str) {
-                    if (c == '"') escaped += "\\\"";
-                    else if (c == '\\') escaped += "\\\\";
-                    else escaped += c;
-                }
-                escaped += "\"";
-                return escaped;
-            }
-            if (isArray(args[0])) {
-                return "[]"; // Simplified
-            }
-            if (isHashMap(args[0])) {
-                return "{}"; // Simplified
-            }
-            return "\"" + valueToString(args[0]) + "\"";
+        [this](const std::vector<Value>& args) -> Value {
+            return this->encodeToJson(args[0]);
         },
         "jsonEncode"
     ));
     
-    // jsonDecode(jsonString) - decode JSON string to value (simple implementation)
+    // jsonDecode(jsonString) - decode JSON string to value
     globals_->define("jsonDecode", std::make_shared<NativeFunction>(
         1,
-        [](const std::vector<Value>& args) -> Value {
+        [this](const std::vector<Value>& args) -> Value {
             if (!isString(args[0])) throw std::runtime_error("jsonDecode() requires a string");
-            std::string jsonStr = asString(args[0]);
-            
-            // Simple JSON decoding
-            // Remove leading/trailing whitespace
-            jsonStr.erase(0, jsonStr.find_first_not_of(" \t\n\r"));
-            jsonStr.erase(jsonStr.find_last_not_of(" \t\n\r") + 1);
-            
-            if (jsonStr.empty()) return nullptr;
-            
-            // Handle null
-            if (jsonStr == "null") return nullptr;
-            
-            // Handle boolean
-            if (jsonStr == "true") return true;
-            if (jsonStr == "false") return false;
-            
-            // Handle string (quoted)
-            if (jsonStr.front() == '"' && jsonStr.back() == '"') {
-                // Remove quotes and handle escape sequences
-                std::string str = jsonStr.substr(1, jsonStr.length() - 2);
-                // Simple escape sequence handling
-                std::string result;
-                for (size_t i = 0; i < str.length(); i++) {
-                    if (str[i] == '\\' && i + 1 < str.length()) {
-                        switch (str[++i]) {
-                            case '"': result += '"'; break;
-                            case '\\': result += '\\'; break;
-                            default: result += str[i-1]; result += str[i]; break;
-                        }
-                    } else {
-                        result += str[i];
-                    }
-                }
-                return result;
-            }
-            
-            // Handle number
-            try {
-                size_t pos;
-                double num = std::stod(jsonStr, &pos);
-                if (pos == jsonStr.length()) {
-                    return num;
-                }
-            } catch (...) {
-                // Not a valid number
-            }
-            
-            // If we can't parse it, treat as string
-            return jsonStr;
+            return this->decodeFromJson(asString(args[0]));
         },
         "jsonDecode"
     ));
     
-    // ==================== STRING ENHANCEMENTS (NEW FOR v0.7.2) ====================
+    // ==================== STRING MANIPULATION (NEW FOR v0.7.2) ====================
     
     // trim(str) - remove whitespace from both ends
     globals_->define("trim", std::make_shared<NativeFunction>(
@@ -673,13 +600,13 @@ void Interpreter::defineNatives() {
             if (isString(v)) return "string";
             if (isCallable(v)) return "function";
             if (isArray(v)) return "array";
-            if (isHashMap(v)) return "hashmap";  // NEW!
+            if (isHashMap(v)) return "hashmap";  // Added!
             return "unknown";
         },
         "type"
     ));
     
-    // keys(hashmap) - get all keys from a hash map  // NEW!
+    // keys(hashmap) - get all keys from a hash map  // Added!
     globals_->define("keys", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
@@ -701,7 +628,7 @@ void Interpreter::defineNatives() {
         "keys"
     ));
     
-    // values(hashmap) - get all values from a hash map  // NEW!
+    // values(hashmap) - get all values from a hash map  // Added!
     globals_->define("values", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
@@ -723,7 +650,7 @@ void Interpreter::defineNatives() {
         "values"
     ));
     
-    // has(hashmap, key) - check if a key exists in a hash map  // NEW!
+    // has(hashmap, key) - check if a key exists in a hash map  // Added!
     globals_->define("has", std::make_shared<NativeFunction>(
         2,
         [](const std::vector<Value>& args) -> Value {
@@ -744,7 +671,7 @@ void Interpreter::defineNatives() {
         "has"
     ));
     
-    // remove(hashmap, key) - remove a key-value pair from a hash map  // NEW!
+    // remove(hashmap, key) - remove a key-value pair from a hash map  // Added!
     globals_->define("remove", std::make_shared<NativeFunction>(
         2,
         [](const std::vector<Value>& args) -> Value {
@@ -765,26 +692,286 @@ void Interpreter::defineNatives() {
         "remove"
     ));
     
-    // values(hashmap) - get all values from a hash map  // NEW!
-    globals_->define("values", std::make_shared<NativeFunction>(
+    // ==================== FILE I/O ENHANCEMENTS (NEW FOR v0.7.9) ====================
+    
+    // exists(path) - check if file or directory exists
+    globals_->define("exists", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
-            if (!isHashMap(args[0])) {
-                throw std::runtime_error("values() requires a hashmap argument");
+            if (!isString(args[0])) {
+                throw std::runtime_error("exists() requires a string path");
             }
-            
-            auto map = asHashMap(args[0]);
-            auto valuesVec = map->getValues();
-            
-            // Create an array with the values
-            auto resultArray = std::make_shared<VoltArray>();
-            for (const auto& value : valuesVec) {
-                resultArray->push(value);
-            }
-            
-            return resultArray;
+            std::ifstream file(asString(args[0]));
+            return file.good();
         },
-        "values"
+        "exists"
+    ));
+    
+    // deleteFile(path) - delete a file
+    globals_->define("deleteFile", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) {
+                throw std::runtime_error("deleteFile() requires a string path");
+            }
+            std::string path = asString(args[0]);
+            if (std::remove(path.c_str()) == 0) {
+                return true;
+            } else {
+                return false;
+            }
+        },
+        "deleteFile"
+    ));
+    
+    // fileSize(path) - get size of a file in bytes
+    globals_->define("fileSize", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) {
+                throw std::runtime_error("fileSize() requires a string path");
+            }
+            std::string path = asString(args[0]);
+            std::ifstream file(path, std::ios::binary | std::ios::ate);
+            if (!file) {
+                throw std::runtime_error("Could not open file: " + path);
+            }
+            return static_cast<double>(file.tellg());
+        },
+        "fileSize"
+    ));
+    
+    // ==================== ADVANCED STRING FUNCTIONS (NEW FOR v0.7.9) ====================
+    
+    // padStart(str, targetLength, padString) - pad string from start
+    globals_->define("padStart", std::make_shared<NativeFunction>(
+        3,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("padStart() requires a string as first argument");
+            if (!isNumber(args[1])) throw std::runtime_error("padStart() requires a number as target length");
+            if (!isString(args[2])) throw std::runtime_error("padStart() requires a string as padding");
+            
+            std::string str = asString(args[0]);
+            int targetLen = static_cast<int>(asNumber(args[1]));
+            std::string padStr = asString(args[2]);
+            
+            if (targetLen <= static_cast<int>(str.length()) || padStr.empty()) {
+                return str;
+            }
+            
+            int padLen = targetLen - str.length();
+            std::string result = "";
+            while (result.length() < padLen) {
+                result += padStr;
+            }
+            result = result.substr(0, padLen);
+            
+            return result + str;
+        },
+        "padStart"
+    ));
+    
+    // padEnd(str, targetLength, padString) - pad string from end
+    globals_->define("padEnd", std::make_shared<NativeFunction>(
+        3,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("padEnd() requires a string as first argument");
+            if (!isNumber(args[1])) throw std::runtime_error("padEnd() requires a number as target length");
+            if (!isString(args[2])) throw std::runtime_error("padEnd() requires a string as padding");
+            
+            std::string str = asString(args[0]);
+            int targetLen = static_cast<int>(asNumber(args[1]));
+            std::string padStr = asString(args[2]);
+            
+            if (targetLen <= static_cast<int>(str.length()) || padStr.empty()) {
+                return str;
+            }
+            
+            int padLen = targetLen - str.length();
+            std::string result = "";
+            while (result.length() < padLen) {
+                result += padStr;
+            }
+            result = result.substr(0, padLen);
+            
+            return str + result;
+        },
+        "padEnd"
+    ));
+    
+    // repeat(str, count) - repeat string n times
+    globals_->define("repeat", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("repeat() requires a string as first argument");
+            if (!isNumber(args[1])) throw std::runtime_error("repeat() requires a number as count");
+            
+            std::string str = asString(args[0]);
+            int count = static_cast<int>(asNumber(args[1]));
+            
+            if (count <= 0) return std::string("");
+            
+            std::string result = "";
+            for (int i = 0; i < count; i++) {
+                result += str;
+            }
+            
+            return result;
+        },
+        "repeat"
+    ));
+    
+    // charCodeAt(str, index) - get character code at index
+    globals_->define("charCodeAt", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isString(args[0])) throw std::runtime_error("charCodeAt() requires a string as first argument");
+            if (!isNumber(args[1])) throw std::runtime_error("charCodeAt() requires a number as index");
+            
+            std::string str = asString(args[0]);
+            int index = static_cast<int>(asNumber(args[1]));
+            
+            if (index < 0 || index >= static_cast<int>(str.length())) {
+                return -1.0; // Return -1 if index is out of bounds
+            }
+            
+            return static_cast<double>(static_cast<unsigned char>(str[index]));
+        },
+        "charCodeAt"
+    ));
+    
+    // fromCharCode(code) - create string from character code
+    globals_->define("fromCharCode", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("fromCharCode() requires a number");
+            
+            int code = static_cast<int>(asNumber(args[0]));
+            
+            if (code < 0 || code > 255) {
+                throw std::runtime_error("Character code must be between 0 and 255");
+            }
+            
+            return std::string(1, static_cast<char>(code));
+        },
+        "fromCharCode"
+    ));
+    
+    // ==================== FUNCTIONAL PROGRAMMING UTILITIES (NEW FOR v0.7.9) ====================
+    
+    // compose(...functions) - compose functions from right to left
+    globals_->define("compose", std::make_shared<NativeFunction>(
+        -1, // Variable arity
+        [this](const std::vector<Value>& args) -> Value {
+            // Verify all arguments are callable
+            for (const auto& arg : args) {
+                if (!isCallable(arg)) {
+                    throw std::runtime_error("All arguments to compose() must be functions");
+                }
+            }
+            
+            // Create a function that applies the composed functions
+            return std::make_shared<NativeFunction>(
+                1, // Takes one argument
+                [this, args](const std::vector<Value>& callArgs) -> Value {
+                    if (callArgs.empty()) {
+                        throw std::runtime_error("compose() function needs at least one argument");
+                    }
+                    
+                    Value result = callArgs[0];
+                    
+                    // Apply functions from right to left (last to first)
+                    for (int i = args.size() - 1; i >= 0; i--) {
+                        auto func = asCallable(args[i]);
+                        result = func->call(*this, {result});
+                    }
+                    
+                    return result;
+                },
+                "composedFunction"
+            );
+        },
+        "compose"
+    ));
+    
+    // pipe(...functions) - pipe value through functions from left to right
+    globals_->define("pipe", std::make_shared<NativeFunction>(
+        -1, // Variable arity
+        [this](const std::vector<Value>& args) -> Value {
+            // Verify all arguments are callable
+            for (const auto& arg : args) {
+                if (!isCallable(arg)) {
+                    throw std::runtime_error("All arguments to pipe() must be functions");
+                }
+            }
+            
+            // Create a function that pipes the value through functions
+            return std::make_shared<NativeFunction>(
+                1, // Takes one argument
+                [this, args](const std::vector<Value>& callArgs) -> Value {
+                    if (callArgs.empty()) {
+                        throw std::runtime_error("pipe() function needs at least one argument");
+                    }
+                    
+                    Value result = callArgs[0];
+                    
+                    // Apply functions from left to right (first to last)
+                    for (size_t i = 0; i < args.size(); i++) {
+                        auto func = asCallable(args[i]);
+                        result = func->call(*this, {result});
+                    }
+                    
+                    return result;
+                },
+                "pipeFunction"
+            );
+        },
+        "pipe"
+    ));
+    
+    // ==================== PERFORMANCE UTILITIES (NEW FOR v0.7.9) ====================
+    
+    // sleep(milliseconds) - pause execution for given milliseconds
+    globals_->define("sleep", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) {
+                throw std::runtime_error("sleep() requires a number (milliseconds)");
+            }
+            int ms = static_cast<int>(asNumber(args[0]));
+            if (ms < 0) ms = 0;
+            std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+            return true;
+        },
+        "sleep"
+    ));
+    
+    // benchmark(func, ...args) - measure execution time of function
+    globals_->define("benchmark", std::make_shared<NativeFunction>(
+        -1, // Variable arity: function + any number of arguments
+        [this](const std::vector<Value>& args) -> Value {
+            if (args.empty() || !isCallable(args[0])) {
+                throw std::runtime_error("benchmark() requires a function as first argument");
+            }
+            
+            auto func = asCallable(args[0]);
+            std::vector<Value> callArgs(args.begin() + 1, args.end());
+            
+            auto start = std::chrono::high_resolution_clock::now();
+            Value result = func->call(*this, callArgs);
+            auto end = std::chrono::high_resolution_clock::now();
+            
+            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            
+            // Return an object with result and execution time
+            auto resultMap = std::make_shared<VoltHashMap>();
+            resultMap->set("result", result);
+            resultMap->set("timeMicroseconds", static_cast<double>(duration.count()));
+            resultMap->set("timeMilliseconds", static_cast<double>(duration.count()) / 1000.0);
+            
+            return resultMap;
+        },
+        "benchmark"
     ));
 }
 
@@ -1015,7 +1202,7 @@ Value Interpreter::evaluate(Expr* expr) {
     }
     
     // ========================================
-    // ARRAY EXPRESSIONS - NEW!
+    // ARRAY EXPRESSIONS - Added!
     // ========================================
     
     if (auto* array = dynamic_cast<ArrayExpr*>(expr)) {
@@ -1035,7 +1222,7 @@ Value Interpreter::evaluate(Expr* expr) {
     }
     
     // ========================================
-    // HASH MAP EXPRESSIONS - NEW!
+    // HASH MAP EXPRESSIONS - Added!
     // ========================================
     
     if (auto* hashMap = dynamic_cast<HashMapExpr*>(expr)) {
@@ -1511,7 +1698,7 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
             );
         }
         
-        if (expr->member == "has") {  // NEW!
+        if (expr->member == "has") {  // Added!
             return std::make_shared<NativeFunction>(
                 1,
                 [map](const std::vector<Value>& args) -> Value {
@@ -1523,7 +1710,7 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
             );
         }
         
-        if (expr->member == "remove") {  // NEW!
+        if (expr->member == "remove") {  // Added!
             return std::make_shared<NativeFunction>(
                 1,
                 [map](const std::vector<Value>& args) -> Value {
@@ -1541,7 +1728,7 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
     throw RuntimeError(expr->token, "Only arrays and hash maps have members");
 }
 
-// Evaluate hash map literal expression  // NEW!
+// Evaluate hash map literal expression  // Added!
 Value Interpreter::evaluateHashMap(HashMapExpr* expr) {
     auto hashMap = std::make_shared<VoltHashMap>();
     
@@ -1574,6 +1761,173 @@ void Interpreter::checkNumberOperand(const Token& op, const Value& operand) {
 void Interpreter::checkNumberOperands(const Token& op, const Value& left, const Value& right) {
     if (isNumber(left) && isNumber(right)) return;
     throw RuntimeError(op, "Operands must be numbers");
+}
+
+// ==================== JSON ENCODING/DECODING METHODS ====================
+
+std::string Interpreter::encodeToJson(const Value& value) {
+    std::ostringstream oss;
+    encodeJsonValue(value, oss);
+    return oss.str();
+}
+
+Value Interpreter::decodeFromJson(const std::string& jsonString) {
+    // Simple JSON decoder - handles basic types
+    std::string trimmed = jsonString;
+    // Remove leading/trailing whitespace
+    trimmed.erase(0, trimmed.find_first_not_of(" \t\n\r"));
+    trimmed.erase(trimmed.find_last_not_of(" \t\n\r") + 1);
+    
+    if (trimmed.empty()) {
+        return nullptr;
+    }
+    
+    // Handle null
+    if (trimmed == "null") {
+        return nullptr;
+    }
+    
+    // Handle boolean
+    if (trimmed == "true") {
+        return true;
+    }
+    if (trimmed == "false") {
+        return false;
+    }
+    
+    // Handle string (quoted)
+    if (trimmed.front() == '"' && trimmed.back() == '"') {
+        // Remove quotes and handle escape sequences
+        std::string str = trimmed.substr(1, trimmed.length() - 2);
+        // Simple escape sequence handling
+        std::string result;
+        for (size_t i = 0; i < str.length(); i++) {
+            if (str[i] == '\\' && i + 1 < str.length()) {
+                switch (str[++i]) {
+                    case '"': result += '"'; break;
+                    case '\\': result += '\\'; break;
+                    case '/': result += '/'; break;
+                    case 'b': result += '\b'; break;
+                    case 'f': result += '\f'; break;
+                    case 'n': result += '\n'; break;
+                    case 'r': result += '\r'; break;
+                    case 't': result += '\t'; break;
+                    default: result += str[i-1]; result += str[i]; break;
+                }
+            } else {
+                result += str[i];
+            }
+        }
+        return result;
+    }
+    
+    // Handle number
+    try {
+        // Check if it's a valid number
+        size_t pos;
+        double num = std::stod(trimmed, &pos);
+        if (pos == trimmed.length()) {
+            return num;
+        }
+    } catch (...) {
+        // Not a valid number
+    }
+    
+    // Handle array
+    if (trimmed.front() == '[' && trimmed.back() == ']') {
+        // Parse array elements
+        std::string content = trimmed.substr(1, trimmed.length() - 2);
+        auto array = std::make_shared<VoltArray>();
+        
+        // Simple CSV-like parsing (doesn't handle nested structures well)
+        std::istringstream iss(content);
+        std::string element;
+        while (std::getline(iss, element, ',')) {
+            // Trim whitespace
+            element.erase(0, element.find_first_not_of(" \t\n\r"));
+            element.erase(element.find_last_not_of(" \t\n\r") + 1);
+            if (!element.empty()) {
+                array->push(decodeFromJson(element));
+            }
+        }
+        return array;
+    }
+    
+    // Handle object
+    if (trimmed.front() == '{' && trimmed.back() == '}') {
+        // Parse object key-value pairs
+        // This is a simplified implementation
+        return std::make_shared<VoltHashMap>(); // Return empty hashmap for now
+    }
+    
+    // If we can't parse it, treat as string
+    return trimmed;
+}
+
+void Interpreter::encodeJsonValue(const Value& value, std::ostringstream& oss) {
+    if (isNil(value)) {
+        oss << "null";
+    } else if (isBool(value)) {
+        oss << (asBool(value) ? "true" : "false");
+    } else if (isNumber(value)) {
+        double num = asNumber(value);
+        if (num == static_cast<long long>(num)) {
+            oss << static_cast<long long>(num);
+        } else {
+            oss << std::fixed << std::setprecision(6) << num;
+            // Remove trailing zeros
+            std::string str = oss.str();
+            oss.str("");
+            oss.clear();
+            size_t dotPos = str.find('.');
+            if (dotPos != std::string::npos) {
+                size_t lastNonZero = str.find_last_not_of('0');
+                if (lastNonZero == dotPos) {
+                    str = str.substr(0, dotPos);
+                } else if (lastNonZero != std::string::npos) {
+                    str = str.substr(0, lastNonZero + 1);
+                }
+            }
+            oss << str;
+        }
+    } else if (isString(value)) {
+        std::string str = asString(value);
+        oss << "\"";
+        for (char c : str) {
+            switch (c) {
+                case '"': oss << "\\\""; break;
+                case '\\': oss << "\\\\"; break;
+                case '/': oss << "\/"; break;
+                case '\b': oss << "\\b"; break;
+                case '\f': oss << "\\f"; break;
+                case '\n': oss << "\\n"; break;
+                case '\r': oss << "\\r"; break;
+                case '\t': oss << "\\t"; break;
+                default:
+                    if (c >= 0 && c < 32) {
+                        // Escape control characters
+                        oss << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c);
+                    } else {
+                        oss << c;
+                    }
+                    break;
+            }
+        }
+        oss << "\"";
+    } else if (isArray(value)) {
+        auto array = asArray(value);
+        oss << "[";
+        const auto& elements = array->elements();
+        for (size_t i = 0; i < elements.size(); i++) {
+            if (i > 0) oss << ",";
+            encodeJsonValue(elements[i], oss);
+        }
+        oss << "]";
+    } else if (isHashMap(value)) {
+        oss << "{}"; // Simplified - just return empty object
+    } else {
+        oss << "\"" << valueToString(value) << "\"";
+    }
 }
 
 } // namespace volt

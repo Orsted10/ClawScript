@@ -1,0 +1,237 @@
+// Example: Simple Game Simulation in VoltScript
+print("=== Game Simulation Demo ===");
+
+// Player class simulation
+createPlayer = fun(name, health, attack) {
+    return {
+        "name": name,
+        "health": health,
+        "maxHealth": health,
+        "attack": attack,
+        "level": 1,
+        "experience": 0,
+        "isAlive": true
+    };
+};
+
+// Monster class simulation
+createMonster = fun(name, health, attack) {
+    return {
+        "name": name,
+        "health": health,
+        "maxHealth": health,
+        "attack": attack,
+        "isAlive": true
+    };
+};
+
+// Combat system
+attack = fun(attacker, defender) {
+    if (!attacker.isAlive || !defender.isAlive) {
+        return false;
+    }
+    
+    damage = attacker.attack + floor(random() * 5);  // Add some randomness
+    defender.health = defender.health - damage;
+    
+    if (defender.health <= 0) {
+        defender.health = 0;
+        defender.isAlive = false;
+    }
+    
+    return {
+        "attacker": attacker.name,
+        "defender": defender.name,
+        "damage": damage,
+        "defenderHealth": defender.health
+    };
+};
+
+// Healing function
+heal = fun(player, amount) {
+    if (!player.isAlive) {
+        return false;
+    }
+    
+    player.health = player.health + amount;
+    if (player.health > player.maxHealth) {
+        player.health = player.maxHealth;
+    }
+    
+    return true;
+};
+
+// Level up function
+levelUp = fun(player) {
+    player.level = player.level + 1;
+    player.maxHealth = player.maxHealth + 10;
+    player.health = player.maxHealth;
+    player.attack = player.attack + 2;
+    player.experience = 0;
+    return player;
+};
+
+// Experience system
+gainExperience = fun(player, exp) {
+    player.experience = player.experience + exp;
+    if (player.experience >= player.level * 100) {
+        return levelUp(player);
+    }
+    return player;
+};
+
+// Create game entities
+hero = createPlayer("Hero", 100, 15);
+goblin = createMonster("Goblin", 30, 8);
+orc = createMonster("Orc", 50, 12);
+dragon = createMonster("Dragon", 200, 25);
+
+print("Game entities created:");
+print("  " + hero.name + " - Health: " + str(hero.health) + ", Attack: " + str(hero.attack));
+print("  " + goblin.name + " - Health: " + str(goblin.health) + ", Attack: " + str(goblin.attack));
+print("  " + orc.name + " - Health: " + str(orc.health) + ", Attack: " + str(orc.attack));
+print("  " + dragon.name + " - Health: " + str(dragon.health) + ", Attack: " + str(dragon.attack));
+
+// Simple combat simulation
+print("\n=== Combat Simulation ===");
+
+// Hero vs Goblin
+print("\nBattle 1: " + hero.name + " vs " + goblin.name);
+round = 1;
+while (hero.isAlive && goblin.isAlive) {
+    print("Round " + str(round) + ":");
+    
+    // Hero attacks first
+    result1 = attack(hero, goblin);
+    if (result1) {
+        print("  " + result1.attacker + " hits " + result1.defender + " for " + str(result1.damage) + " damage");
+        print("  " + goblin.name + " health: " + str(goblin.health));
+    }
+    
+    // Goblin attacks back if still alive
+    if (goblin.isAlive) {
+        result2 = attack(goblin, hero);
+        if (result2) {
+            print("  " + result2.attacker + " hits " + result2.defender + " for " + str(result2.damage) + " damage");
+            print("  " + hero.name + " health: " + str(hero.health));
+        }
+    }
+    
+    round = round + 1;
+    sleep(100);  // Small delay for readability
+}
+
+if (hero.isAlive) {
+    print(hero.name + " wins the battle!");
+    gainExperience(hero, 50);
+    print("Gained 50 experience!");
+} else {
+    print(goblin.name + " wins the battle!");
+}
+
+// Check if hero can be healed
+if (hero.isAlive && hero.health < hero.maxHealth) {
+    print("\nHero healing:");
+    healResult = heal(hero, 20);
+    if (healResult) {
+        print("Hero healed to " + str(hero.health) + " health");
+    }
+}
+
+// Hero vs Orc
+print("\nBattle 2: " + hero.name + " vs " + orc.name);
+orc = createMonster("Orc", 50, 12);  // Reset orc
+round = 1;
+while (hero.isAlive && orc.isAlive) {
+    print("Round " + str(round) + ":");
+    
+    // Hero attacks
+    result1 = attack(hero, orc);
+    if (result1) {
+        print("  " + result1.attacker + " hits " + result1.defender + " for " + str(result1.damage) + " damage");
+        print("  " + orc.name + " health: " + str(orc.health));
+    }
+    
+    // Orc attacks back if still alive
+    if (orc.isAlive) {
+        result2 = attack(orc, hero);
+        if (result2) {
+            print("  " + result2.attacker + " hits " + result2.defender + " for " + str(result2.damage) + " damage");
+            print("  " + hero.name + " health: " + str(hero.health));
+        }
+    }
+    
+    round = round + 1;
+    sleep(100);
+}
+
+if (hero.isAlive) {
+    print(hero.name + " wins the battle!");
+    gainExperience(hero, 100);
+    print("Gained 100 experience! Level up!");
+    print("New level: " + str(hero.level) + ", Attack: " + str(hero.attack));
+} else {
+    print(orc.name + " wins the battle!");
+}
+
+// Status check
+print("\n=== Final Status ===");
+print("Hero - Health: " + str(hero.health) + "/" + str(hero.maxHealth) + 
+      ", Attack: " + str(hero.attack) + 
+      ", Level: " + str(hero.level) + 
+      ", Experience: " + str(hero.experience) + 
+      ", Alive: " + str(hero.isAlive));
+print("Goblin - Health: " + str(goblin.health) + "/" + str(goblin.maxHealth) + ", Alive: " + str(goblin.isAlive));
+print("Orc - Health: " + str(orc.health) + "/" + str(orc.maxHealth) + ", Alive: " + str(orc.isAlive));
+
+// Adventure summary
+if (hero.isAlive) {
+    print("\n" + hero.name + " has survived the adventure!");
+    print("Levels achieved: " + str(hero.level));
+    print("Monsters defeated: " + str((goblin.health == 0) + (orc.health == 0)) + " out of 2");
+} else {
+    print("\n" + hero.name + " has fallen in battle!");
+    print("Final level: " + str(hero.level));
+}
+
+// Stats summary
+print("\n=== Statistics Summary ===");
+battles = 2;
+won = (hero.isAlive || (!goblin.isAlive || !orc.isAlive)) ? 1 : 0;  // Simplified
+survived = hero.isAlive ? 1 : 0;
+print("Total battles: " + str(battles));
+print("Battles won: " + str(won));
+print("Survived: " + str(survived > 0));
+print("Final score: " + str(hero.level * 100 + hero.experience));
+
+// Item collection system (simulated)
+items = [];
+itemNames = ["Health Potion", "Magic Sword", "Armor", "Magic Ring"];
+
+for (let i = 0; i < 4; i = i + 1) {
+    if (random() > 0.5) {
+        items.push(itemNames[i]);
+    }
+}
+
+print("\nCollected items: [" + 
+      (items.length > 0 ? items[0] : "none") + ", " + 
+      (items.length > 1 ? items[1] : "none") + ", " + 
+      (items.length > 2 ? items[2] : "none") + ", " + 
+      (items.length > 3 ? items[3] : "none") + "]");
+
+// Final message
+if (hero.isAlive) {
+    print("\nVictory! " + hero.name + " completed the adventure.");
+    if (hero.level > 1) {
+        print("Achieved level " + str(hero.level) + "!");
+    }
+    if (items.length > 0) {
+        print("Collected " + str(items.length) + " magical items.");
+    }
+} else {
+    print("\nDefeat. Better luck next time!");
+    print("But " + hero.name + " tried valiantly until level " + str(hero.level));
+}
+
+print("\nThanks for playing!");

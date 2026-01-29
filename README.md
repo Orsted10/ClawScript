@@ -1,40 +1,38 @@
 <div align="center">
 
-# ⚡ VoltScript ⚡  
-### *A programming language built from scratch in modern C++*
+# ⚡ VoltScript v0.7.9 ⚡
+### *A programming language built from scratch in C++20*
 
-**Version:** `0.7.5`  
-**Milestone:** Objects & Hash Maps 🗺️
-**Status:** 🟢 Production-Ready | 🚀 Feature-Rich | 🧠 Educational  
+**Production-Ready • Feature-Rich • Educational**  
 
 > *From tokens → trees → closures → arrays → objects*  
 
-[![Tests](https://img.shields.io/badge/tests-345%2F345-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-450%2B-brightgreen)]()
 [![C++](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
 </div>
 
 ---
-  
+
 ## 🧠 What is VoltScript?
 
-VoltScript is a **fully-functional programming language**, written completely from scratch in **C++20**.
+VoltScript is a **fully-functional programming language** written completely from scratch in **C++20**.
 
 Not a transpiler.  
 Not a wrapper.  
 Not a toy.
 
-This project exists to answer one question honestly:
-
+This project answers one question honestly:
 > **How do programming languages actually work under the hood?**
 
 So instead of hiding complexity, VoltScript **embraces it**—and builds every layer explicitly:
+
 - ⚡ Lexical analysis
-- 🌳 Parsing with recursive descent
+- 🌳 Parsing with recursive descent  
 - 🧠 AST construction
 - ⚙️ Tree-walk interpretation
-- 📍 Precise error reporting (Line/Col tracking)
+- 📍 Precise error reporting
 - 🔐 Lexical scoping & environments
 - 🔁 First-class functions & closures
 - 📦 Dynamic arrays with methods
@@ -44,54 +42,15 @@ If you've ever wanted to *truly* understand languages like **Python**, **JavaScr
 
 ---
 
-## 🎯 Core Philosophy
-
-VoltScript is built with a few simple rules:
-
-- 🧼 **Clarity over cleverness**
-- 🧠 **Understanding over shortcuts**
-- 🛠️ **Explicit behavior over magic**
-- 📚 **Readable code over clever hacks**
-
-Every subsystem is written to be:
-- Debuggable
-- Extendable
-- Educational
-- Real-world inspired
-
----
-
-## ✨ Features (v0.7.5)
+## ✨ Features (v0.7.9)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
 - **Literals**: Numbers (`42`, `3.14`), Strings (`"hello"`), Booleans (`true`, `false`), `nil`
-- **Identifiers**: `x`, `totalSum`, `_temp123`
 - **Keywords**: `let`, `if`, `else`, `while`, `for`, `run`, `until`, `fn`, `return`, `print`, `break`, `continue`
-- **Operators**:
-  - Arithmetic: `+`, `-`, `*`, `/`, `%`
-  - Comparison: `==`, `!=`, `<`, `<=`, `>`, `>=`
-  - Logical: `&&`, `||`, `!`
-  - Assignment: `=`
-  - Compound: `+=`, `-=`, `*=`, `/=`
-  - Increment/Decrement: `++`, `--` (prefix & postfix)
-  - Ternary: `? :`
-  - Indexing: `[]` (for arrays and hash maps)
-- **Punctuation**: `(`, `)`, `{`, `}`, `[`, `]`, `;`, `,`, `.`
+- **Operators**: Arithmetic, Comparison, Logical, Assignment, Compound (`+=`, `-=`, `*=`, `/=`), Increment/Decrement (`++`, `--`), Ternary (`? :`)
+- **Data Structures**: Arrays `[]`, Hash Maps `{}`
 - **Comments**: `// line comments`
-- **Literals**: Numbers (`42`, `3.14`), Strings (`"hello"`), Booleans (`true`, `false`), `nil`, **Hash Maps** (`{"key": "value"}`)
-
----
-
-### 🧠 AST — *Program Structure Made Explicit*
-
-- Separate **expression** and **statement** nodes
-- **Hash Map literals** support: `{"key": value, "another": 42}`
-- Clear, inspectable tree structure
-- Designed for interpretation now, compilation later
-- Easy to debug and visualize
-
----
 
 ### ⚙️ Interpreter — *AST → Execution*
 
@@ -102,25 +61,17 @@ VoltScript runs **real programs** with:
 - ✅ Block scoping & shadowing
 - ✅ Control flow: `if`/`else`, `while`, `for`, `run-until`
 - ✅ **Loop control**: `break` and `continue`
-- ✅ `print` statement
-- ✅ Comparison & logical operators
-- ✅ **Short-circuit evaluation**
-- ✅ String concatenation & coercion
 - ✅ **Compound assignment**: `x += 5`, `s *= 2`
 - ✅ **Increment/Decrement**: `++i`, `i--`, etc.
 - ✅ **Ternary operator**: `max = (a > b) ? a : b;`
 - ✅ **Precise error reporting**: Errors point to exact source tokens
-- ✅ Runtime type checking with friendly errors
 - ✅ **Hash Map support**: `{ "key": "value", "nested": { "prop": 42 } }`
-- ✅ **Hash Map operations**: Access with `map["key"]`, assignment with `map["key"] = value`
-- ✅ Built-in functions: `keys(map)`, `values(map)`, `has(map, key)`, `remove(map, key)`
-- ✅ Hash Map member access: `map.size`, `map.keys()`, `map.values()`, `map.has(key)`, `map.remove(key)`
-
----
+- ✅ **File I/O**: `readFile()`, `writeFile()`, `exists()`, `deleteFile()`, `fileSize()`
+- ✅ **Advanced strings**: `padStart()`, `padEnd()`, `repeat()`, `charCodeAt()`, `fromCharCode()`
+- ✅ **Functional utilities**: `compose()`, `pipe()` for function composition
+- ✅ **Performance tools**: `sleep()`, `benchmark()` for timing
 
 ### 🔁 Functions & Closures
-
-VoltScript supports **advanced function features**:
 
 - ✅ `fn` declarations
 - ✅ Parameters & return values
@@ -131,74 +82,26 @@ VoltScript supports **advanced function features**:
 - ✅ **Higher-order functions**
 - ✅ **Native C++ functions** callable from VoltScript
 
-Built-in functions:
-- `clock()` — Returns current timestamp
-- `len(x)` — Length of string, array, or hash map
-- `str(x)` — Convert to string
-- `num(x)` — Convert to number
-- `type(x)` — Get value type as string
-- `toUpper(s)` — Convert string to uppercase
-- `toLower(s)` — Convert string to lowercase
-- `upper(s)` — Convert string to uppercase (alias)
-- `lower(s)` — Convert string to lowercase (alias)
-- `substr(s, start, length)` — Extract substring
-- `indexOf(s, substr)` — Find substring position
-- `trim(s)` — Remove whitespace from both ends
-- `split(s, delimiter)` — Split string into array
-- `replace(s, search, replacement)` — Replace all occurrences
-- `startsWith(s, prefix)` — Check if string starts with prefix
-- `endsWith(s, suffix)` — Check if string ends with suffix
-- `keys(map)` — Get hash map keys as array
-- `values(map)` — Get hash map values as array
-- `has(map, key)` — Check if key exists in hash map
-- `remove(map, key)` — Remove key-value pair from hash map
-- `abs(x)` — Absolute value
-- `sqrt(x)` — Square root
-- `pow(base, exponent)` — Power function
-- `min(a, b)` — Minimum of two values
-- `max(a, b)` — Maximum of two values
-- `round(x)` — Round to nearest integer
-- `floor(x)` — Round down to integer
-- `ceil(x)` — Round up to integer
-- `random()` — Random number between 0 and 1
-- `sin(x)` — Sine function (NEW v0.7.5)
-- `cos(x)` — Cosine function (NEW v0.7.5)
-- `tan(x)` — Tangent function (NEW v0.7.5)
-- `log(x)` — Natural logarithm (NEW v0.7.5)
-- `exp(x)` — Exponential function (NEW v0.7.5)
-- `now()` — Current timestamp in milliseconds (NEW v0.7.5)
-- `formatDate(timestamp, format)` — Format timestamp (NEW v0.7.5)
-- `jsonEncode(value)` — Encode value to JSON string (NEW v0.7.5)
-- `jsonDecode(jsonString)` — Decode JSON string to value (NEW v0.7.5)
-
----
-
 ### 📦 Arrays — *Dynamic Collections*
 
-Full array support with built-in methods:
-
-``volt
-let numbers = ;
+```volt
+let numbers = [1, 2, 3, 4, 5];
 let mixed = [42, "hello", true, nil];
-let nested = [, ];
+let nested = [[1, 2], [3, 4]];
 
 // Access
-print numbers;          // 1
-print nested;        // 3
+print numbers[0];          // 1
+print nested[1][0];        // 3
 
 // Modify
-numbers = 99;
-print numbers;             
+numbers[0] = 99;
+print numbers[0];          // 99
 
 // Properties & Methods
 print numbers.length;      // 5
 numbers.push(6);           // Add element
 let last = numbers.pop();  // Remove and return last
-
-// Iterate
-for (let i = 0; i < numbers.length; i++) {
-    print numbers[i];
-}
+numbers.reverse();         // In-place reverse
 ```
 
 Array features:
@@ -210,48 +113,74 @@ Array features:
 - ✅ `.push(value)` method
 - ✅ `.pop()` method
 - ✅ `.reverse()` method (in-place)
-- ✅ Trailing commas: `[1, 2, 3,]`
-- ✅ Bounds checking with helpful errors
 
+### 🗺️ Hash Maps — *Key-Value Collections*
+
+```volt
+let person = {
+    "name": "Alice",
+    "age": 25,
+    "active": true,
+    "scores": [95, 87, 92]
+};
+
+print person["name"];           // Access value
+person["email"] = "alice@example.com";  // Dynamic addition
+
+// Built-in functions
+let keys = keys(person);        // Get all keys
+let values = values(person);    // Get all values
+print person.size;              // Get size (4)
+print has(person, "name");      // Check key exists (true)
+print remove(person, "age");    // Remove key-value pair
 ```
 
-## 🗂️ Project Structure
+Hash Map features:
+- ✅ Dynamic key-value pairs
+- ✅ Mixed value types
+- ✅ Nested hash maps
+- ✅ Key access & assignment
+- ✅ `.size` property
+- ✅ `.keys()` method
+- ✅ `.values()` method
+- ✅ `.has(key)` method
+- ✅ `.remove(key)` method
 
+### 🧮 Built-in Functions
 
-```
-VoltScript/
-├── src/                    # Core implementation
-│   ├── token.{h,cpp}      # Token definitions
-│   ├── lexer.{h,cpp}      # Lexical analyzer
-│   ├── ast.{h,cpp}        # AST nodes
-│   ├── stmt.h             # Statement nodes
-│   ├── parser.{h,cpp}     # Recursive descent parser
-│   ├── value.{h,cpp}      # Value system
-│   ├── environment.{h,cpp}# Variable scoping
-│   ├── callable.{h,cpp}   # Function objects
-│   ├── array.{h,cpp}      # Array implementation
-│   ├── interpreter.{h,cpp}# Execution engine
-│   └── main.cpp           # REPL & file runner
-├── tests/                  # 345 comprehensive tests
-│   ├── test_lexer.cpp
-│   ├── test_parser.cpp
-│   ├── test_evaluator.cpp
-│   ├── test_interpreter.cpp
-│   ├── test_functions.cpp
-│   ├── test_enhanced_features.cpp
-│   ├── test_arrays.cpp
-│   └── test_error_reporting.cpp
-├── examples/               # Example programs
-│   ├── calculator.volt      # Basic arithmetic
-│   ├── counter_closure.volt # Closure demonstration
-│   ├── fibonacci.volt       # Fibonacci sequence
-│   ├── hash_maps.volt       # Hash map usage
-│   ├── enhanced_features.volt # v0.7.1 features
-│   ├── v072_enhancements.volt # v0.7.2 features
-│   └── v075_demo.volt       # New v0.7.5 features
-├── CMakeLists.txt
-└── README.md
-```
+**Math Functions:**
+- `abs(x)`, `sqrt(x)`, `pow(base, exp)`, `min(a,b)`, `max(a,b)`
+- `round(x)`, `floor(x)`, `ceil(x)`, `random()`
+- `sin(x)`, `cos(x)`, `tan(x)`, `log(x)`, `exp(x)`
+
+**String Functions:**
+- `len(x)`, `str(x)`, `num(x)`, `type(x)`
+- `toUpper(s)`, `toLower(s)`, `upper(s)`, `lower(s)`
+- `substr(s, start, length)`, `indexOf(s, substr)`
+- `trim(s)`, `split(s, delimiter)`, `replace(s, search, replacement)`
+- `startsWith(s, prefix)`, `endsWith(s, suffix)`
+- `padStart(s, length, pad)`, `padEnd(s, length, pad)`
+- `repeat(s, count)`, `charCodeAt(s, index)`, `fromCharCode(code)`
+
+**File I/O:**
+- `readFile(path)`, `writeFile(path, content)`, `appendFile(path, content)`
+- `fileExists(path)`, `exists(path)`, `deleteFile(path)`, `fileSize(path)`
+
+**Date/Time:**
+- `now()` — Current timestamp in milliseconds
+- `formatDate(timestamp, format)` — Format timestamp
+
+**JSON:**
+- `jsonEncode(value)` — Encode value to JSON string
+- `jsonDecode(jsonString)` — Decode JSON string to value
+
+**Functional Programming:**
+- `compose(f1, f2, ...)` — Compose functions (right to left)
+- `pipe(f1, f2, ...)` — Pipe value through functions (left to right)
+
+**Performance:**
+- `sleep(milliseconds)` — Pause execution
+- `benchmark(func, ...args)` — Measure execution time
 
 ---
 
@@ -263,31 +192,25 @@ VoltScript/
 * CMake ≥ 3.14
 * GoogleTest (automatically fetched)
 
----
+### Windows (MSVC)
 
-### Windows (MSVC / Visual Studio)
-
-```
+```bash
 cmake -B build
 cmake --build build --config Release
 .\build\bin\Release\volt.exe
 ```
 
----
-
 ### Linux / macOS
 
-```
+```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ./build/bin/volt
 ```
 
----
-
 ### Run Tests
 
-```
+```bash
 # Build and run all tests
 cmake --build build --config Release
 ./build/bin/Release/volt_tests
@@ -296,7 +219,7 @@ cmake --build build --config Release
 ctest --output-on-failure --test-dir build
 ```
 
-**Result:** ✅ **100% Pass Rate** (345/345)
+**Result:** ✅ **100% Pass Rate** (450+ tests)
 
 ---
 
@@ -304,13 +227,11 @@ ctest --output-on-failure --test-dir build
 
 ### Interactive REPL
 
-```
-⚡ VoltScript v0.7.5 REPL
+```bash
+⚡ VoltScript v0.7.9 REPL
 Type 'exit' to quit
->>
+>> 
 ```
-
----
 
 ### Run a File
 
@@ -324,21 +245,19 @@ volt script.volt
 
 ### 🎯 Arrays & Loops
 
-```
+```volt
 // Build Fibonacci sequence
-let fib = ;
+let fib = [0, 1];
 for (let i = 0; i < 8; i++) {
     let next = fib[fib.length - 1] + fib[fib.length - 2];
     fib.push(next);
 }
-print fib;  // 
+print fib;  // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
 ```
-
----
 
 ### 🔁 Array Functions
 
-```
+```volt
 // Sum array elements
 fn sum(arr) {
     let total = 0;
@@ -359,23 +278,21 @@ fn filterEvens(arr) {
     return result;
 }
 
-print sum();           // 15
-print filterEvens(); // 
+print sum([1, 2, 3, 4, 5]);           // 15
+print filterEvens([1, 2, 3, 4, 5]);    // [2, 4]
 ```
-
----
 
 ### 🎲 Nested Arrays (Matrices)
 
-```
+```volt
 let matrix = [
-    ,
-    ,
-    
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
 ];
 
 // Access elements
-print matrix;  // 6
+print matrix[1][2];  // 6
 
 // Iterate
 for (let i = 0; i < matrix.length; i++) {
@@ -385,11 +302,9 @@ for (let i = 0; i < matrix.length; i++) {
 }
 ```
 
----
-
 ### 🚦 Enhanced Control Flow
 
-```
+```volt
 // Break and continue
 for (let i = 1; i <= 10; i++) {
     if (i % 2 == 0) continue;  // Skip evens
@@ -415,7 +330,11 @@ run {
     countdown--;
 } until (countdown <= 0);
 print "Liftoff!";
+```
 
+### 🗺️ Hash Maps
+
+```volt
 // Hash Maps - Key-value collections
 let person = {
     "name": "Alice",
@@ -431,6 +350,8 @@ person["email"] = "alice@example.com";  // Dynamic addition
 let keys = keys(person);        // Get all keys
 let values = values(person);    // Get all values
 print person.size;              // Get size
+print has(person, "name");      // Check key exists (true)
+print remove(person, "age");    // Remove key-value pair
 
 // Nested hash maps
 let company = {
@@ -444,11 +365,9 @@ let company = {
 print company["departments"]["engineering"]["head"];  // Alice
 ```
 
----
+### 🔁 Closures with Arrays
 
-### 🔄 Closures with Arrays
-
-```
+```volt
 fn makeStack() {
     let items = [];
     
@@ -468,9 +387,9 @@ fn makeStack() {
 }
 
 let stack = makeStack();
-let push = stack;
-let pop = stack;
-let size = stack;
+let push = stack[0];
+let pop = stack[1];
+let size = stack[2];
 
 push(10);
 push(20);
@@ -478,15 +397,13 @@ print pop();   // 20
 print size();  // 1
 ```
 
----
-
 ### 🎯 Practical Example: Find Maximum
 
-```
+```volt
 fn max(arr) {
     if (arr.length == 0) return nil;
     
-    let maxVal = arr;
+    let maxVal = arr[0];
     for (let i = 1; i < arr.length; i++) {
         if (arr[i] > maxVal) {
             maxVal = arr[i];
@@ -495,14 +412,85 @@ fn max(arr) {
     return maxVal;
 }
 
-print max();  // 9
+print max([3, 7, 2, 9, 1]);  // 9
+```
+
+### 🎯 File Operations
+
+```volt
+// Check if file exists
+if (exists("data.txt")) {
+    print "File exists!";
+    print "Size: " + str(fileSize("data.txt")) + " bytes";
+} else {
+    print "File not found";
+    writeFile("data.txt", "Hello, VoltScript!");
+}
+
+// Read and process file
+let content = readFile("data.txt");
+print "Content: " + content;
+
+// Append to file
+appendFile("data.txt", "\nAppended line!");
+```
+
+### 🎯 Functional Programming
+
+```volt
+// Function composition
+addOne = fun(x) { return x + 1; };
+multiplyByTwo = fun(x) { return x * 2; };
+square = fun(x) { return x * x; };
+
+// Compose functions (right to left)
+addThenSquare = compose(square, addOne);
+result1 = addThenSquare(5);  // square(addOne(5)) = square(6) = 36
+
+// Pipe functions (left to right)
+squareThenDouble = pipe(square, multiplyByTwo);
+result2 = squareThenDouble(3);  // multiplyByTwo(square(3)) = multiplyByTwo(9) = 18
+
+print "Composed result: " + str(result1);
+print "Piped result: " + str(result2);
+```
+
+### 🎯 Performance Benchmarking
+
+```volt
+// Benchmark different algorithms
+slowFunction = fun(n) {
+    result = 0;
+    for (let i = 0; i < n; i = i + 1) {
+        for (let j = 0; j < n; j = j + 1) {
+            result = result + 1;
+        }
+    }
+    return result;
+};
+
+fastFunction = fun(n) {
+    return n * n;
+};
+
+print "Benchmarking...";
+slowBench = benchmark(slowFunction, 100);
+fastBench = benchmark(fastFunction, 100);
+
+print "Slow function: " + str(slowBench.timeMicroseconds) + " μs";
+print "Fast function: " + str(fastBench.timeMicroseconds) + " μs";
+
+if (slowBench.timeMicroseconds > 0) {
+    speedup = slowBench.timeMicroseconds / fastBench.timeMicroseconds;
+    print "Speedup factor: " + str(speedup) + "x";
+}
 ```
 
 ---
 
-## 🧪 Testing (345 Tests!)
+## 🧪 Testing (450+ Tests!)
 
-VoltScript has **comprehensive test coverage** with 345 unit tests:
+VoltScript has **comprehensive test coverage** with 450+ unit tests:
 
 | Test Suite | Tests | Description |
 |-----------|-------|-------------|
@@ -513,11 +501,16 @@ VoltScript has **comprehensive test coverage** with 345 unit tests:
 | **Functions** | 27 | Functions, closures, recursion |
 | **Enhanced Features** | 35 | `break`, `continue`, `+=`, `++`, `type()`, etc. |
 | **Arrays** | 71 | Creation, access, methods, `.reverse()` |
+| **Hash Maps** | 26 | Dictionary/object functionality |
+| **File I/O** | 25 | File operations and enhancements |
+| **String Functions** | 30 | String manipulation and advanced functions |
+| **Math Functions** | 20 | Mathematical operations |
+| **Functional Utilities** | 15 | Function composition and utilities |
+| **Performance Tools** | 20 | Benchmarking and timing |
 | **Error Reporting** | 5 | Precise line/column tracking tests |
-| **Run-Until Loops** | 24 | Do-until style loops with break/continue |
-| **Hash Maps** | 26 | Dictionary/object functionality, keys/values, access |
+| **Edge Cases** | 25 | Boundary conditions and error handling |
 
-```
+```bash
 # Run all tests
 ./build/bin/Release/volt_tests
 
@@ -525,30 +518,51 @@ VoltScript has **comprehensive test coverage** with 345 unit tests:
 ctest --test-dir build --output-on-failure
 ```
 
-**Result:** ✅ **100% Pass Rate** (345/345)
+**Result:** ✅ **100% Pass Rate** (450+ tests)
 
 ---
 
-## 🚀 What's Next?
+## 🗂️ Project Structure
 
-### Milestone 8: Object-Oriented Programming 🏗️
-*Real encapsulation, inheritance, and polymorphism*
-
-- [ ] **Class declarations**: `class Person { constructor(name) { this.name = name; } }`
-- [ ] **Instance methods**: `obj.method()` with proper `this` binding
-- [ ] **Inheritance**: `class Employee extends Person {}`
-- [ ] **Encapsulation**: Private/public members
-- [ ] **Method resolution**: Super calls, overloading
-
-### Future Roadmap
-- [ ] **String methods** — `.split()`, `.join()`, `.substring()`
-- [ ] **More array methods** — `.map()`, `.filter()`, `.reduce()`
-- [ ] **Exception handling** — `try`/`catch`
-- [ ] **Module system** — `import`/`export`
-- [ ] **Standard library**
-- [ ] **Bytecode compiler + VM** (for 10-100x speed improvement)
-- [ ] **Garbage collection** (currently uses shared_ptr)
-- [ ] **Debugger integration**
+```
+VoltScript/
+├── src/                    # Core implementation
+│   ├── token.{h,cpp}      # Token definitions
+│   ├── lexer.{h,cpp}      # Lexical analyzer
+│   ├── ast.{h,cpp}        # AST nodes
+│   ├── stmt.h             # Statement nodes
+│   ├── parser.{h,cpp}     # Recursive descent parser
+│   ├── value.{h,cpp}      # Value system
+│   ├── environment.{h,cpp}# Variable scoping
+│   ├── callable.{h,cpp}   # Function objects
+│   ├── array.{h,cpp}      # Array implementation
+│   ├── interpreter.{h,cpp}# Execution engine
+│   └── main.cpp           # REPL & file runner
+├── tests/                  # 450+ comprehensive tests
+│   ├── test_lexer.cpp
+│   ├── test_parser.cpp
+│   ├── test_interpreter.cpp
+│   ├── test_functions.cpp
+│   ├── test_arrays.cpp
+│   ├── test_hash_maps.cpp
+│   ├── test_new_features.cpp
+│   └── test_builtin_functions.cpp
+├── examples/               # Example programs
+│   ├── calculator.volt      # Basic arithmetic
+│   ├── file_operations.volt # File I/O examples
+│   ├── functional_programming.volt # Function composition
+│   ├── performance_benchmarking.volt # Timing examples
+│   ├── json_handling.volt   # JSON operations
+│   ├── array_manipulation.volt # Array operations
+│   ├── hashmap_operations.volt # Hash map examples
+│   ├── mathematical_functions.volt # Math functions
+│   ├── date_time_operations.volt # Time operations
+│   ├── string_processing.volt # String manipulation
+│   ├── sorting_algorithms.volt # Sorting examples
+│   └── game_simulation.volt # Game simulation
+├── CMakeLists.txt
+└── README.md
+```
 
 ---
 
@@ -611,7 +625,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.7.5 ⚡
+### ⚡ VoltScript v0.7.9 ⚡
 
 **Functions. Closures. Arrays. Power.**  
 *This is where languages get real.*

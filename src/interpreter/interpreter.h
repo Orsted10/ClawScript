@@ -9,16 +9,13 @@
 #include <string>
 #include <exception>
 #include <stdexcept>
+#include <sstream>
 
 namespace volt {
 
-/**
- * ReturnValue - Special exception for implementing return statements
- * 
- * When you hit a 'return' in VoltScript, we throw this to unwind
- * the call stack back to where the function was called.
- * It's cleaner than checking every statement for "did we return yet?"
- */
+// When a function hits 'return', we use this exception to jump
+// back to where the function was called. Much cleaner than checking
+// every statement to see if we already returned!
 class ReturnValue : public std::exception {
 public:
     Value value;
@@ -35,12 +32,9 @@ class BreakException : public std::exception {};
  */
 class ContinueException : public std::exception {};
 
-/**
- * Interpreter - Executes statements and evaluates expressions
- * 
- * This is a tree-walk interpreter - it directly executes the AST.
- * Not the fastest approach, but simple and easy to understand.
- */
+// This runs our VoltScript programs! It walks through the
+// abstract syntax tree (AST) and executes each piece. Sure, it's
+// not the fastest way to interpret code, but it's straightforward.
 class Interpreter {
 public:
     Interpreter();
@@ -91,13 +85,13 @@ private:
     Value evaluateUpdate(UpdateExpr* expr);
     Value evaluateTernary(TernaryExpr* expr);
     
-    // ARRAY EVALUATION - NEW!
+    // ARRAY EVALUATION - Added!
     Value evaluateArray(ArrayExpr* expr);
     Value evaluateIndex(IndexExpr* expr);
     Value evaluateIndexAssign(IndexAssignExpr* expr);
     Value evaluateMember(MemberExpr* expr);
     
-    // HASH MAP EVALUATION - NEW!
+    // HASH MAP EVALUATION - Added!
     Value evaluateHashMap(HashMapExpr* expr);
     
     // Helper methods

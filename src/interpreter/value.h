@@ -8,8 +8,8 @@ namespace volt {
 
 // Forward declarations
 class Callable;
-class VoltArray;  // NEW!
-struct VoltHashMap;  // NEW! - Changed from class to struct to match definition
+class VoltArray;  // Added!
+struct VoltHashMap;  // Added - Changed from class to struct to match definition
 
 // Runtime value types
 using Value = std::variant<
@@ -18,11 +18,11 @@ using Value = std::variant<
     double,                      // number
     std::string,                 // string
     std::shared_ptr<Callable>,   // function
-    std::shared_ptr<VoltArray>,  // array - NEW!
-    std::shared_ptr<VoltHashMap> // hash map - NEW!
+    std::shared_ptr<VoltArray>,  // array - Added!
+    std::shared_ptr<VoltHashMap> // hash map - Added!
 >;
 
-// Type checking helpers
+// Easy ways to check what type of value we're dealing with
 inline bool isNil(const Value& v) {
     return std::holds_alternative<std::nullptr_t>(v);
 }
@@ -43,15 +43,15 @@ inline bool isCallable(const Value& v) {
     return std::holds_alternative<std::shared_ptr<Callable>>(v);
 }
 
-inline bool isArray(const Value& v) {  // NEW!
+inline bool isArray(const Value& v) {  // Added!
     return std::holds_alternative<std::shared_ptr<VoltArray>>(v);
 }
 
-inline bool isHashMap(const Value& v) {  // NEW!
+inline bool isHashMap(const Value& v) {  // Added!
     return std::holds_alternative<std::shared_ptr<VoltHashMap>>(v);
 }
 
-// Get typed values
+// Extract actual values from our variant wrapper
 inline double asNumber(const Value& v) {
     return std::get<double>(v);
 }
@@ -64,15 +64,19 @@ inline std::string asString(const Value& v) {
     return std::get<std::string>(v);
 }
 
-inline std::shared_ptr<VoltArray> asArray(const Value& v) {  // NEW!
+inline std::shared_ptr<VoltArray> asArray(const Value& v) {  // Added!
     return std::get<std::shared_ptr<VoltArray>>(v);
 }
 
-inline std::shared_ptr<VoltHashMap> asHashMap(const Value& v) {  // NEW!
+inline std::shared_ptr<VoltHashMap> asHashMap(const Value& v) {  // Added!
     return std::get<std::shared_ptr<VoltHashMap>>(v);
 }
 
-// Truthiness (for conditionals)
+inline std::shared_ptr<Callable> asCallable(const Value& v) {
+    return std::get<std::shared_ptr<Callable>>(v);
+}
+
+// Figure out if something is true or false for if statements
 bool isTruthy(const Value& v);
 
 // Equality

@@ -80,7 +80,7 @@ std::string printAST(Expr* expr) {
     }
     
     // ========================================
-    // ARRAY EXPRESSIONS - NEW!
+    // ARRAY EXPRESSIONS - Added!
     // ========================================
     
     if (auto* array = dynamic_cast<ArrayExpr*>(expr)) {

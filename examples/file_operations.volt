@@ -1,0 +1,32 @@
+// Example: File Operations in VoltScript
+print("=== File Operations Demo ===");
+
+// Check if file exists
+filename = "sample.txt";
+if (exists(filename)) {
+    print("File " + filename + " exists!");
+    print("File size: " + str(fileSize(filename)) + " bytes");
+} else {
+    print("File " + filename + " does not exist");
+    // Create the file
+    writeFile(filename, "This is a sample file for demonstration.");
+    print("Created sample file");
+}
+
+// Read and display file content
+content = readFile(filename);
+print("File content:");
+print(content);
+
+// Append to file
+appendFile(filename, "\nAppended line!");
+print("Appended to file");
+
+// Read updated content
+updatedContent = readFile(filename);
+print("Updated content:");
+print(updatedContent);
+
+// Clean up by deleting the file
+deleteFile(filename);
+print("Cleaned up - deleted sample file");
