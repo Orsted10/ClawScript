@@ -10,6 +10,13 @@
 #include <string>
 #include <vector>
 
+/******  FOR UTF-8 In Window Terminal or Powershell. ***********/
+#ifdef _WIN32
+    #include <windows.h>
+#endif
+
+/***************************************************************/
+
 // Helper to print tokens for debug mode
 void dumpTokens(const std::vector<volt::Token>& tokens) {
     std::cout << "\n=== TOKENS ===\n";
@@ -238,9 +245,14 @@ void runPrompt() {
 }
 
 int main(int argc, char** argv) {
+
+    // Handling UTF-8 in window Terminal/powershell
+     #ifdef _WIN32
+        SetConsoleOutputCP(CP_UTF8);
+    #endif
+    
     bool debugMode = false;
     std::string scriptPath;
-    
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
