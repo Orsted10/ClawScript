@@ -7,7 +7,7 @@
 
 > *From tokens → trees → closures → arrays → objects*  
 
-[![Tests](https://img.shields.io/badge/tests-450%2B-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-650%2B-brightgreen)]()
 [![C++](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -219,7 +219,7 @@ cmake --build build --config Release
 ctest --output-on-failure --test-dir build
 ```
 
-**Result:** ✅ **100% Pass Rate** (450+ tests)
+**Result:** ✅ **90% Pass Rate** (650+ tests, 584 passing)
 
 ---
 
@@ -488,9 +488,9 @@ if (slowBench.timeMicroseconds > 0) {
 
 ---
 
-## 🧪 Testing (450+ Tests!)
+## 🧪 Testing (650+ Tests!)
 
-VoltScript has **comprehensive test coverage** with 450+ unit tests:
+VoltScript has **comprehensive test coverage** with 650+ unit tests:
 
 | Test Suite | Tests | Description |
 |-----------|-------|-------------|
@@ -518,7 +518,7 @@ VoltScript has **comprehensive test coverage** with 450+ unit tests:
 ctest --test-dir build --output-on-failure
 ```
 
-**Result:** ✅ **100% Pass Rate** (450+ tests)
+**Result:** ✅ **90% Pass Rate** (650+ tests, 584 passing)
 
 ---
 
@@ -547,7 +547,7 @@ VoltScript/
 │   ├── test_hash_maps.cpp
 │   ├── test_new_features.cpp
 │   └── test_builtin_functions.cpp
-├── examples/               # Example programs
+├── examples/               # 44+ Example programs
 │   ├── calculator.volt      # Basic arithmetic
 │   ├── file_operations.volt # File I/O examples
 │   ├── functional_programming.volt # Function composition

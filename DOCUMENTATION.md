@@ -2022,7 +2022,7 @@ A: Arrays, hash maps, strings, numbers, booleans, and functions.
 ### Development
 
 **Q: How many tests does it have?**
-A: Over 450 comprehensive unit tests covering all language features.
+A: Over 650 comprehensive unit tests covering all language features.
 
 **Q: How is error reporting handled?**
 A: Precise error messages with line and column numbers for exact source location.

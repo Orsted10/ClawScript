@@ -1,93 +1,184 @@
-// Example: Performance Benchmarking in VoltScript
-print("=== Performance Benchmarking Demo ===");
+// Performance benchmarking and timing demonstration
+print "=== Performance Benchmarking ===";
 
-// Define functions to benchmark
-slowFunction = fun(n) {
-    // Simulate some computation
-    result = 0;
-    for (let i = 0; i < n; i = i + 1) {
-        result = result + i * i;
-    }
-    return result;
-};
+// Measure simple operations
+print "=== Basic Timing ===";
+let startTime = now();
+let endTime = now();
+print "Time measurement overhead: " + str(endTime - startTime) + " ms";
 
-fastFunction = fun(n) {
-    // Fast computation
-    return n * (n + 1) / 2;
-};
+// Benchmark different loop types
+print "\n=== Loop Performance Comparison ===";
 
-// Benchmark the slow function
-print("Benchmarking slow function...");
-benchSlow = benchmark(slowFunction, 1000);
-print("Result: " + str(benchSlow.result));
-print("Time (ms): " + str(benchSlow.timeMilliseconds));
-print("Time (μs): " + str(benchSlow.timeMicroseconds));
+// For loop benchmark
+let startTime1 = now();
+let sum1 = 0;
+for (let i = 0; i < 10000; i = i + 1) {
+    sum1 = sum1 + i;
+}
+let endTime1 = now();
+print "For loop (10000 iterations): " + str(endTime1 - startTime1) + " ms";
+print "Sum: " + str(sum1);
 
-// Benchmark the fast function
-print("\nBenchmarking fast function...");
-benchFast = benchmark(fastFunction, 1000);
-print("Result: " + str(benchFast.result));
-print("Time (ms): " + str(benchFast.timeMilliseconds));
-print("Time (μs): " + str(benchFast.timeMicroseconds));
+// While loop benchmark
+let startTime2 = now();
+let sum2 = 0;
+let counter = 0;
+while (counter < 10000) {
+    sum2 = sum2 + counter;
+    counter = counter + 1;
+}
+let endTime2 = now();
+print "While loop (10000 iterations): " + str(endTime2 - startTime2) + " ms";
+print "Sum: " + str(sum2);
 
-// Compare performance
-speedup = benchSlow.timeMicroseconds / benchFast.timeMicroseconds;
-print("\nSpeedup factor: approximately " + str(speedup) + "x");
+// Array operations benchmark
+print "\n=== Array Operations Performance ===";
 
-// Timing different sizes
-sizes = [100, 500, 1000];
-print("\nTiming for different input sizes:");
-for (let i = 0; i < sizes.length; i = i + 1) {
-    size = sizes[i];
-    timing = benchmark(slowFunction, size);
-    print("Size " + str(size) + ": " + str(timing.timeMilliseconds) + " ms");
+// Create large array
+let startTime3 = now();
+let largeArray = [];
+for (let i = 0; i < 5000; i = i + 1) {
+    largeArray.push(i);
+}
+let endTime3 = now();
+print "Array creation (5000 elements): " + str(endTime3 - startTime3) + " ms";
+
+// Array iteration
+let startTime4 = now();
+let arraySum = 0;
+for (let i = 0; i < largeArray.length; i = i + 1) {
+    arraySum = arraySum + largeArray[i];
+}
+let endTime4 = now();
+print "Array iteration and sum: " + str(endTime4 - startTime4) + " ms";
+print "Array sum: " + str(arraySum);
+
+// String operations benchmark
+print "\n=== String Operations Performance ===";
+
+// String concatenation
+let startTime5 = now();
+let longString = "";
+for (let i = 0; i < 1000; i = i + 1) {
+    longString = longString + "x";
+}
+let endTime5 = now();
+print "String concatenation (1000 chars): " + str(endTime5 - startTime5) + " ms";
+print "String length: " + str(len(longString));
+
+// String building with array join
+let startTime6 = now();
+let stringParts = [];
+for (let i = 0; i < 1000; i = i + 1) {
+    stringParts.push("x");
+}
+let builtString = stringParts.join("");
+let endTime6 = now();
+print "Array-based string building: " + str(endTime6 - startTime6) + " ms";
+print "Built string length: " + str(len(builtString));
+
+// Mathematical operations benchmark
+print "\n=== Mathematical Operations Performance ===";
+
+// Square root calculations
+let startTime7 = now();
+let sqrtSum = 0;
+for (let i = 1; i <= 1000; i = i + 1) {
+    sqrtSum = sqrtSum + sqrt(float(i));
+}
+let endTime7 = now();
+print "1000 square root calculations: " + str(endTime7 - startTime7) + " ms";
+print "Sum of square roots: " + str(sqrtSum);
+
+// Power calculations
+let startTime8 = now();
+let powerSum = 0;
+for (let i = 1; i <= 100; i = i + 1) {
+    powerSum = powerSum + pow(float(i), 2);
+}
+let endTime8 = now();
+print "100 power calculations: " + str(endTime8 - startTime8) + " ms";
+print "Sum of squares: " + str(powerSum);
+
+// Function call overhead
+print "\n=== Function Call Performance ===";
+
+fn simpleFunction(x) {
+    return x + 1;
 }
 
-// Using sleep for timing demonstrations
-print("\nDemonstrating sleep function:");
-print("Before sleep...");
-sleep(1000);  // Sleep for 1 second
-print("After sleep (1 second delay)");
+let startTime9 = now();
+let funcResult = 0;
+for (let i = 0; i < 10000; i = i + 1) {
+    funcResult = simpleFunction(funcResult);
+}
+let endTime9 = now();
+print "10000 function calls: " + str(endTime9 - startTime9) + " ms";
+print "Final result: " + str(funcResult);
 
-// Practical example: Benchmark different algorithms
-fibRecursive = fun(n) {
-    if (n <= 1) return n;
-    return fibRecursive(n - 1) + fibRecursive(n - 2);
-};
+// Recursive function performance
+print "\n=== Recursive Function Performance ===";
 
-fibIterative = fun(n) {
-    if (n <= 1) return n;
-    a = 0;
-    b = 1;
+fn fibonacciRecursive(n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fibonacciRecursive(n - 1) + fibonacciRecursive(n - 2);
+}
+
+let startTime10 = now();
+let fibResult = fibonacciRecursive(20);
+let endTime10 = now();
+print "Fibonacci(20) recursive: " + str(endTime10 - startTime10) + " ms";
+print "Result: " + str(fibResult);
+
+// Iterative vs recursive comparison
+fn fibonacciIterative(n) {
+    if (n <= 1) {
+        return n;
+    }
+    let a = 0;
+    let b = 1;
     for (let i = 2; i <= n; i = i + 1) {
-        temp = a + b;
+        let temp = a + b;
         a = b;
         b = temp;
     }
     return b;
-};
+}
 
-// Be careful with recursive Fibonacci - use small n
-print("\nComparing Fibonacci implementations (n=20):");
-fibRecBench = benchmark(fibRecursive, 20);
-print("Recursive Fibonacci: " + str(fibRecBench.timeMicroseconds) + " μs");
+let startTime11 = now();
+let fibIterResult = fibonacciIterative(20);
+let endTime11 = now();
+print "Fibonacci(20) iterative: " + str(endTime11 - startTime11) + " ms";
+print "Result: " + str(fibIterResult);
 
-fibIterBench = benchmark(fibIterative, 20);
-print("Iterative Fibonacci: " + str(fibIterBench.timeMicroseconds) + " μs");
+// Memory allocation test
+print "\n=== Memory Allocation Performance ===";
 
-// Performance testing utility function
-performanceTest = fun(func, inputs, desc) {
-    print("\nPerformance test: " + desc);
-    totalTime = 0;
-    for (let i = 0; i < inputs.length; i = i + 1) {
-        bench = benchmark(func, inputs[i]);
-        totalTime = totalTime + bench.timeMicroseconds;
-        print("  Input " + str(inputs[i]) + ": " + str(bench.timeMicroseconds) + " μs");
+let startTime12 = now();
+let nestedArrays = [];
+for (let i = 0; i < 100; i = i + 1) {
+    let innerArray = [];
+    for (let j = 0; j < 100; j = j + 1) {
+        innerArray.push(i * j);
     }
-    avgTime = totalTime / inputs.length;
-    print("  Average time: " + str(avgTime) + " μs");
-};
+    nestedArrays.push(innerArray);
+}
+let endTime12 = now();
+print "Nested array creation (100x100): " + str(endTime12 - startTime12) + " ms";
+print "Outer array length: " + str(nestedArrays.length);
 
-// Run a performance test
-inputs = [10, 20, 30];
-performanceTest(fastFunction, inputs, "Fast summation function");
+// Sleep function demonstration
+print "\n=== Sleep Function Demo ===";
+print "Sleeping for 100ms...";
+sleep(100);
+print "Awake!";
+
+print "\n=== Performance Summary ===";
+print "All benchmarks completed successfully";
+print "Performance testing helps identify bottlenecks";
+print "Different approaches have different performance characteristics";
+
+print "\n=== Performance Benchmarking Complete ===";

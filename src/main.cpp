@@ -144,11 +144,12 @@ void runPrompt() {
     std::vector<std::string> history;
     std::string buffer;
     
-    std::cout << "VoltScript v0.7.0 REPL\n";
-    std::cout << "Type 'exit' to quit, 'history' to show command history\n\n";
+    std::cout << "\n⚡ VoltScript v0.7.9 REPL\n";
+    std::cout << "Type 'exit' to quit, 'history' to show command history\n";
+    std::cout << "Commands: clear (reset environment), help (show this message)\n\n";
     
     while (true) {
-        // Show different prompt for continuation lines
+        // Shows different prompt for continuation lines
         std::cout << (buffer.empty() ? "> " : ". ");
         
         std::string line;
@@ -168,6 +169,24 @@ void runPrompt() {
             if (line == "clear") {
                 interpreter.reset();
                 std::cout << "Environment cleared.\n";
+                continue;
+            }
+            if (line == "help") {
+                std::cout << "\n=== VoltScript v0.7.9 Help ===\n";
+                std::cout << "Special commands:\n";
+                std::cout << "  exit/quit    - Exit the REPL\n";
+                std::cout << "  history      - Show command history\n";
+                std::cout << "  clear        - Reset environment\n";
+                std::cout << "  help         - Show this help\n\n";
+                std::cout << "Features:\n";
+                std::cout << "  • Arrays with methods: push, pop, reverse, length\n";
+                std::cout << "  • Hash maps with keys, values, has, remove\n";
+                std::cout << "  • File I/O: readFile, writeFile, exists, fileSize\n";
+                std::cout << "  • String functions: len, substr, indexOf, toUpper, toLower\n";
+                std::cout << "  • Math functions: sin, cos, tan, log, exp, sqrt, pow\n";
+                std::cout << "  • JSON support: jsonEncode, jsonDecode\n";
+                std::cout << "  • Functional utilities: compose, pipe\n";
+                std::cout << "  • Performance tools: sleep, benchmark\n\n";
                 continue;
             }
             if (line.empty()) continue;
@@ -197,7 +216,7 @@ void runPrompt() {
             
             if (parser.hadError()) {
                 for (const auto& error : parser.getErrors()) {
-                    std::cerr << error << "\n";
+                    std::cerr << "❌ " << error << "\n";
                 }
                 buffer.clear();
                 continue;
@@ -207,11 +226,11 @@ void runPrompt() {
             interpreter.execute(statements);
             
         } catch (const volt::RuntimeError& e) {
-            std::cerr << "Runtime Error [Line " << e.token.line 
+            std::cerr << "❌ Runtime Error [Line " << e.token.line 
                       << ", Col " << e.token.column << "]: " 
                       << e.what() << "\n";
         } catch (const std::exception& e) {
-            std::cerr << "Error: " << e.what() << "\n";
+            std::cerr << "❌ Error: " << e.what() << "\n";
         }
         
         buffer.clear();
@@ -228,7 +247,7 @@ int main(int argc, char** argv) {
         if (arg == "--debug" || arg == "-d") {
             debugMode = true;
         } else if (arg == "--help" || arg == "-h") {
-            std::cout << "VoltScript v0.7.0\n";
+            std::cout << "⚡ VoltScript v0.7.9\n";
             std::cout << "Usage: volt [options] [script]\n\n";
             std::cout << "Options:\n";
             std::cout << "  --debug, -d    Print tokens and AST before execution\n";
