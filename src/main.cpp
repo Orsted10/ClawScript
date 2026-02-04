@@ -4,6 +4,7 @@
 #include "ast.h"
 #include "stmt.h"
 #include "token.h"
+#include "version.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -151,7 +152,7 @@ void runPrompt() {
     std::vector<std::string> history;
     std::string buffer;
     
-    std::cout << "\n⚡ VoltScript v0.7.9 REPL\n";
+    std::cout << "\n⚡ VoltScript v" << volt::VOLT_VERSION << " REPL\n";
     std::cout << "Type 'exit' to quit, 'history' to show command history\n";
     std::cout << "Commands: clear (reset environment), help (show this message)\n\n";
     
@@ -179,7 +180,7 @@ void runPrompt() {
                 continue;
             }
             if (line == "help") {
-                std::cout << "\n=== VoltScript v0.7.9 Help ===\n";
+                std::cout << "\n=== VoltScript v" << volt::VOLT_VERSION << " Help ===\n";
                 std::cout << "Special commands:\n";
                 std::cout << "  exit/quit    - Exit the REPL\n";
                 std::cout << "  history      - Show command history\n";
@@ -259,7 +260,7 @@ int main(int argc, char** argv) {
         if (arg == "--debug" || arg == "-d") {
             debugMode = true;
         } else if (arg == "--help" || arg == "-h") {
-            std::cout << "⚡ VoltScript v0.7.9\n";
+            std::cout << "⚡ VoltScript v" << volt::VOLT_VERSION << "\n";
             std::cout << "Usage: volt [options] [script]\n\n";
             std::cout << "Options:\n";
             std::cout << "  --debug, -d    Print tokens and AST before execution\n";
