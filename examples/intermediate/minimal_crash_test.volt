@@ -1,0 +1,10 @@
+// Minimal test to reproduce array method crash
+numbers = [1, 2, 3];
+func = fun(x) { return x * 2; };
+
+// Just create the map function call - don't execute it yet
+mapper = numbers.map;
+
+// Try to call it
+result = mapper(func);
+print result;

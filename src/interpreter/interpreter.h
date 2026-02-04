@@ -38,6 +38,7 @@ class ContinueException : public std::exception {};
 class Interpreter {
 public:
     Interpreter();
+    ~Interpreter();
     
     // Execute statements
     void execute(Stmt* stmt);
@@ -71,6 +72,7 @@ private:
     void executeReturnStmt(ReturnStmt* stmt);
     void executeBreakStmt(BreakStmt* stmt);
     void executeContinueStmt(ContinueStmt* stmt);
+    void executeTryStmt(TryStmt* stmt);
     
     // Expression evaluation
     Value evaluateLiteral(LiteralExpr* expr);
@@ -90,6 +92,7 @@ private:
     Value evaluateIndex(IndexExpr* expr);
     Value evaluateIndexAssign(IndexAssignExpr* expr);
     Value evaluateMember(MemberExpr* expr);
+    Value evaluateSet(SetExpr* expr);
     
     // HASH MAP EVALUATION - Added!
     Value evaluateHashMap(HashMapExpr* expr);
@@ -101,10 +104,18 @@ private:
     // Register built-in functions (like clock(), input(), etc.)
     void defineNatives();
     
+    // Removed getCurrent() method - using safer method
+    
     // JSON encoding/decoding methods (NEW FOR v0.7.5)
     std::string encodeToJson(const Value& value);
     Value decodeFromJson(const std::string& jsonString);
     void encodeJsonValue(const Value& value, std::ostringstream& oss);
+    
+    // Removed thread_local approach - using safer method
+    
+    // Recursion depth tracking for stress test protection
+    int recursion_depth_ = 0;
+    static const int MAX_RECURSION_DEPTH = 1000;
     
     std::shared_ptr<Environment> environment_;
     std::shared_ptr<Environment> globals_;

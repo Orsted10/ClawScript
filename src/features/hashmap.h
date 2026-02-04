@@ -57,22 +57,26 @@ struct VoltHashMap {
         return data.erase(key) > 0;
     }
     
-    // Get all keys as a vector
+    // Get all keys as a vector (optimized)
     std::vector<std::string> getKeys() const {
         std::vector<std::string> keys;
         keys.reserve(data.size());
+        keys.resize(data.size());
+        size_t i = 0;
         for (const auto& pair : data) {
-            keys.push_back(pair.first);
+            keys[i++] = pair.first;
         }
         return keys;
     }
     
-    // Get all values as a vector
+    // Get all values as a vector (optimized)
     std::vector<Value> getValues() const {
         std::vector<Value> values;
         values.reserve(data.size());
+        values.resize(data.size());
+        size_t i = 0;
         for (const auto& pair : data) {
-            values.push_back(pair.second);
+            values[i++] = pair.second;
         }
         return values;
     }

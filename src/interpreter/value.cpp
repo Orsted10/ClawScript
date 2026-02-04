@@ -5,8 +5,12 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <set>
 
 namespace volt {
+
+// Thread-local set to track visited objects for cycle detection during string conversion
+thread_local std::set<const void*> visitedObjects;
 
 bool isTruthy(const Value& v) {
     if (isNil(v)) return false;
@@ -48,6 +52,11 @@ bool isEqual(const Value& a, const Value& b) {
 }
 
 std::string valueToString(const Value& v) {
+    // Call the helper function with the thread-local visited set
+    return valueToStringWithCycleDetection(v, visitedObjects);
+}
+
+std::string valueToStringWithCycleDetection(const Value& v, std::set<const void*>& visited) {
     if (isNil(v)) {
         return "nil";
     } else if (isNumber(v)) {
@@ -72,18 +81,42 @@ std::string valueToString(const Value& v) {
         auto func = std::get<std::shared_ptr<Callable>>(v);
         return func->toString();
     } else if (isArray(v)) {
-        return asArray(v)->toString();
+        // For arrays, we need to also check for circular references
+        auto arr = asArray(v);
+        const void* ptr = arr.get();
+        
+        if (visited.count(ptr)) {
+            return "[Circular Array]";
+        }
+        
+        visited.insert(ptr);
+        std::string result = arr->toStringWithCycleDetection(visited);
+        visited.erase(ptr);
+        return result;
     } else if (isHashMap(v)) {  // Added!
         auto map = asHashMap(v);
+        const void* ptr = map.get();
+        
+        // Check if this map is already being processed (cycle detection)
+        if (visited.count(ptr)) {
+            return "{Circular Object}";
+        }
+        
+        // Mark this map as being processed
+        visited.insert(ptr);
+        
         std::ostringstream oss;
         oss << "{";
         bool first = true;
         for (const auto& [key, value] : map->data) {
             if (!first) oss << ", ";
-            oss << "\"" << key << "\": " << valueToString(value);
+            oss << "\"" << key << "\": " << valueToStringWithCycleDetection(value, visited);
             first = false;
         }
         oss << "}";
+        
+        // Unmark this map after processing
+        visited.erase(ptr);
         return oss.str();
     }
     return "unknown";

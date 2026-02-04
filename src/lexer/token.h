@@ -12,6 +12,7 @@ enum class TokenType {
     Let, If, Else, While, For, Run, Until, Fn, Return,
     True, False, Nil, Print,
     Break, Continue, // Loop control
+    Try, Catch, // Exception handling
     
     // Operators
     Plus, Minus, Star, Slash, Percent,

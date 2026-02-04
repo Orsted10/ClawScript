@@ -22,9 +22,11 @@ private:
 
 // Helper function to run code and capture output
 std::string runCode(const std::string& code) {
+    PrintCapture capture;
+    
     Lexer lexer(code);
     auto tokens = lexer.tokenize();
-
+    
     Parser parser(tokens);
     auto statements = parser.parseProgram();
 
@@ -32,13 +34,14 @@ std::string runCode(const std::string& code) {
         return "PARSE_ERROR";
     }
 
-    PrintCapture capture;
     Interpreter interpreter;
 
     try {
         interpreter.execute(statements);
     } catch (const std::exception& e) {
         return std::string("RUNTIME_ERROR: ") + e.what();
+    } catch (...) {
+        return "UNKNOWN_ERROR";
     }
 
     return capture.getOutput();

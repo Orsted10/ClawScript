@@ -1,0 +1,5 @@
+// Test function with captured variable
+x = 10;
+func = fun() { return x; };
+result = func();
+print result;

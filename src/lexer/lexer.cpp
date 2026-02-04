@@ -19,6 +19,9 @@ const std::unordered_map<std::string_view, TokenType> Lexer::keywords_ = {
     {"print", TokenType::Print},
     {"break", TokenType::Break},
     {"continue", TokenType::Continue},
+    {"try", TokenType::Try},
+    {"catch", TokenType::Catch},
+    {"fun", TokenType::Fn},  // Alias for fn
 };
 
 Lexer::Lexer(std::string_view source) : source_(source) {}

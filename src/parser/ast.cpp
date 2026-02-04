@@ -1,4 +1,5 @@
 #include "ast.h"
+#include "stmt.h"
 #include <sstream>
 
 namespace volt {
@@ -106,6 +107,20 @@ std::string printAST(Expr* expr) {
     
     if (auto* member = dynamic_cast<MemberExpr*>(expr)) {
         return printAST(member->object.get()) + "." + member->member;
+    }
+    
+    // Hash map expression printing - Added!
+    if (auto* hashMap = dynamic_cast<HashMapExpr*>(expr)) {
+        std::ostringstream oss;
+        oss << "{hashmap " << hashMap->keyValuePairs.size() << " pairs}";
+        return oss.str();
+    }
+    
+    // Function expression printing - Added!
+    if (auto* funcExpr = dynamic_cast<FunctionExpr*>(expr)) {
+        std::ostringstream oss;
+        oss << "(function " << funcExpr->parameters.size() << " params)";
+        return oss.str();
     }
     
     return "?";

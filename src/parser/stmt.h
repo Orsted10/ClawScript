@@ -126,4 +126,27 @@ struct ContinueStmt : Stmt {
     explicit ContinueStmt(Token tok) : Stmt(tok) {}
 };
 
+// Function Expression: fun(params) { body }  // Added!
+struct FunctionExpr : Expr {
+    std::vector<std::string> parameters;
+    std::vector<StmtPtr> body;
+    
+    FunctionExpr(Token keyword, 
+                 std::vector<std::string> params,
+                 std::vector<StmtPtr> b)
+        : Expr(keyword),
+          parameters(std::move(params)),
+          body(std::move(b)) {}
+};
+
+// Try statement: try { body } catch (error) { handler }
+struct TryStmt : Stmt {
+    StmtPtr tryBody;
+    std::string exceptionVar;
+    StmtPtr catchBody;
+    
+    TryStmt(Token tryTok, StmtPtr tryB, std::string exVar, StmtPtr catchB)
+        : Stmt(tryTok), tryBody(std::move(tryB)), exceptionVar(std::move(exVar)), catchBody(std::move(catchB)) {}
+};
+
 } // namespace volt

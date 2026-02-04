@@ -35,6 +35,7 @@ private:
     StmtPtr runUntilStatement();
     StmtPtr forStatement();
     StmtPtr blockStatement();
+    StmtPtr tryStatement();
     StmtPtr expressionStatement();
     
     // Expression parsing (by precedence level)
@@ -58,6 +59,9 @@ private:
 
     // Hash map parsing - Added!
     ExprPtr hashMapLiteral();
+    
+    // Function expression parsing - Added!
+    ExprPtr functionExpression();
 
     // Helper to finish call expressions
     ExprPtr finishCall(ExprPtr callee);

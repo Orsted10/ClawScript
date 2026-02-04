@@ -1,5 +1,6 @@
 #include "parser.h"
 #include <sstream>
+#include <iostream>
 
 namespace volt {
 
@@ -12,7 +13,10 @@ std::vector<StmtPtr> Parser::parseProgram() {
     
     while (!isAtEnd()) {
         try {
-            statements.push_back(statement());
+            StmtPtr stmt = statement();
+            if (stmt) {
+                statements.push_back(std::move(stmt));
+            }
         } catch (...) {
             synchronize();
         }
@@ -42,6 +46,7 @@ StmtPtr Parser::statement() {
     if (match(TokenType::While)) return whileStatement();
     if (match(TokenType::Run)) return runUntilStatement();
     if (match(TokenType::For)) return forStatement();
+    if (match(TokenType::Try)) return tryStatement();
     if (match(TokenType::LeftBrace)) return blockStatement();
     
     return expressionStatement();
@@ -92,7 +97,10 @@ StmtPtr Parser::fnStatement() {
     // Parse body (statements until we hit closing brace)
     std::vector<StmtPtr> body;
     while (!check(TokenType::RightBrace) && !isAtEnd()) {
-        body.push_back(statement());
+        StmtPtr stmt = statement();
+        if (stmt) {
+            body.push_back(std::move(stmt));
+        }
     }
     
     consume(TokenType::RightBrace, "Expected '}' after function body");
@@ -220,8 +228,38 @@ StmtPtr Parser::blockStatement() {
         statements.push_back(statement());
     }
     
-    consume(TokenType::RightBrace, "Expected '}' after block");
+    consume(TokenType::RightBrace, "Expected '\}' after block");
     return std::make_unique<BlockStmt>(brace, std::move(statements));
+}
+
+StmtPtr Parser::tryStatement() {
+    Token keyword = previous(); // 'try' token
+    
+    // Parse try body
+    StmtPtr tryBody = statement();
+    
+    if (!tryBody) {
+        return nullptr;
+    }
+    
+    // Expect 'catch' keyword
+    consume(TokenType::Catch, "Expected 'catch' after try block");
+    
+    // Parse exception variable
+    consume(TokenType::LeftParen, "Expected '(' after 'catch'");
+    Token exceptionVar = consume(TokenType::Identifier, "Expected exception variable name");
+    consume(TokenType::RightParen, "Expected ')' after exception variable");
+    
+    // Parse catch body
+    StmtPtr catchBody = statement();
+    
+    if (!catchBody) {
+        return nullptr;
+    }
+    
+    return std::make_unique<TryStmt>(keyword, std::move(tryBody), 
+                                     std::string(exceptionVar.lexeme), 
+                                     std::move(catchBody));
 }
 
 StmtPtr Parser::expressionStatement() {
@@ -256,6 +294,16 @@ ExprPtr Parser::assignment() {
                 index->token,
                 std::move(index->object),
                 std::move(index->index),
+                std::move(value)
+            );
+        }
+        
+        // Property assignment: obj.property = value  // Added!
+        if (auto* member = dynamic_cast<MemberExpr*>(expr.get())) {
+            return std::make_unique<SetExpr>(
+                member->token,
+                std::move(member->object),
+                member->member,
                 std::move(value)
             );
         }
@@ -424,6 +472,43 @@ ExprPtr Parser::call() {
     return expr;
 }
 
+// Function expression parsing - Added!
+ExprPtr Parser::functionExpression() {
+    Token keyword = previous(); // This is the 'fun' token
+    
+    consume(TokenType::LeftParen, "Expected '(' after 'fun'");
+    
+    // Parse parameters
+    std::vector<std::string> parameters;
+    if (!check(TokenType::RightParen)) {
+        do {
+            if (parameters.size() >= 255) {
+                error("Can't have more than 255 parameters");
+            }
+            
+            Token param = consume(TokenType::Identifier, "Expected parameter name");
+            parameters.push_back(std::string(param.lexeme));
+        } while (match(TokenType::Comma));
+    }
+    
+    consume(TokenType::RightParen, "Expected ')' after parameters");
+    consume(TokenType::LeftBrace, "Expected '{' before function body");
+    
+    // Parse body (statements until we hit closing brace)
+    std::vector<StmtPtr> body;
+    while (!check(TokenType::RightBrace) && !isAtEnd()) {
+        StmtPtr stmt = statement();
+        if (stmt) {
+            body.push_back(std::move(stmt));
+        }
+    }
+    
+    consume(TokenType::RightBrace, "Expected '}' after function body");
+    
+    // Create function expression (similar to FnStmt but as an expression)
+    return std::make_unique<FunctionExpr>(keyword, std::move(parameters), std::move(body));
+}
+
 ExprPtr Parser::finishCall(ExprPtr callee) {
     Token paren = previous(); // This is the '('
     std::vector<ExprPtr> arguments;
@@ -573,6 +658,11 @@ ExprPtr Parser::primary() {
     // Hash map literal: {"key": "value", "age": 25}  // Added!
     if (match(TokenType::LeftBrace)) {
         return hashMapLiteral();
+    }
+
+    // Function expression: fun(params) { body }  // Added!
+    if (match(TokenType::Fn)) {
+        return functionExpression();
     }
 
     error("Expected expression");

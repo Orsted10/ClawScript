@@ -1,0 +1,12 @@
+// Test recursion depth tracking
+func = fun(x) {
+    if (x <= 0) {
+        return 0;
+    } else {
+        return func(x - 1);
+    }
+};
+
+// This should work - not too deep
+result = func(10);
+print result;

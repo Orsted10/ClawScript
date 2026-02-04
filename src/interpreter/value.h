@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <set>
 
 namespace volt {
 
@@ -84,5 +85,6 @@ bool isEqual(const Value& a, const Value& b);
 
 // String representation
 std::string valueToString(const Value& v);
+std::string valueToStringWithCycleDetection(const Value& v, std::set<const void*>& visited);
 
 } // namespace volt

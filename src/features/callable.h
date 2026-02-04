@@ -55,8 +55,8 @@ public:
     std::string toString() const override;
     
 private:
-    struct FnStmt* declaration_;           // The function's AST node
-    std::shared_ptr<Environment> closure_; // The environment where it was defined
+    struct FnStmt* declaration_;   // The function's AST node
+    std::shared_ptr<Environment> closure_;         // The environment where it was defined
 };
 
 /**

@@ -10,6 +10,9 @@ namespace volt {
 struct Expr;
 using ExprPtr = std::unique_ptr<Expr>;
 
+struct Stmt;
+using StmtPtr = std::unique_ptr<Stmt>;
+
 // Base expression node
 struct Expr {
     Token token; // Representative token for error reporting
@@ -175,6 +178,18 @@ struct MemberExpr : Expr {
     MemberExpr(Token name, ExprPtr obj, std::string mem)
         : Expr(name), object(std::move(obj)), member(std::move(mem)) {}
 };
+
+// Property Assignment: obj.property = value
+struct SetExpr : Expr {
+    ExprPtr object;      // The object
+    std::string member;  // The property name
+    ExprPtr value;       // The value to assign
+    
+    SetExpr(Token name, ExprPtr obj, std::string mem, ExprPtr val)
+        : Expr(name), object(std::move(obj)), member(std::move(mem)), value(std::move(val)) {}
+};
+
+
 
 // AST Pretty Printer
 std::string printAST(Expr* expr);
