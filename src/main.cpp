@@ -265,6 +265,10 @@ int main(int argc, char** argv) {
             std::cout << "Options:\n";
             std::cout << "  --debug, -d    Print tokens and AST before execution\n";
             std::cout << "  --help, -h     Show this help message\n";
+            std::cout << "  --version      Show version information\n";
+            return 0;
+        } else if (arg == "--version") {
+            std::cout << "VoltScript " << volt::VOLT_VERSION << "\n";
             return 0;
         } else if (arg[0] == '-') {
             std::cerr << "Unknown option: " << arg << "\n";
