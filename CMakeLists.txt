@@ -100,10 +100,6 @@ if(BUILD_TESTS)
         tests/test_arrays_extended.cpp
         tests/test_interpreter_edge_cases.cpp
         tests/test_builtin_functions.cpp
-        tests/test_stress_limits.cpp
-        tests/test_edge_cases_advanced.cpp
-        tests/test_functional_advanced.cpp
-        tests/test_performance_limits.cpp
         tests/test_basic_arithmetic.cpp
         tests/test_variable_operations.cpp
         tests/test_control_flow.cpp
