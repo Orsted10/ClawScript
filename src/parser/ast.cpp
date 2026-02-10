@@ -126,4 +126,38 @@ std::string printAST(Expr* expr) {
     return "?";
 }
 
+// Visitor Pattern Implementations
+Value LiteralExpr::accept(ExprVisitor& visitor) { return visitor.visitLiteralExpr(this); }
+Value VariableExpr::accept(ExprVisitor& visitor) { return visitor.visitVariableExpr(this); }
+Value UnaryExpr::accept(ExprVisitor& visitor) { return visitor.visitUnaryExpr(this); }
+Value BinaryExpr::accept(ExprVisitor& visitor) { return visitor.visitBinaryExpr(this); }
+Value LogicalExpr::accept(ExprVisitor& visitor) { return visitor.visitLogicalExpr(this); }
+Value GroupingExpr::accept(ExprVisitor& visitor) { return visitor.visitGroupingExpr(this); }
+Value CallExpr::accept(ExprVisitor& visitor) { return visitor.visitCallExpr(this); }
+Value AssignExpr::accept(ExprVisitor& visitor) { return visitor.visitAssignExpr(this); }
+Value CompoundAssignExpr::accept(ExprVisitor& visitor) { return visitor.visitCompoundAssignExpr(this); }
+Value UpdateExpr::accept(ExprVisitor& visitor) { return visitor.visitUpdateExpr(this); }
+Value TernaryExpr::accept(ExprVisitor& visitor) { return visitor.visitTernaryExpr(this); }
+Value ArrayExpr::accept(ExprVisitor& visitor) { return visitor.visitArrayExpr(this); }
+Value IndexExpr::accept(ExprVisitor& visitor) { return visitor.visitIndexExpr(this); }
+Value IndexAssignExpr::accept(ExprVisitor& visitor) { return visitor.visitIndexAssignExpr(this); }
+Value HashMapExpr::accept(ExprVisitor& visitor) { return visitor.visitHashMapExpr(this); }
+Value MemberExpr::accept(ExprVisitor& visitor) { return visitor.visitMemberExpr(this); }
+Value SetExpr::accept(ExprVisitor& visitor) { return visitor.visitSetExpr(this); }
+Value FunctionExpr::accept(ExprVisitor& visitor) { return visitor.visitFunctionExpr(this); }
+
+void ExprStmt::accept(StmtVisitor& visitor) { visitor.visitExprStmt(this); }
+void PrintStmt::accept(StmtVisitor& visitor) { visitor.visitPrintStmt(this); }
+void LetStmt::accept(StmtVisitor& visitor) { visitor.visitLetStmt(this); }
+void BlockStmt::accept(StmtVisitor& visitor) { visitor.visitBlockStmt(this); }
+void IfStmt::accept(StmtVisitor& visitor) { visitor.visitIfStmt(this); }
+void WhileStmt::accept(StmtVisitor& visitor) { visitor.visitWhileStmt(this); }
+void RunUntilStmt::accept(StmtVisitor& visitor) { visitor.visitRunUntilStmt(this); }
+void ForStmt::accept(StmtVisitor& visitor) { visitor.visitForStmt(this); }
+void FnStmt::accept(StmtVisitor& visitor) { visitor.visitFnStmt(this); }
+void ReturnStmt::accept(StmtVisitor& visitor) { visitor.visitReturnStmt(this); }
+void BreakStmt::accept(StmtVisitor& visitor) { visitor.visitBreakStmt(this); }
+void ContinueStmt::accept(StmtVisitor& visitor) { visitor.visitContinueStmt(this); }
+void TryStmt::accept(StmtVisitor& visitor) { visitor.visitTryStmt(this); }
+
 } // namespace volt

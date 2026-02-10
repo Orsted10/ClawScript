@@ -10,11 +10,45 @@ namespace volt {
 struct Stmt;
 using StmtPtr = std::unique_ptr<Stmt>;
 
+// Forward declarations for Visitor
+struct ExprStmt;
+struct PrintStmt;
+struct LetStmt;
+struct BlockStmt;
+struct IfStmt;
+struct WhileStmt;
+struct RunUntilStmt;
+struct ForStmt;
+struct FnStmt;
+struct ReturnStmt;
+struct BreakStmt;
+struct ContinueStmt;
+struct TryStmt;
+
+class StmtVisitor {
+public:
+    virtual ~StmtVisitor() = default;
+    virtual void visitExprStmt(ExprStmt* stmt) = 0;
+    virtual void visitPrintStmt(PrintStmt* stmt) = 0;
+    virtual void visitLetStmt(LetStmt* stmt) = 0;
+    virtual void visitBlockStmt(BlockStmt* stmt) = 0;
+    virtual void visitIfStmt(IfStmt* stmt) = 0;
+    virtual void visitWhileStmt(WhileStmt* stmt) = 0;
+    virtual void visitRunUntilStmt(RunUntilStmt* stmt) = 0;
+    virtual void visitForStmt(ForStmt* stmt) = 0;
+    virtual void visitFnStmt(FnStmt* stmt) = 0;
+    virtual void visitReturnStmt(ReturnStmt* stmt) = 0;
+    virtual void visitBreakStmt(BreakStmt* stmt) = 0;
+    virtual void visitContinueStmt(ContinueStmt* stmt) = 0;
+    virtual void visitTryStmt(TryStmt* stmt) = 0;
+};
+
 // Base statement node
 struct Stmt {
     Token token; // Representative token for errors
     explicit Stmt(Token tok) : token(tok) {}
     virtual ~Stmt() = default;
+    virtual void accept(StmtVisitor& visitor) = 0;
 };
 
 // Expression statement: expr;
@@ -22,6 +56,7 @@ struct ExprStmt : Stmt {
     ExprPtr expr;
     
     ExprStmt(Token tok, ExprPtr e) : Stmt(tok), expr(std::move(e)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Print statement: print expr;
@@ -29,6 +64,7 @@ struct PrintStmt : Stmt {
     ExprPtr expr;
     
     PrintStmt(Token tok, ExprPtr e) : Stmt(tok), expr(std::move(e)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Variable declaration: let name = expr;
@@ -38,6 +74,7 @@ struct LetStmt : Stmt {
     
     LetStmt(Token nameTok, ExprPtr init)
         : Stmt(nameTok), name(std::string(nameTok.lexeme)), initializer(std::move(init)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Block statement: { stmts... }
@@ -46,6 +83,7 @@ struct BlockStmt : Stmt {
     
     BlockStmt(Token brace, std::vector<StmtPtr> stmts)
         : Stmt(brace), statements(std::move(stmts)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // If statement: if (condition) thenBranch [else elseBranch]
@@ -58,6 +96,7 @@ struct IfStmt : Stmt {
         : Stmt(ifTok), condition(std::move(cond)), 
           thenBranch(std::move(thenB)),
           elseBranch(std::move(elseB)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // While statement: while (condition) body
@@ -67,6 +106,7 @@ struct WhileStmt : Stmt {
     
     WhileStmt(Token whileTok, ExprPtr cond, StmtPtr b)
         : Stmt(whileTok), condition(std::move(cond)), body(std::move(b)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Run-Until statement: run { body } until (condition);
@@ -77,6 +117,7 @@ struct RunUntilStmt : Stmt {
     
     RunUntilStmt(Token runTok, StmtPtr b, ExprPtr cond)
         : Stmt(runTok), body(std::move(b)), condition(std::move(cond)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // For statement: for (init; condition; increment) body
@@ -92,6 +133,7 @@ struct ForStmt : Stmt {
           condition(std::move(cond)),
           increment(std::move(incr)),
           body(std::move(b)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Function declaration: fn name(params...) { body }
@@ -107,6 +149,7 @@ struct FnStmt : Stmt {
           name(std::string(nameTok.lexeme)), 
           parameters(std::move(params)),
           body(std::move(b)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Return statement: return expr;
@@ -114,16 +157,19 @@ struct ReturnStmt : Stmt {
     ExprPtr value;  // can be null (just "return;")
     
     ReturnStmt(Token returnTok, ExprPtr v) : Stmt(returnTok), value(std::move(v)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Break statement: break;
 struct BreakStmt : Stmt {
     explicit BreakStmt(Token tok) : Stmt(tok) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Continue statement: continue;
 struct ContinueStmt : Stmt {
     explicit ContinueStmt(Token tok) : Stmt(tok) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 // Function Expression: fun(params) { body }  // Added!
@@ -137,6 +183,7 @@ struct FunctionExpr : Expr {
         : Expr(keyword),
           parameters(std::move(params)),
           body(std::move(b)) {}
+    Value accept(ExprVisitor& visitor) override;
 };
 
 // Try statement: try { body } catch (error) { handler }
@@ -147,6 +194,7 @@ struct TryStmt : Stmt {
     
     TryStmt(Token tryTok, StmtPtr tryB, std::string exVar, StmtPtr catchB)
         : Stmt(tryTok), tryBody(std::move(tryB)), exceptionVar(std::move(exVar)), catchBody(std::move(catchB)) {}
+    void accept(StmtVisitor& visitor) override;
 };
 
 } // namespace volt

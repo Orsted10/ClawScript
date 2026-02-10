@@ -4,8 +4,8 @@
 #include "ast.h"
 #include "value.h"
 #include "environment.h"
-#include "features/array.h"  // Added!
-#include "features/hashmap.h"  // Added!
+#include "features/array.h"
+#include "features/hashmap.h"
 #include "interpreter/natives/native_math.h"
 #include "interpreter/natives/native_string.h"
 #include "interpreter/natives/native_array.h"
@@ -17,13 +17,10 @@
 #include <fstream>
 #include <iomanip>
 #include <cmath>
-#include <iostream>  // Added for std::cout, std::cin
-#include <chrono>    // Added for clock() function
-#include <sstream>   // Added for JSON encoding
-#include <iomanip>   // Added for JSON formatting
-#include <thread>    // Added for sleep function
-#include <fstream>   // Added for file operations
-#include <cstdio>    // Added for std::remove function
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include <cstdio>
 
 namespace volt {
 
@@ -117,13 +114,13 @@ void Interpreter::defineNatives() {
             if (isString(v)) return "string";
             if (isCallable(v)) return "function";
             if (isArray(v)) return "array";
-            if (isHashMap(v)) return "hashmap";  // Added!
+            if (isHashMap(v)) return "hashmap";
             return "unknown";
         },
         "type"
     ));
     
-    // keys(hashmap) - get all keys from a hash map  // Added!
+    // keys(hashmap) - get all keys from a hash map
     globals_->define("keys", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
@@ -145,7 +142,7 @@ void Interpreter::defineNatives() {
         "keys"
     ));
     
-    // values(hashmap) - get all values from a hash map  // Added!
+    // values(hashmap) - get all values from a hash map
     globals_->define("values", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
@@ -167,7 +164,7 @@ void Interpreter::defineNatives() {
         "values"
     ));
     
-    // has(hashmap, key) - check if a key exists in a hash map  // Added!
+    // has(hashmap, key) - check if a key exists in a hash map
     globals_->define("has", std::make_shared<NativeFunction>(
         2,
         [](const std::vector<Value>& args) -> Value {
@@ -188,7 +185,7 @@ void Interpreter::defineNatives() {
         "has"
     ));
     
-    // remove(hashmap, key) - remove a key-value pair from a hash map  // Added!
+    // remove(hashmap, key) - remove a key-value pair from a hash map
     globals_->define("remove", std::make_shared<NativeFunction>(
         2,
         [](const std::vector<Value>& args) -> Value {
@@ -350,34 +347,8 @@ void Interpreter::defineNatives() {
 // ========================================
 
 void Interpreter::execute(Stmt* stmt) {
-    if (auto* exprStmt = dynamic_cast<ExprStmt*>(stmt)) {
-        executeExprStmt(exprStmt);
-    } else if (auto* printStmt = dynamic_cast<PrintStmt*>(stmt)) {
-        executePrintStmt(printStmt);
-    } else if (auto* letStmt = dynamic_cast<LetStmt*>(stmt)) {
-        executeLetStmt(letStmt);
-    } else if (auto* blockStmt = dynamic_cast<BlockStmt*>(stmt)) {
-        executeBlockStmt(blockStmt);
-    } else if (auto* ifStmt = dynamic_cast<IfStmt*>(stmt)) {
-        executeIfStmt(ifStmt);
-    } else if (auto* whileStmt = dynamic_cast<WhileStmt*>(stmt)) {
-        executeWhileStmt(whileStmt);
-    } else if (auto* runUntilStmt = dynamic_cast<RunUntilStmt*>(stmt)) {
-        executeRunUntilStmt(runUntilStmt);
-    } else if (auto* forStmt = dynamic_cast<ForStmt*>(stmt)) {
-        executeForStmt(forStmt);
-    } else if (auto* fnStmt = dynamic_cast<FnStmt*>(stmt)) {
-        executeFnStmt(fnStmt);
-    } else if (auto* returnStmt = dynamic_cast<ReturnStmt*>(stmt)) {
-        executeReturnStmt(returnStmt);
-    } else if (auto* breakStmt = dynamic_cast<BreakStmt*>(stmt)) {
-        executeBreakStmt(breakStmt);
-    } else if (auto* continueStmt = dynamic_cast<ContinueStmt*>(stmt)) {
-        executeContinueStmt(continueStmt);
-    } else if (auto* tryStmt = dynamic_cast<TryStmt*>(stmt)) {
-        executeTryStmt(tryStmt);
-    } else {
-        throw std::runtime_error("Unknown statement type");
+    if (stmt) {
+        stmt->accept(*this);
     }
 }
 
@@ -387,16 +358,16 @@ void Interpreter::execute(const std::vector<StmtPtr>& statements) {
     }
 }
 
-void Interpreter::executeExprStmt(ExprStmt* stmt) {
+void Interpreter::visitExprStmt(ExprStmt* stmt) {
     evaluate(stmt->expr.get());
 }
 
-void Interpreter::executePrintStmt(PrintStmt* stmt) {
+void Interpreter::visitPrintStmt(PrintStmt* stmt) {
     Value value = evaluate(stmt->expr.get());
     std::cout << valueToString(value) << "\n";
 }
 
-void Interpreter::executeLetStmt(LetStmt* stmt) {
+void Interpreter::visitLetStmt(LetStmt* stmt) {
     Value value = nullptr;
     if (stmt->initializer) {
         value = evaluate(stmt->initializer.get());
@@ -404,7 +375,7 @@ void Interpreter::executeLetStmt(LetStmt* stmt) {
     environment_->define(stmt->name, value);
 }
 
-void Interpreter::executeBlockStmt(BlockStmt* stmt) {
+void Interpreter::visitBlockStmt(BlockStmt* stmt) {
     executeBlock(stmt->statements,
                  std::make_shared<Environment>(environment_));
 }
@@ -424,7 +395,7 @@ void Interpreter::executeBlock(const std::vector<StmtPtr>& statements,
     }
 }
 
-void Interpreter::executeIfStmt(IfStmt* stmt) {
+void Interpreter::visitIfStmt(IfStmt* stmt) {
     Value condition = evaluate(stmt->condition.get());
     if (isTruthy(condition)) {
         execute(stmt->thenBranch.get());
@@ -433,7 +404,7 @@ void Interpreter::executeIfStmt(IfStmt* stmt) {
     }
 }
 
-void Interpreter::executeWhileStmt(WhileStmt* stmt) {
+void Interpreter::visitWhileStmt(WhileStmt* stmt) {
     while (isTruthy(evaluate(stmt->condition.get()))) {
         try {
             execute(stmt->body.get());
@@ -445,9 +416,8 @@ void Interpreter::executeWhileStmt(WhileStmt* stmt) {
     }
 }
 
-void Interpreter::executeRunUntilStmt(RunUntilStmt* stmt) {
+void Interpreter::visitRunUntilStmt(RunUntilStmt* stmt) {
     // Run-until: executes body at least once, then continues until condition becomes TRUE
-    // This is different from do-while which continues while condition is true
     do {
         try {
             execute(stmt->body.get());
@@ -459,7 +429,7 @@ void Interpreter::executeRunUntilStmt(RunUntilStmt* stmt) {
     } while (!isTruthy(evaluate(stmt->condition.get())));
 }
 
-void Interpreter::executeForStmt(ForStmt* stmt) {
+void Interpreter::visitForStmt(ForStmt* stmt) {
     // Create new scope for loop
     auto loopEnv = std::make_shared<Environment>(environment_);
     auto previous = environment_;
@@ -502,169 +472,98 @@ void Interpreter::executeForStmt(ForStmt* stmt) {
     }
 }
 
-void Interpreter::executeFnStmt(FnStmt* stmt) {
+void Interpreter::visitFnStmt(FnStmt* stmt) {
     // Create a function object that captures the current environment
-    // This is what makes closures work!
     auto function = std::make_shared<VoltFunction>(stmt, environment_);
     
     // Define the function in the current scope
-    // Note: We define it AFTER creating the closure, but that's okay
-    // because the function name isn't in scope inside its own body
-    // (unless you reference it for recursion, which we handle specially)
     environment_->define(stmt->name, function);
 }
 
-void Interpreter::executeReturnStmt(ReturnStmt* stmt) {
+void Interpreter::visitReturnStmt(ReturnStmt* stmt) {
     Value value = nullptr;
     if (stmt->value) {
         value = evaluate(stmt->value.get());
     }
     
     // Throw a special exception to unwind the call stack
-    // This is caught in VoltFunction::call()
     throw ReturnValue(value);
 }
+
+void Interpreter::visitBreakStmt(BreakStmt*) {
+    throw BreakException();
+}
+
+void Interpreter::visitContinueStmt(ContinueStmt*) {
+    throw ContinueException();
+}
+
+void Interpreter::visitTryStmt(TryStmt* stmt) {
+    // Debug output removed for cleaner production code
+    
+    if (!stmt->tryBody) return;
+    if (!stmt->catchBody) return;
+    
+    try {
+        // Execute the try block
+        execute(stmt->tryBody.get());
+    } catch (const RuntimeError& e) {
+        // Handle runtime errors
+        auto catchEnvironment = std::make_shared<Environment>(environment_);
+        catchEnvironment->define(stmt->exceptionVar, e.what());
+        
+        auto previousEnv = environment_;
+        try {
+            environment_ = catchEnvironment;
+            execute(stmt->catchBody.get());
+            environment_ = previousEnv;
+        } catch (...) {
+            environment_ = previousEnv;
+            throw;
+        }
+    } catch (const std::runtime_error& e) {
+        // Also catch std::runtime_error
+        auto catchEnvironment = std::make_shared<Environment>(environment_);
+        catchEnvironment->define(stmt->exceptionVar, e.what());
+        
+        auto previousEnv = environment_;
+        try {
+            environment_ = catchEnvironment;
+            execute(stmt->catchBody.get());
+            environment_ = previousEnv;
+        } catch (...) {
+            environment_ = previousEnv;
+            throw;
+        }
+    } catch (...) {
+        // Catch everything else
+        auto catchEnvironment = std::make_shared<Environment>(environment_);
+        catchEnvironment->define(stmt->exceptionVar, "Unknown exception caught");
+        
+        auto previousEnv = environment_;
+        try {
+            environment_ = catchEnvironment;
+            execute(stmt->catchBody.get());
+            environment_ = previousEnv;
+        } catch (...) {
+            environment_ = previousEnv;
+            throw;
+        }
+    }
+}
+
 // ========================================
 // EXPRESSION EVALUATION
 // ========================================
 
 Value Interpreter::evaluate(Expr* expr) {
-    if (auto* lit = dynamic_cast<LiteralExpr*>(expr)) {
-        return evaluateLiteral(lit);
+    if (expr) {
+        return expr->accept(*this);
     }
-    
-    if (auto* var = dynamic_cast<VariableExpr*>(expr)) {
-        return evaluateVariable(var);
-    }
-    
-    if (auto* unary = dynamic_cast<UnaryExpr*>(expr)) {
-        return evaluateUnary(unary);
-    }
-    
-    if (auto* binary = dynamic_cast<BinaryExpr*>(expr)) {
-        return evaluateBinary(binary);
-    }
-    
-    if (auto* logical = dynamic_cast<LogicalExpr*>(expr)) {
-        return evaluateLogical(logical);
-    }
-    
-    if (auto* group = dynamic_cast<GroupingExpr*>(expr)) {
-        return evaluateGrouping(group);
-    }
-    
-    if (auto* call = dynamic_cast<CallExpr*>(expr)) {
-        return evaluateCall(call);
-    }
-    
-    if (auto* assign = dynamic_cast<AssignExpr*>(expr)) {
-        return evaluateAssign(assign);
-    }
-    
-    if (auto* compound = dynamic_cast<CompoundAssignExpr*>(expr)) {
-        return evaluateCompoundAssign(compound);
-    }
-    
-    if (auto* update = dynamic_cast<UpdateExpr*>(expr)) {
-        return evaluateUpdate(update);
-    }
-    
-    if (auto* ternary = dynamic_cast<TernaryExpr*>(expr)) {
-        return evaluateTernary(ternary);
-    }
-    
-    // ========================================
-    // ARRAY EXPRESSIONS - Added!
-    // ========================================
-    
-    if (auto* array = dynamic_cast<ArrayExpr*>(expr)) {
-        return evaluateArray(array);
-    }
-    
-    if (auto* index = dynamic_cast<IndexExpr*>(expr)) {
-        return evaluateIndex(index);
-    }
-    
-    if (auto* indexAssign = dynamic_cast<IndexAssignExpr*>(expr)) {
-        return evaluateIndexAssign(indexAssign);
-    }
-    
-    if (auto* member = dynamic_cast<MemberExpr*>(expr)) {
-        return evaluateMember(member);
-    }
-    
-    // ========================================
-    // HASH MAP EXPRESSIONS - Added!
-    // ========================================
-    
-    if (auto* hashMap = dynamic_cast<HashMapExpr*>(expr)) {
-        return evaluateHashMap(hashMap);
-    }
-    
-    // Function expression evaluation - Added!
-    if (auto* funcExpr = dynamic_cast<FunctionExpr*>(expr)) {
-        // Create a function expression that can execute the function body
-        // We'll store the parameters and a reference to the original function expression
-        // Note: This approach relies on the AST nodes remaining valid
-        struct FunctionExpressionCallable : public Callable {
-            std::vector<std::string> parameters;
-            const FunctionExpr* func_expr;
-            std::shared_ptr<Environment> closure;
-            
-            FunctionExpressionCallable(std::vector<std::string> params,
-                                     const FunctionExpr* expr,
-                                     std::shared_ptr<Environment> env)
-                : parameters(std::move(params)), func_expr(expr), closure(std::move(env)) {}
-            
-            Value call(Interpreter& interp, const std::vector<Value>& arguments) override {
-                // Create new environment for function execution
-                auto functionEnv = std::make_shared<Environment>(closure);
-                
-                // Bind parameters to arguments
-                for (size_t i = 0; i < parameters.size() && i < arguments.size(); i++) {
-                    functionEnv->define(parameters[i], arguments[i]);
-                }
-                
-                // Save current environment and switch to function environment
-                auto oldEnv = interp.environment_;
-                interp.environment_ = functionEnv;
-                
-                // Execute function body
-                Value result = nullptr;
-                try {
-                    for (const auto& stmt : func_expr->body) {
-                        interp.execute(stmt.get());
-                    }
-                } catch (const ReturnValue& returnValue) {
-                    result = returnValue.value;
-                    // Restore environment before returning
-                    interp.environment_ = oldEnv;
-                    return result;
-                }
-                
-                // Restore the original environment
-                interp.environment_ = oldEnv;
-                
-                return result; // Return nil if no explicit return
-            }
-            
-            int arity() const override {
-                return static_cast<int>(parameters.size());
-            }
-            
-            std::string toString() const override {
-                return "<anonymous function>";
-            }
-        };
-        
-        return Value(std::make_shared<FunctionExpressionCallable>(
-            funcExpr->parameters, funcExpr, environment_));
-    }
-    
-    throw std::runtime_error("Unknown expression type");
+    return nullptr;
 }
 
-Value Interpreter::evaluateLiteral(LiteralExpr* expr) {
+Value Interpreter::visitLiteralExpr(LiteralExpr* expr) {
     switch (expr->type) {
         case LiteralExpr::Type::Number:
             return expr->numberValue;
@@ -678,7 +577,7 @@ Value Interpreter::evaluateLiteral(LiteralExpr* expr) {
     return nullptr;
 }
 
-Value Interpreter::evaluateVariable(VariableExpr* expr) {
+Value Interpreter::visitVariableExpr(VariableExpr* expr) {
     try {
         return environment_->get(expr->name);
     } catch (const std::runtime_error& e) {
@@ -686,7 +585,7 @@ Value Interpreter::evaluateVariable(VariableExpr* expr) {
     }
 }
 
-Value Interpreter::evaluateUnary(UnaryExpr* expr) {
+Value Interpreter::visitUnaryExpr(UnaryExpr* expr) {
     Value right = evaluate(expr->right.get());
     
     switch (expr->op.type) {
@@ -700,7 +599,7 @@ Value Interpreter::evaluateUnary(UnaryExpr* expr) {
     }
 }
 
-Value Interpreter::evaluateBinary(BinaryExpr* expr) {
+Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
     Value left = evaluate(expr->left.get());
     Value right = evaluate(expr->right.get());
     
@@ -760,7 +659,7 @@ Value Interpreter::evaluateBinary(BinaryExpr* expr) {
     }
 }
 
-Value Interpreter::evaluateLogical(LogicalExpr* expr) {
+Value Interpreter::visitLogicalExpr(LogicalExpr* expr) {
     Value left = evaluate(expr->left.get());
     
     // Short-circuit evaluation
@@ -773,11 +672,11 @@ Value Interpreter::evaluateLogical(LogicalExpr* expr) {
     return evaluate(expr->right.get());
 }
 
-Value Interpreter::evaluateGrouping(GroupingExpr* expr) {
+Value Interpreter::visitGroupingExpr(GroupingExpr* expr) {
     return evaluate(expr->expr.get());
 }
 
-Value Interpreter::evaluateCall(CallExpr* expr) {
+Value Interpreter::visitCallExpr(CallExpr* expr) {
     // Evaluate the callee (the thing being called)
     Value callee = evaluate(expr->callee.get());
     
@@ -798,7 +697,7 @@ Value Interpreter::evaluateCall(CallExpr* expr) {
     auto function = std::get<std::shared_ptr<Callable>>(callee);
     
     // Check arity (number of arguments)
-    if (static_cast<int>(arguments.size()) != function->arity()) {
+    if (function->arity() != -1 && static_cast<int>(arguments.size()) != function->arity()) {
         throw RuntimeError(
             expr->token,
             "Expected " + std::to_string(function->arity()) +
@@ -810,7 +709,7 @@ Value Interpreter::evaluateCall(CallExpr* expr) {
     return function->call(*this, arguments);
 }
 
-Value Interpreter::evaluateAssign(AssignExpr* expr) {
+Value Interpreter::visitAssignExpr(AssignExpr* expr) {
     Value value = evaluate(expr->value.get());
     try {
         environment_->assign(expr->name, value);
@@ -821,7 +720,7 @@ Value Interpreter::evaluateAssign(AssignExpr* expr) {
     return value;
 }
 
-Value Interpreter::evaluateCompoundAssign(CompoundAssignExpr* expr) {
+Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
     Value current;
     try {
         current = environment_->get(expr->name);
@@ -871,7 +770,7 @@ Value Interpreter::evaluateCompoundAssign(CompoundAssignExpr* expr) {
     return result;
 }
 
-Value Interpreter::evaluateUpdate(UpdateExpr* expr) {
+Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     Value current;
     try {
         current = environment_->get(expr->name);
@@ -901,7 +800,7 @@ Value Interpreter::evaluateUpdate(UpdateExpr* expr) {
     return expr->prefix ? newValue : oldValue;
 }
 
-Value Interpreter::evaluateTernary(TernaryExpr* expr) {
+Value Interpreter::visitTernaryExpr(TernaryExpr* expr) {
     if (isTruthy(evaluate(expr->condition.get()))) {
         return evaluate(expr->thenBranch.get());
     }
@@ -909,10 +808,10 @@ Value Interpreter::evaluateTernary(TernaryExpr* expr) {
 }
 
 // ========================================
-// ARRAY EVALUATION - NEW METHODS!
+// ARRAY EVALUATION
 // ========================================
 
-Value Interpreter::evaluateArray(ArrayExpr* expr) {
+Value Interpreter::visitArrayExpr(ArrayExpr* expr) {
     std::vector<Value> elements;
     
     // Evaluate all element expressions
@@ -924,7 +823,7 @@ Value Interpreter::evaluateArray(ArrayExpr* expr) {
     return std::make_shared<VoltArray>(elements);
 }
 
-Value Interpreter::evaluateIndex(IndexExpr* expr) {
+Value Interpreter::visitIndexExpr(IndexExpr* expr) {
     Value object = evaluate(expr->object.get());
     Value index = evaluate(expr->index.get());
     
@@ -980,7 +879,7 @@ Value Interpreter::evaluateIndex(IndexExpr* expr) {
     throw RuntimeError(expr->token, "Can only index arrays and hash maps");
 }
 
-Value Interpreter::evaluateIndexAssign(IndexAssignExpr* expr) {
+Value Interpreter::visitIndexAssignExpr(IndexAssignExpr* expr) {
     Value object = evaluate(expr->object.get());
     Value index = evaluate(expr->index.get());
     Value value = evaluate(expr->value.get());
@@ -1035,7 +934,7 @@ Value Interpreter::evaluateIndexAssign(IndexAssignExpr* expr) {
     throw RuntimeError(expr->token, "Can only index arrays and hash maps");
 }
 
-Value Interpreter::evaluateMember(MemberExpr* expr) {
+Value Interpreter::visitMemberExpr(MemberExpr* expr) {
     Value object = evaluate(expr->object.get());
     
     // Handle arrays
@@ -1224,7 +1123,7 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
             );
         }
         
-        if (expr->member == "has") {  // Added!
+        if (expr->member == "has") {
             return std::make_shared<NativeFunction>(
                 1,
                 [map](const std::vector<Value>& args) -> Value {
@@ -1236,7 +1135,7 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
             );
         }
         
-        if (expr->member == "remove") {  // Added!
+        if (expr->member == "remove") {
             return std::make_shared<NativeFunction>(
                 1,
                 [map](const std::vector<Value>& args) -> Value {
@@ -1254,8 +1153,8 @@ Value Interpreter::evaluateMember(MemberExpr* expr) {
     throw RuntimeError(expr->token, "Only arrays and hash maps have members");
 }
 
-// Evaluate hash map literal expression  // Added!
-Value Interpreter::evaluateHashMap(HashMapExpr* expr) {
+// Evaluate hash map literal expression
+Value Interpreter::visitHashMapExpr(HashMapExpr* expr) {
     auto hashMap = std::make_shared<VoltHashMap>();
     
     for (const auto& [keyExpr, valueExpr] : expr->keyValuePairs) {
@@ -1271,118 +1170,66 @@ Value Interpreter::evaluateHashMap(HashMapExpr* expr) {
     return hashMap;
 }
 
-void Interpreter::executeBreakStmt(BreakStmt*) {
-    throw BreakException();
+Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
+    // Create a function expression that can execute the function body
+    // We'll store the parameters and a reference to the original function expression
+    struct FunctionExpressionCallable : public Callable {
+        std::vector<std::string> parameters;
+        const FunctionExpr* func_expr;
+        std::shared_ptr<Environment> closure;
+        
+        FunctionExpressionCallable(std::vector<std::string> params,
+                                 const FunctionExpr* expr,
+                                 std::shared_ptr<Environment> env)
+            : parameters(std::move(params)), func_expr(expr), closure(std::move(env)) {}
+        
+        Value call(Interpreter& interp, const std::vector<Value>& arguments) override {
+            // Create new environment for function execution
+            auto functionEnv = std::make_shared<Environment>(closure);
+            
+            // Bind parameters to arguments
+            for (size_t i = 0; i < parameters.size() && i < arguments.size(); i++) {
+                functionEnv->define(parameters[i], arguments[i]);
+            }
+            
+            // Save current environment and switch to function environment
+            auto oldEnv = interp.environment_;
+            interp.environment_ = functionEnv;
+            
+            // Execute function body
+            Value result = nullptr;
+            try {
+                for (const auto& stmt : func_expr->body) {
+                    interp.execute(stmt.get());
+                }
+            } catch (const ReturnValue& returnValue) {
+                result = returnValue.value;
+                // Restore environment before returning
+                interp.environment_ = oldEnv;
+                return result;
+            }
+            
+            // Restore the original environment
+            interp.environment_ = oldEnv;
+            
+            return result; // Return nil if no explicit return
+        }
+        
+        int arity() const override {
+            return static_cast<int>(parameters.size());
+        }
+        
+        std::string toString() const override {
+            return "<anonymous function>";
+        }
+    };
+    
+    return Value(std::make_shared<FunctionExpressionCallable>(
+        expr->parameters, expr, environment_));
 }
 
-void Interpreter::executeContinueStmt(ContinueStmt*) {
-    throw ContinueException();
-}
-
-// Commented out to avoid crashes
-// void Interpreter::executeTryStmt(TryStmt* stmt) {
-//     // Simple try-catch implementation to avoid crashes
-//     // Just execute the try block - no exception handling
-//     // Do nothing - just return
-//     // This is a placeholder to avoid crashes
-//     // Return immediately to avoid any potential crashes
-//     return;
-// }
-
-void Interpreter::executeTryStmt(TryStmt* stmt) {
-    // Debug output
-    std::cout << "executeTryStmt called" << std::endl;
-    std::cout << "stmt->tryBody is " << (stmt->tryBody ? "not null" : "null") << std::endl;
-    std::cout << "stmt->catchBody is " << (stmt->catchBody ? "not null" : "null") << std::endl;
-    
-    if (!stmt->tryBody) {
-        std::cout << "Error: stmt->tryBody is null!" << std::endl;
-        return;
-    }
-    
-    if (!stmt->catchBody) {
-        std::cout << "Error: stmt->catchBody is null!" << std::endl;
-        return;
-    }
-    
-    try {
-        // Execute the try block
-        execute(stmt->tryBody.get());
-    } catch (const RuntimeError& e) {
-        // Handle runtime errors - these are the ones we want to catch
-        
-        // Create a new environment for the catch block
-        auto catchEnvironment = std::make_shared<Environment>(environment_);
-        
-        // Define the exception variable with the error message
-        catchEnvironment->define(stmt->exceptionVar, e.what());
-        
-        // Execute the catch block with the exception variable in scope
-        auto previousEnv = environment_;
-        try {
-            environment_ = catchEnvironment;
-            
-            // Execute the catch body
-            execute(stmt->catchBody.get());
-            
-            // Restore environment
-            environment_ = previousEnv;
-        } catch (...) {
-            // Restore environment even if there's an error
-            environment_ = previousEnv;
-            // If there's an error in the catch block, re-throw it
-            throw;
-        }
-    } catch (const std::runtime_error& e) {
-        // Also catch std::runtime_error (from native functions, etc.)
-        
-        // Create a new environment for the catch block
-        auto catchEnvironment = std::make_shared<Environment>(environment_);
-        
-        // Define the exception variable with the error message
-        catchEnvironment->define(stmt->exceptionVar, e.what());
-        
-        // Execute the catch block with the exception variable in scope
-        auto previousEnv = environment_;
-        try {
-            environment_ = catchEnvironment;
-            
-            // Execute the catch body
-            execute(stmt->catchBody.get());
-            
-            // Restore environment
-            environment_ = previousEnv;
-        } catch (...) {
-            // Restore environment even if there's an error
-            environment_ = previousEnv;
-            // If there's an error in the catch block, re-throw it
-            throw;
-        }
-    } catch (...) {
-        // Catch everything for debugging
-        // Create a new environment for the catch block
-        auto catchEnvironment = std::make_shared<Environment>(environment_);
-        
-        // Define the exception variable with a generic message
-        catchEnvironment->define(stmt->exceptionVar, "Unknown exception caught");
-        
-        // Execute the catch block with the exception variable in scope
-        auto previousEnv = environment_;
-        try {
-            environment_ = catchEnvironment;
-            
-            // Execute the catch body
-            execute(stmt->catchBody.get());
-            
-            // Restore environment
-            environment_ = previousEnv;
-        } catch (...) {
-            // Restore environment even if there's an error
-            environment_ = previousEnv;
-            // If there's an error in the catch block, re-throw it
-            throw;
-        }
-    }
+Value Interpreter::visitSetExpr(SetExpr* expr) {
+    throw RuntimeError(expr->token, "Set expressions not supported.");
 }
 
 void Interpreter::checkNumberOperand(const Token& op, const Value& operand) {
