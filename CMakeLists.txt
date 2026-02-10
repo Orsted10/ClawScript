@@ -1,9 +1,17 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.8.0 LANGUAGES CXX)  # Feature-Rich Release
+project(VoltScript VERSION 0.8.1 LANGUAGES CXX)  # Feature-Rich Release
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Generate version header from project version
+configure_file(
+    ${CMAKE_SOURCE_DIR}/src/version.h.in
+    ${CMAKE_BINARY_DIR}/generated/version.h
+    @ONLY
+)
+include_directories(${CMAKE_BINARY_DIR}/generated)
 
 # Build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -35,6 +43,7 @@ add_executable(volt
 
 target_include_directories(volt PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(volt PRIVATE 
+    ${CMAKE_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/Lexer
     ${CMAKE_SOURCE_DIR}/src/Parser
@@ -77,6 +86,12 @@ if(BUILD_TESTS)
         src/interpreter/environment.cpp
         src/features/callable.cpp
         src/interpreter/interpreter.cpp
+        src/interpreter/natives/native_math.cpp
+        src/interpreter/natives/native_string.cpp
+        src/interpreter/natives/native_array.cpp
+        src/interpreter/natives/native_io.cpp
+        src/interpreter/natives/native_time.cpp
+        src/interpreter/natives/native_json.cpp
         src/features/array.cpp
         src/features/hashmap.cpp
         tests/test_lexer.cpp
