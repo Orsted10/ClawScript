@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.8.4 LANGUAGES CXX)  # Feature-Rich Release
+project(VoltScript VERSION 0.8.5 LANGUAGES CXX)  # Feature-Rich Release
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -164,6 +164,100 @@ if(BUILD_TESTS)
     gtest_discover_tests(volt_tests)
     
     message(STATUS "✅ Tests enabled (650+ tests)")
+
+    # ========================================
+    # INTEGRATION TESTS (Phase 3.2)
+    # ========================================
+    
+    set(INTEGRATION_TEST_SOURCES
+        tests/integration_tests.cpp
+        src/lexer/token.cpp
+        src/lexer/lexer.cpp
+        src/parser/ast.cpp
+        src/parser/parser.cpp
+        src/interpreter/value.cpp
+        src/interpreter/environment.cpp
+        src/features/callable.cpp
+        src/interpreter/interpreter.cpp
+        src/interpreter/natives/native_math.cpp
+        src/interpreter/natives/native_string.cpp
+        src/interpreter/natives/native_array.cpp
+        src/interpreter/natives/native_io.cpp
+        src/interpreter/natives/native_time.cpp
+        src/interpreter/natives/native_json.cpp
+        src/features/array.cpp
+        src/features/hashmap.cpp
+    )
+    
+    add_executable(volt_integration_tests ${INTEGRATION_TEST_SOURCES})
+    
+    target_include_directories(volt_integration_tests PRIVATE 
+        ${CMAKE_BINARY_DIR}/generated
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/lexer
+        ${CMAKE_SOURCE_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/src/interpreter
+        ${CMAKE_SOURCE_DIR}/src/features
+    )
+    
+    target_link_libraries(volt_integration_tests 
+        GTest::gtest_main
+    )
+    
+    set_target_properties(volt_integration_tests PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
+    
+    gtest_discover_tests(volt_integration_tests)
+
+    # ========================================
+    # BENCHMARKS (Phase 3.3)
+    # ========================================
+    
+    message(STATUS "Fetching Google Benchmark...")
+    FetchContent_Declare(
+        googlebenchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG v1.8.3
+    )
+    FetchContent_MakeAvailable(googlebenchmark)
+    
+    set(BENCHMARK_SOURCES
+        benchmarks/benchmark_interpreter.cpp
+        src/lexer/token.cpp
+        src/lexer/lexer.cpp
+        src/parser/ast.cpp
+        src/parser/parser.cpp
+        src/interpreter/value.cpp
+        src/interpreter/environment.cpp
+        src/features/callable.cpp
+        src/interpreter/interpreter.cpp
+        src/interpreter/natives/native_math.cpp
+        src/interpreter/natives/native_string.cpp
+        src/interpreter/natives/native_array.cpp
+        src/interpreter/natives/native_io.cpp
+        src/interpreter/natives/native_time.cpp
+        src/interpreter/natives/native_json.cpp
+        src/features/array.cpp
+        src/features/hashmap.cpp
+    )
+    
+    add_executable(volt_benchmarks ${BENCHMARK_SOURCES})
+    
+    target_include_directories(volt_benchmarks PRIVATE 
+        ${CMAKE_BINARY_DIR}/generated
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/lexer
+        ${CMAKE_SOURCE_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/src/interpreter
+        ${CMAKE_SOURCE_DIR}/src/features
+    )
+    
+    target_link_libraries(volt_benchmarks benchmark::benchmark_main)
+    
+    set_target_properties(volt_benchmarks PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    )
 endif()
 
 # ========================================
