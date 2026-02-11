@@ -15,16 +15,16 @@
 namespace volt {
 
 // Runtime error with location info
-class RuntimeError : public std::runtime_error {
+class RuntimeError : public VoltError {
 public:
     Token token;
     std::vector<StackFrame> stack_trace;
     
-    RuntimeError(Token tok, const std::string& message)
-        : std::runtime_error(message), token(tok) {}
+    RuntimeError(Token tok, ErrorCode code, const std::string& message)
+        : VoltError(code, message), token(tok) {}
 
-    RuntimeError(Token tok, const std::string& message, std::vector<StackFrame> trace)
-        : std::runtime_error(message), token(tok), stack_trace(std::move(trace)) {}
+    RuntimeError(Token tok, ErrorCode code, const std::string& message, std::vector<StackFrame> trace)
+        : VoltError(code, message), token(tok), stack_trace(std::move(trace)) {}
 };
 
 // When a function hits 'return', we use this exception to jump
@@ -119,8 +119,8 @@ private:
     void defineNatives();
 
     // Helper to throw runtime errors with stack trace
-    [[noreturn]] void throwRuntimeError(const Token& token, const std::string& message) {
-        throw RuntimeError(token, message, call_stack_.get_frames());
+    [[noreturn]] void throwRuntimeError(const Token& token, ErrorCode code, const std::string& message) {
+        throw RuntimeError(token, code, message, call_stack_.get_frames());
     }
     
     // JSON encoding/decoding methods (NEW FOR v0.7.5)

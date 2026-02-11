@@ -1,4 +1,5 @@
 #include "environment.h"
+#include "errors.h"
 #include <stdexcept>
 
 namespace volt {
@@ -19,7 +20,7 @@ Value Environment::get(const std::string& name) const {
         return enclosing_->get(name);
     }
     
-    throw std::runtime_error("Undefined variable: " + name);
+    throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + name);
 }
 
 void Environment::assign(const std::string& name, Value value) {
@@ -36,7 +37,7 @@ void Environment::assign(const std::string& name, Value value) {
         return;
     }
     
-    throw std::runtime_error("Undefined variable: " + name);
+    throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + name);
 }
 
 bool Environment::exists(const std::string& name) const {

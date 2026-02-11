@@ -722,7 +722,7 @@ bool Parser::isAtEnd() const {
 void Parser::error(const std::string& message) {
     Token tok = peek();
     std::ostringstream oss;
-    oss << "[Line " << tok.line << ", Col " << tok.column << "] Error";
+    oss << "E1001: Syntax Error [Line " << tok.line << ", Col " << tok.column << "]";
     if (tok.type == TokenType::Eof) {
         oss << " at end";
     } else {

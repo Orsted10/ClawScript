@@ -30,7 +30,7 @@ Value VoltFunction::call(Interpreter& interpreter,
     try {
         interpreter.getCallStack().push(declaration_->name, declaration_->token.line);
     } catch (const std::runtime_error& e) {
-        throw RuntimeError(declaration_->token, e.what(), interpreter.getCallStack().get_frames());
+        throw RuntimeError(declaration_->token, ErrorCode::STACK_OVERFLOW, e.what(), interpreter.getCallStack().get_frames());
     }
     
     // Execute the function body

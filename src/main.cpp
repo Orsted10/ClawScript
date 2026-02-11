@@ -76,7 +76,7 @@ void dumpStatements(const std::vector<volt::StmtPtr>& statements) {
 }
 
 void printRuntimeError(const volt::RuntimeError& e) {
-    std::cerr << "❌ Runtime Error [Line " << e.token.line 
+    std::cerr << "❌ " << volt::errorCodeToString(e.code) << ": Runtime Error [Line " << e.token.line 
               << ", Col " << e.token.column << "]: " 
               << e.what() << "\n";
     

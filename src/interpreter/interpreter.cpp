@@ -56,13 +56,13 @@ void Interpreter::defineNatives() {
                 try {
                     return std::stod(asString(args[0]));
                 } catch (...) {
-                    throw std::runtime_error("Cannot convert string to number: " + asString(args[0]));
+                    throw std::runtime_error("E2001: Cannot convert string to number: " + asString(args[0]));
                 }
             }
             if (isBool(args[0])) {
                 return asBool(args[0]) ? 1.0 : 0.0;
             }
-            throw std::runtime_error("Cannot convert to number");
+            throw std::runtime_error("E2001: Cannot convert to number");
         },
         "num"
     ));
@@ -96,7 +96,7 @@ void Interpreter::defineNatives() {
     globals_->define("jsonDecode", std::make_shared<NativeFunction>(
         1,
         [this](const std::vector<Value>& args) -> Value {
-            if (!isString(args[0])) throw std::runtime_error("jsonDecode() requires a string");
+            if (!isString(args[0])) throw std::runtime_error("E4005: jsonDecode() requires a string");
             return this->decodeFromJson(asString(args[0]));
         },
         "jsonDecode"
@@ -255,7 +255,7 @@ void Interpreter::defineNatives() {
             // Verify all arguments are callable
             for (const auto& arg : args) {
                 if (!isCallable(arg)) {
-                    throw std::runtime_error("All arguments to compose() must be functions");
+                    throw std::runtime_error("E2001: All arguments to compose() must be functions");
                 }
             }
             
@@ -264,7 +264,7 @@ void Interpreter::defineNatives() {
                 1, // Takes one argument
                 [args](const std::vector<Value>& callArgs) -> Value {
                     if (callArgs.empty()) {
-                        throw std::runtime_error("compose() function needs at least one argument");
+                        throw std::runtime_error("E4007: compose() function needs at least one argument");
                     }
                     
                     Value result = callArgs[0];
@@ -286,7 +286,7 @@ void Interpreter::defineNatives() {
             // Verify all arguments are callable
             for (const auto& arg : args) {
                 if (!isCallable(arg)) {
-                    throw std::runtime_error("All arguments to pipe() must be functions");
+                    throw std::runtime_error("E2001: All arguments to pipe() must be functions");
                 }
             }
             
@@ -295,7 +295,7 @@ void Interpreter::defineNatives() {
                 1, // Takes one argument
                 [args](const std::vector<Value>& callArgs) -> Value {
                     if (callArgs.empty()) {
-                        throw std::runtime_error("pipe() function needs at least one argument");
+                        throw std::runtime_error("E4007: pipe() function needs at least one argument");
                     }
                     
                     Value result = callArgs[0];
@@ -510,7 +510,8 @@ void Interpreter::visitTryStmt(TryStmt* stmt) {
     } catch (const RuntimeError& e) {
         // Handle runtime errors
         auto catchEnvironment = std::make_shared<Environment>(environment_);
-        catchEnvironment->define(stmt->exceptionVar, e.what());
+        std::string errorMsg = errorCodeToString(e.code) + ": " + e.what();
+        catchEnvironment->define(stmt->exceptionVar, errorMsg);
         
         auto previousEnv = environment_;
         try {
@@ -580,8 +581,8 @@ Value Interpreter::visitLiteralExpr(LiteralExpr* expr) {
 Value Interpreter::visitVariableExpr(VariableExpr* expr) {
     try {
         return environment_->get(expr->name);
-    } catch (const std::runtime_error& e) {
-        throwRuntimeError(expr->token, e.what());
+    } catch (const VoltError& e) {
+        throwRuntimeError(expr->token, e.code, e.what());
     }
 }
 
@@ -595,7 +596,7 @@ Value Interpreter::visitUnaryExpr(UnaryExpr* expr) {
         case TokenType::Bang:
             return !isTruthy(right);
         default:
-            throwRuntimeError(expr->op, "Unknown unary operator");
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown unary operator");
     }
 }
 
@@ -618,7 +619,7 @@ Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
             if (isNumber(left) && isString(right)) {
                 return valueToString(left) + asString(right);
             }
-            throwRuntimeError(expr->op, "Operands must be two numbers or two strings");
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operands must be two numbers or two strings");
             
         case TokenType::Minus:
             checkNumberOperands(expr->op, left, right);
@@ -629,11 +630,14 @@ Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
         case TokenType::Slash:
             checkNumberOperands(expr->op, left, right);
             if (asNumber(right) == 0.0) {
-                throwRuntimeError(expr->op, "Division by zero");
+                throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
             }
             return asNumber(left) / asNumber(right);
         case TokenType::Percent:
             checkNumberOperands(expr->op, left, right);
+            if (asNumber(right) == 0.0) {
+                throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
+            }
             return std::fmod(asNumber(left), asNumber(right));
             
         case TokenType::Greater:
@@ -655,7 +659,7 @@ Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
             return !isEqual(left, right);
             
         default:
-            throwRuntimeError(expr->op, "Unknown binary operator");
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown binary operator");
     }
 }
 
@@ -690,6 +694,7 @@ Value Interpreter::visitCallExpr(CallExpr* expr) {
     if (!isCallable(callee)) {
         throwRuntimeError(
             expr->token,
+            ErrorCode::NOT_CALLABLE,
             "Can only call functions and classes"
         );
     }
@@ -700,6 +705,7 @@ Value Interpreter::visitCallExpr(CallExpr* expr) {
     if (function->arity() != -1 && arguments.size() != static_cast<size_t>(function->arity())) {
         throwRuntimeError(
             expr->token,
+            ErrorCode::ARGUMENT_COUNT_MISMATCH,
             "Expected " + std::to_string(function->arity()) +
             " arguments but got " + std::to_string(arguments.size())
         );
@@ -724,8 +730,8 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
     Value current;
     try {
         current = environment_->get(expr->name);
-    } catch (const std::runtime_error& e) {
-        throwRuntimeError(expr->token, e.what());
+    } catch (const VoltError& e) {
+        throwRuntimeError(expr->token, e.code, e.what());
     }
     
     Value operand = evaluate(expr->value.get());
@@ -740,7 +746,7 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
             } else if (isString(current) && isNumber(operand)) {
                 result = asString(current) + valueToString(operand);
             } else {
-                throwRuntimeError(expr->op, "Operands must be compatible for +=");
+                throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operands must be compatible for +=");
             }
             break;
         case TokenType::MinusEqual:
@@ -754,18 +760,18 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
         case TokenType::SlashEqual:
             checkNumberOperands(expr->op, current, operand);
             if (asNumber(operand) == 0.0) {
-                throwRuntimeError(expr->op, "Division by zero");
+                throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
             }
             result = asNumber(current) / asNumber(operand);
             break;
         default:
-            throwRuntimeError(expr->op, "Unknown compound assignment operator");
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown compound assignment operator");
     }
     
     try {
         environment_->assign(expr->name, result);
-    } catch (const std::runtime_error& e) {
-        throwRuntimeError(expr->token, e.what());
+    } catch (const VoltError& e) {
+        throwRuntimeError(expr->token, e.code, e.what());
     }
     return result;
 }
@@ -774,12 +780,12 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     Value current;
     try {
         current = environment_->get(expr->name);
-    } catch (const std::runtime_error& e) {
-        throwRuntimeError(expr->token, e.what());
+    } catch (const VoltError& e) {
+        throwRuntimeError(expr->token, e.code, e.what());
     }
     
     if (!isNumber(current)) {
-        throwRuntimeError(expr->op, "Operand must be a number for increment/decrement");
+        throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operand must be a number for increment/decrement");
     }
     
     double oldValue = asNumber(current);
@@ -792,8 +798,8 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     
     try {
         environment_->assign(expr->name, newValue);
-    } catch (const std::runtime_error& e) {
-        throwRuntimeError(expr->token, e.what());
+    } catch (const VoltError& e) {
+        throwRuntimeError(expr->token, e.code, e.what());
     }
     
     // Return old value for postfix, new value for prefix
@@ -833,14 +839,15 @@ Value Interpreter::visitIndexExpr(IndexExpr* expr) {
         
         // Index must be a number
         if (!isNumber(index)) {
-            throwRuntimeError(expr->token, "Array index must be a number");
+            throwRuntimeError(expr->token, ErrorCode::TYPE_MISMATCH, "Array index must be a number");
         }
         
         int idx = static_cast<int>(asNumber(index));
         
         // Check bounds
         if (idx < 0 || idx >= array->length()) {
-            throwRuntimeError(expr->token, "Array index out of bounds: " + std::to_string(idx));
+            throwRuntimeError(expr->token, ErrorCode::INDEX_OUT_OF_BOUNDS, 
+                "Index " + std::to_string(idx) + " out of bounds [0, " + std::to_string(array->length() - 1) + "]");
         }
         
         return array->get(idx);
@@ -870,13 +877,13 @@ Value Interpreter::visitIndexExpr(IndexExpr* expr) {
         } else if (isBool(index)) {
             key = asBool(index) ? "true" : "false";
         } else {
-            throwRuntimeError(expr->token, "Hash map index must be a string, number, boolean, or nil");
+            throwRuntimeError(expr->token, ErrorCode::TYPE_MISMATCH, "Hash map index must be a string, number, boolean, or nil");
         }
         
         return map->get(key);
     }
     
-    throwRuntimeError(expr->token, "Can only index arrays and hash maps");
+    throwRuntimeError(expr->token, ErrorCode::NOT_INDEXABLE, "Can only index arrays and hash maps");
 }
 
 Value Interpreter::visitIndexAssignExpr(IndexAssignExpr* expr) {
@@ -890,14 +897,15 @@ Value Interpreter::visitIndexAssignExpr(IndexAssignExpr* expr) {
         
         // Index must be a number
         if (!isNumber(index)) {
-            throwRuntimeError(expr->token, "Array index must be a number");
+            throwRuntimeError(expr->token, ErrorCode::TYPE_MISMATCH, "Array index must be a number");
         }
         
         int idx = static_cast<int>(asNumber(index));
         
         // Check bounds
         if (idx < 0 || idx >= array->length()) {
-            throwRuntimeError(expr->token, "Array index out of bounds: " + std::to_string(idx));
+            throwRuntimeError(expr->token, ErrorCode::INDEX_OUT_OF_BOUNDS, 
+                "Index " + std::to_string(idx) + " out of bounds [0, " + std::to_string(array->length() - 1) + "]");
         }
         
         array->set(idx, value);
@@ -924,14 +932,14 @@ Value Interpreter::visitIndexAssignExpr(IndexAssignExpr* expr) {
         } else if (isBool(index)) {
             key = asBool(index) ? "true" : "false";
         } else {
-            throwRuntimeError(expr->token, "Hash map index must be a string, number, boolean, or nil");
+            throwRuntimeError(expr->token, ErrorCode::TYPE_MISMATCH, "Hash map index must be a string, number, boolean, or nil");
         }
         
         map->set(key, value);
         return value;
     }
     
-    throwRuntimeError(expr->token, "Can only index arrays and hash maps");
+    throwRuntimeError(expr->token, ErrorCode::NOT_INDEXABLE, "Can only index arrays and hash maps");
 }
 
 Value Interpreter::visitMemberExpr(MemberExpr* expr) {
@@ -992,19 +1000,18 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                 1,
                 [this, array](const std::vector<Value>& args) -> Value {
                     if (!isCallable(args[0])) {
-                        throw std::runtime_error("map() requires a function argument");
+                        throw std::runtime_error("E2001: map() requires a function argument");
                     }
                     
-                    auto func = asCallable(args[0]);
-                    auto result = std::make_shared<VoltArray>();
+                    auto function = asCallable(args[0]);
+                    auto newArray = std::make_shared<VoltArray>();
                     
-                    for (size_t i = 0; i < array->size(); i++) {
-                        Value element = array->get(i);
-                        Value mappedValue = func->call(*this, {element});
-                        result->push(mappedValue);
+                    for (size_t i = 0; i < array->size(); ++i) {
+                        std::vector<Value> callArgs = { array->get(static_cast<int>(i)) };
+                        newArray->push(function->call(*this, callArgs));
                     }
                     
-                    return result;
+                    return newArray;
                 },
                 "map"
             );
@@ -1016,22 +1023,21 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                 1,
                 [this, array](const std::vector<Value>& args) -> Value {
                     if (!isCallable(args[0])) {
-                        throw std::runtime_error("filter() requires a function argument");
+                        throw std::runtime_error("E2001: filter() requires a function argument");
                     }
                     
-                    auto func = asCallable(args[0]);
-                    auto result = std::make_shared<VoltArray>();
+                    auto function = asCallable(args[0]);
+                    auto newArray = std::make_shared<VoltArray>();
                     
-                    for (size_t i = 0; i < array->size(); i++) {
-                        Value element = array->get(i);
-                        Value predicateResult = func->call(*this, {element});
-                        
-                        if (isTruthy(predicateResult)) {
-                            result->push(element);
+                    for (size_t i = 0; i < array->size(); ++i) {
+                        Value item = array->get(static_cast<int>(i));
+                        std::vector<Value> callArgs = { item };
+                        if (isTruthy(function->call(*this, callArgs))) {
+                            newArray->push(item);
                         }
                     }
                     
-                    return result;
+                    return newArray;
                 },
                 "filter"
             );
@@ -1040,23 +1046,45 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
         // Handle array.reduce
         if (expr->member == "reduce") {
             return std::make_shared<NativeFunction>(
-                2,
+                2, // accumulator function and initial value
                 [this, array](const std::vector<Value>& args) -> Value {
                     if (!isCallable(args[0])) {
-                        throw std::runtime_error("reduce() requires a function as first argument");
+                        throw std::runtime_error("E2001: reduce() requires a function argument");
                     }
                     
-                    auto func = asCallable(args[0]);
+                    auto function = asCallable(args[0]);
                     Value accumulator = args[1];
                     
-                    for (size_t i = 0; i < array->size(); i++) {
-                        Value element = array->get(i);
-                        accumulator = func->call(*this, {accumulator, element});
+                    for (size_t i = 0; i < array->size(); ++i) {
+                        std::vector<Value> callArgs = { accumulator, array->get(static_cast<int>(i)) };
+                        accumulator = function->call(*this, callArgs);
                     }
                     
                     return accumulator;
                 },
                 "reduce"
+            );
+        }
+        
+        // Handle array.forEach
+        if (expr->member == "forEach") {
+            return std::make_shared<NativeFunction>(
+                1,
+                [this, array](const std::vector<Value>& args) -> Value {
+                    if (!isCallable(args[0])) {
+                        throw std::runtime_error("E2001: forEach() requires a function argument");
+                    }
+                    
+                    auto function = asCallable(args[0]);
+                    
+                    for (size_t i = 0; i < array->size(); ++i) {
+                        std::vector<Value> callArgs = { array->get(static_cast<int>(i)) };
+                        function->call(*this, callArgs);
+                    }
+                    
+                    return nullptr;
+                },
+                "forEach"
             );
         }
         
@@ -1075,7 +1103,7 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
             );
         }
         
-        throwRuntimeError(expr->token, "Unknown array member: " + expr->member);
+        throwRuntimeError(expr->token, ErrorCode::UNDEFINED_VARIABLE, "Unknown array member: " + expr->member);
     }
     
     // Handle hash maps
@@ -1147,10 +1175,10 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
             );
         }
         
-        throwRuntimeError(expr->token, "Unknown hash map member: " + expr->member);
+        throwRuntimeError(expr->token, ErrorCode::UNDEFINED_VARIABLE, "Unknown hash map member: " + expr->member);
     }
     
-    throwRuntimeError(expr->token, "Only arrays and hash maps have members");
+    throwRuntimeError(expr->token, ErrorCode::NOT_INDEXABLE, "Only arrays and hash maps have members");
 }
 
 // Evaluate hash map literal expression
@@ -1238,17 +1266,17 @@ Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
 }
 
 Value Interpreter::visitSetExpr(SetExpr* expr) {
-    throwRuntimeError(expr->token, "Set expressions not supported.");
+    throwRuntimeError(expr->token, ErrorCode::SYNTAX_ERROR, "Set expressions not supported.");
 }
 
 void Interpreter::checkNumberOperand(const Token& op, const Value& operand) {
     if (isNumber(operand)) return;
-    throwRuntimeError(op, "Operand must be a number");
+    throwRuntimeError(op, ErrorCode::TYPE_MISMATCH, "Operand must be a number");
 }
 
 void Interpreter::checkNumberOperands(const Token& op, const Value& left, const Value& right) {
     if (isNumber(left) && isNumber(right)) return;
-    throwRuntimeError(op, "Operands must be numbers");
+    throwRuntimeError(op, ErrorCode::TYPE_MISMATCH, "Operands must be numbers");
 }
 
 // ==================== JSON ENCODING/DECODING METHODS ====================
