@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ VoltScript v0.8.2 ⚡
+# ⚡ VoltScript v0.8.3 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
@@ -42,7 +42,7 @@ If you've ever wanted to *truly* understand languages like **Python**, **JavaScr
 
 ---
 
-## ✨ Features (v0.8.2)
+## ✨ Features (v0.8.3)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -59,11 +59,11 @@ Enhanced with:
 
 ### ⚙️ Interpreter — *AST → Execution*
 
-Major enhancements in v0.8.2:
+Major enhancements in v0.8.3:
 
-- ✅ **Visitor Pattern Architecture**: Replaced slow `dynamic_cast` with high-performance double-dispatch
-- ✅ **Performance Boost**: 10-20% faster execution for all operations
-- ✅ **Function expressions**: Anonymous functions with proper closure support
+- ✅ **Build System**: Modern CMake configuration with proper dependency management
+- ✅ **Quality Assurance**: Compiler warnings enabled (/W4, -Wall) and AddressSanitizer support
+- ✅ **Visitor Pattern**: High-performance AST traversal (introduced v0.8.2)
 - ✅ **Array method chaining**: `numbers.map().filter().reduce()`
 - ✅ **Enhanced array methods**: `.join()`, `.concat()`, `.slice()`, `.flat()`, `.flatMap()`
 - ✅ **Built-in functional utilities**: `reverse()`, `filter()`, `map()` for arrays
@@ -691,7 +691,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.8.2 ⚡
+### ⚡ VoltScript v0.8.3 ⚡
 
 **Functions. Closures. Arrays. Power.**  
 *This is where languages get real.*

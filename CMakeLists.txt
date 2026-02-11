@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.8.2 LANGUAGES CXX)  # Feature-Rich Release
+project(VoltScript VERSION 0.8.3 LANGUAGES CXX)  # Feature-Rich Release
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,24 +11,32 @@ configure_file(
     ${CMAKE_BINARY_DIR}/generated/version.h
     @ONLY
 )
-include_directories(${CMAKE_BINARY_DIR}/generated)
 
 # Build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# Compiler warnings
+if(MSVC)
+    add_compile_options(/W4 /permissive-)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# Sanitizers for Debug build
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        # MSVC Address Sanitizer support (VS 2019 16.9+)
+        add_compile_options(/fsanitize=address)
+    else()
+        add_compile_options(-fsanitize=address -fsanitize=undefined)
+        add_link_options(-fsanitize=address -fsanitize=undefined)
+    endif()
+endif()
+
 # Options
 option(BUILD_TESTS "Build tests" ON)
-
-# Include directories
-include_directories(
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/lexer
-    ${CMAKE_SOURCE_DIR}/src/parser
-    ${CMAKE_SOURCE_DIR}/src/interpreter
-    ${CMAKE_SOURCE_DIR}/src/features
-)
 
 # Source files
 file(GLOB_RECURSE VOLT_SOURCES
@@ -41,14 +49,13 @@ add_executable(volt
     ${VOLT_SOURCES}
 )
 
-target_include_directories(volt PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(volt PRIVATE 
     ${CMAKE_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/Lexer
-    ${CMAKE_SOURCE_DIR}/src/Parser
-    ${CMAKE_SOURCE_DIR}/src/Interpreter
-    ${CMAKE_SOURCE_DIR}/src/features  # NEW!
+    ${CMAKE_SOURCE_DIR}/src/lexer
+    ${CMAKE_SOURCE_DIR}/src/parser
+    ${CMAKE_SOURCE_DIR}/src/interpreter
+    ${CMAKE_SOURCE_DIR}/src/features
 )
 
 # Set output directory
@@ -124,6 +131,15 @@ if(BUILD_TESTS)
     # Test executable
     add_executable(volt_tests ${TEST_SOURCES})
     
+    target_include_directories(volt_tests PRIVATE 
+        ${CMAKE_BINARY_DIR}/generated
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/lexer
+        ${CMAKE_SOURCE_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/src/interpreter
+        ${CMAKE_SOURCE_DIR}/src/features
+    )
+    
     # Link GoogleTest
     target_link_libraries(volt_tests 
         GTest::gtest_main
@@ -150,7 +166,7 @@ message(STATUS "")
 message(STATUS "========================================")
 message(STATUS "⚡ VoltScript v${PROJECT_VERSION}")
 message(STATUS "========================================")
-message(STATUS "Milestone:      Feature-Rich Release 🚀")
+message(STATUS "Milestone:      Build System Improvements 🚀")
 message(STATUS "Build type:     ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler:       ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "C++ Standard:   C++${CMAKE_CXX_STANDARD}")
