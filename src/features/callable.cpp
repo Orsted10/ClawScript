@@ -2,6 +2,7 @@
 #include "interpreter.h"
 #include "stmt.h"
 #include "environment.h"
+#include "stack_trace.h"
 #include <sstream>
 
 namespace volt {
@@ -25,12 +26,25 @@ Value VoltFunction::call(Interpreter& interpreter,
         environment->define(declaration_->parameters[i], arguments[i]);
     }
     
+    // Push to call stack
+    try {
+        interpreter.getCallStack().push(declaration_->name, declaration_->token.line);
+    } catch (const std::runtime_error& e) {
+        throw RuntimeError(declaration_->token, e.what(), interpreter.getCallStack().get_frames());
+    }
+    
     // Execute the function body
     try {
         interpreter.executeBlock(declaration_->body, environment);
+        interpreter.getCallStack().pop();
     } catch (const ReturnValue& returnValue) {
         // Return statement throws a special exception with the value
+        interpreter.getCallStack().pop();
         return returnValue.value;
+    } catch (...) {
+        // Ensure we pop even on other exceptions (like RuntimeErrors)
+        interpreter.getCallStack().pop();
+        throw;
     }
     
     // If no return statement, functions return nil
@@ -55,7 +69,22 @@ NativeFunction::NativeFunction(int arity, NativeFn function, std::string name)
 Value NativeFunction::call(Interpreter& interpreter, 
                           const std::vector<Value>& arguments) {
     // Just call the C++ function we wrapped
-    return function_(arguments);
+    try {
+        interpreter.getCallStack().push(name_, -1); // Native functions don't have a line number
+    } catch (const std::runtime_error&) {
+        // For native functions, we don't have a token easily available here
+        // but it will likely be caught by the caller's push
+        throw;
+    }
+
+    try {
+        Value result = function_(arguments);
+        interpreter.getCallStack().pop();
+        return result;
+    } catch (...) {
+        interpreter.getCallStack().pop();
+        throw;
+    }
 }
 
 int NativeFunction::arity() const {

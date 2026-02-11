@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.8.3 LANGUAGES CXX)  # Feature-Rich Release
+project(VoltScript VERSION 0.8.4 LANGUAGES CXX)  # Feature-Rich Release
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,6 +48,10 @@ file(GLOB_RECURSE VOLT_SOURCES
 add_executable(volt
     ${VOLT_SOURCES}
 )
+
+if(MSVC)
+    set_target_properties(volt PROPERTIES LINK_FLAGS "/STACK:33554432")
+endif()
 
 target_include_directories(volt PRIVATE 
     ${CMAKE_BINARY_DIR}/generated
@@ -130,6 +134,10 @@ if(BUILD_TESTS)
     
     # Test executable
     add_executable(volt_tests ${TEST_SOURCES})
+
+    if(MSVC)
+        set_target_properties(volt_tests PROPERTIES LINK_FLAGS "/STACK:8388608")
+    endif()
     
     target_include_directories(volt_tests PRIVATE 
         ${CMAKE_BINARY_DIR}/generated

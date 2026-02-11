@@ -4,6 +4,7 @@
 #include "ast.h"
 #include "value.h"
 #include "environment.h"
+#include "stack_trace.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -12,6 +13,19 @@
 #include <sstream>
 
 namespace volt {
+
+// Runtime error with location info
+class RuntimeError : public std::runtime_error {
+public:
+    Token token;
+    std::vector<StackFrame> stack_trace;
+    
+    RuntimeError(Token tok, const std::string& message)
+        : std::runtime_error(message), token(tok) {}
+
+    RuntimeError(Token tok, const std::string& message, std::vector<StackFrame> trace)
+        : std::runtime_error(message), token(tok), stack_trace(std::move(trace)) {}
+};
 
 // When a function hits 'return', we use this exception to jump
 // back to where the function was called. Much cleaner than checking
@@ -54,6 +68,9 @@ public:
     
     // Get current environment
     std::shared_ptr<Environment> getEnvironment() { return environment_; }
+
+    // Call stack for tracing
+    CallStack& getCallStack() { return call_stack_; }
     
     // Reset interpreter state
     void reset();
@@ -100,6 +117,11 @@ private:
     
     // Register built-in functions (like clock(), input(), etc.)
     void defineNatives();
+
+    // Helper to throw runtime errors with stack trace
+    [[noreturn]] void throwRuntimeError(const Token& token, const std::string& message) {
+        throw RuntimeError(token, message, call_stack_.get_frames());
+    }
     
     // JSON encoding/decoding methods (NEW FOR v0.7.5)
     std::string encodeToJson(const Value& value);
@@ -110,16 +132,9 @@ private:
     int recursion_depth_ = 0;
     static const int MAX_RECURSION_DEPTH = 1000;
     
+    CallStack call_stack_;
     std::shared_ptr<Environment> environment_;
     std::shared_ptr<Environment> globals_;
-};
-
-// Runtime error with location info
-class RuntimeError : public std::runtime_error {
-public:
-    Token token;
-    RuntimeError(Token tok, const std::string& message)
-        : std::runtime_error(message), token(tok) {}
 };
 
 } // namespace volt

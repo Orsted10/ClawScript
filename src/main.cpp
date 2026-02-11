@@ -75,7 +75,24 @@ void dumpStatements(const std::vector<volt::StmtPtr>& statements) {
     std::cout << "===========\n\n";
 }
 
-void runFile(const std::string& path, volt::Interpreter& interpreter, bool debugMode = false) {
+void printRuntimeError(const volt::RuntimeError& e) {
+    std::cerr << "❌ Runtime Error [Line " << e.token.line 
+              << ", Col " << e.token.column << "]: " 
+              << e.what() << "\n";
+    
+    if (!e.stack_trace.empty()) {
+        std::cerr << "Stack trace:\n";
+        for (auto it = e.stack_trace.rbegin(); it != e.stack_trace.rend(); ++it) {
+            std::cerr << "  at " << it->function_name << " (";
+            if (!it->file_path.empty()) {
+                std::cerr << it->file_path << ":";
+            }
+            std::cerr << it->line << ")\n";
+        }
+    }
+}
+
+void runFile(const std::string& path, volt::Interpreter& interpreter, bool debugMode) {
     std::ifstream file(path);
     if (!file) {
         std::cerr << "Could not open file: " << path << "\n";
@@ -115,9 +132,7 @@ void runFile(const std::string& path, volt::Interpreter& interpreter, bool debug
     try {
         interpreter.execute(statements);
     } catch (const volt::RuntimeError& e) {
-        std::cerr << "Runtime Error [Line " << e.token.line 
-                  << ", Col " << e.token.column << "]: " 
-                  << e.what() << "\n";
+        printRuntimeError(e);
         exit(70);
     }
 }
@@ -234,9 +249,7 @@ void runPrompt() {
             interpreter.execute(statements);
             
         } catch (const volt::RuntimeError& e) {
-            std::cerr << "❌ Runtime Error [Line " << e.token.line 
-                      << ", Col " << e.token.column << "]: " 
-                      << e.what() << "\n";
+            printRuntimeError(e);
         } catch (const std::exception& e) {
             std::cerr << "❌ Error: " << e.what() << "\n";
         }

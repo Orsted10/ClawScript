@@ -581,7 +581,7 @@ Value Interpreter::visitVariableExpr(VariableExpr* expr) {
     try {
         return environment_->get(expr->name);
     } catch (const std::runtime_error& e) {
-        throw RuntimeError(expr->token, e.what());
+        throwRuntimeError(expr->token, e.what());
     }
 }
 
@@ -595,7 +595,7 @@ Value Interpreter::visitUnaryExpr(UnaryExpr* expr) {
         case TokenType::Bang:
             return !isTruthy(right);
         default:
-            throw RuntimeError(expr->op, "Unknown unary operator");
+            throwRuntimeError(expr->op, "Unknown unary operator");
     }
 }
 
@@ -618,7 +618,7 @@ Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
             if (isNumber(left) && isString(right)) {
                 return valueToString(left) + asString(right);
             }
-            throw RuntimeError(expr->op, "Operands must be two numbers or two strings");
+            throwRuntimeError(expr->op, "Operands must be two numbers or two strings");
             
         case TokenType::Minus:
             checkNumberOperands(expr->op, left, right);
@@ -629,7 +629,7 @@ Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
         case TokenType::Slash:
             checkNumberOperands(expr->op, left, right);
             if (asNumber(right) == 0.0) {
-                throw RuntimeError(expr->op, "Division by zero");
+                throwRuntimeError(expr->op, "Division by zero");
             }
             return asNumber(left) / asNumber(right);
         case TokenType::Percent:
@@ -655,7 +655,7 @@ Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
             return !isEqual(left, right);
             
         default:
-            throw RuntimeError(expr->op, "Unknown binary operator");
+            throwRuntimeError(expr->op, "Unknown binary operator");
     }
 }
 
@@ -688,7 +688,7 @@ Value Interpreter::visitCallExpr(CallExpr* expr) {
     
     // Make sure it's actually a function
     if (!isCallable(callee)) {
-        throw RuntimeError(
+        throwRuntimeError(
             expr->token,
             "Can only call functions and classes"
         );
@@ -697,8 +697,8 @@ Value Interpreter::visitCallExpr(CallExpr* expr) {
     auto function = std::get<std::shared_ptr<Callable>>(callee);
     
     // Check arity (number of arguments)
-    if (function->arity() != -1 && static_cast<int>(arguments.size()) != function->arity()) {
-        throw RuntimeError(
+    if (function->arity() != -1 && arguments.size() != static_cast<size_t>(function->arity())) {
+        throwRuntimeError(
             expr->token,
             "Expected " + std::to_string(function->arity()) +
             " arguments but got " + std::to_string(arguments.size())
@@ -725,7 +725,7 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
     try {
         current = environment_->get(expr->name);
     } catch (const std::runtime_error& e) {
-        throw RuntimeError(expr->token, e.what());
+        throwRuntimeError(expr->token, e.what());
     }
     
     Value operand = evaluate(expr->value.get());
@@ -740,7 +740,7 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
             } else if (isString(current) && isNumber(operand)) {
                 result = asString(current) + valueToString(operand);
             } else {
-                throw RuntimeError(expr->op, "Operands must be compatible for +=");
+                throwRuntimeError(expr->op, "Operands must be compatible for +=");
             }
             break;
         case TokenType::MinusEqual:
@@ -754,18 +754,18 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
         case TokenType::SlashEqual:
             checkNumberOperands(expr->op, current, operand);
             if (asNumber(operand) == 0.0) {
-                throw RuntimeError(expr->op, "Division by zero");
+                throwRuntimeError(expr->op, "Division by zero");
             }
             result = asNumber(current) / asNumber(operand);
             break;
         default:
-            throw RuntimeError(expr->op, "Unknown compound assignment operator");
+            throwRuntimeError(expr->op, "Unknown compound assignment operator");
     }
     
     try {
         environment_->assign(expr->name, result);
     } catch (const std::runtime_error& e) {
-        throw RuntimeError(expr->token, e.what());
+        throwRuntimeError(expr->token, e.what());
     }
     return result;
 }
@@ -775,11 +775,11 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     try {
         current = environment_->get(expr->name);
     } catch (const std::runtime_error& e) {
-        throw RuntimeError(expr->token, e.what());
+        throwRuntimeError(expr->token, e.what());
     }
     
     if (!isNumber(current)) {
-        throw RuntimeError(expr->op, "Operand must be a number for increment/decrement");
+        throwRuntimeError(expr->op, "Operand must be a number for increment/decrement");
     }
     
     double oldValue = asNumber(current);
@@ -793,7 +793,7 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     try {
         environment_->assign(expr->name, newValue);
     } catch (const std::runtime_error& e) {
-        throw RuntimeError(expr->token, e.what());
+        throwRuntimeError(expr->token, e.what());
     }
     
     // Return old value for postfix, new value for prefix
@@ -833,14 +833,14 @@ Value Interpreter::visitIndexExpr(IndexExpr* expr) {
         
         // Index must be a number
         if (!isNumber(index)) {
-            throw RuntimeError(expr->token, "Array index must be a number");
+            throwRuntimeError(expr->token, "Array index must be a number");
         }
         
         int idx = static_cast<int>(asNumber(index));
         
         // Check bounds
         if (idx < 0 || idx >= array->length()) {
-            throw RuntimeError(expr->token, "Array index out of bounds: " + std::to_string(idx));
+            throwRuntimeError(expr->token, "Array index out of bounds: " + std::to_string(idx));
         }
         
         return array->get(idx);
@@ -870,13 +870,13 @@ Value Interpreter::visitIndexExpr(IndexExpr* expr) {
         } else if (isBool(index)) {
             key = asBool(index) ? "true" : "false";
         } else {
-            throw RuntimeError(expr->token, "Hash map index must be a string, number, boolean, or nil");
+            throwRuntimeError(expr->token, "Hash map index must be a string, number, boolean, or nil");
         }
         
         return map->get(key);
     }
     
-    throw RuntimeError(expr->token, "Can only index arrays and hash maps");
+    throwRuntimeError(expr->token, "Can only index arrays and hash maps");
 }
 
 Value Interpreter::visitIndexAssignExpr(IndexAssignExpr* expr) {
@@ -890,14 +890,14 @@ Value Interpreter::visitIndexAssignExpr(IndexAssignExpr* expr) {
         
         // Index must be a number
         if (!isNumber(index)) {
-            throw RuntimeError(expr->token, "Array index must be a number");
+            throwRuntimeError(expr->token, "Array index must be a number");
         }
         
         int idx = static_cast<int>(asNumber(index));
         
         // Check bounds
         if (idx < 0 || idx >= array->length()) {
-            throw RuntimeError(expr->token, "Array index out of bounds: " + std::to_string(idx));
+            throwRuntimeError(expr->token, "Array index out of bounds: " + std::to_string(idx));
         }
         
         array->set(idx, value);
@@ -924,14 +924,14 @@ Value Interpreter::visitIndexAssignExpr(IndexAssignExpr* expr) {
         } else if (isBool(index)) {
             key = asBool(index) ? "true" : "false";
         } else {
-            throw RuntimeError(expr->token, "Hash map index must be a string, number, boolean, or nil");
+            throwRuntimeError(expr->token, "Hash map index must be a string, number, boolean, or nil");
         }
         
         map->set(key, value);
         return value;
     }
     
-    throw RuntimeError(expr->token, "Can only index arrays and hash maps");
+    throwRuntimeError(expr->token, "Can only index arrays and hash maps");
 }
 
 Value Interpreter::visitMemberExpr(MemberExpr* expr) {
@@ -1075,7 +1075,7 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
             );
         }
         
-        throw RuntimeError(expr->token, "Unknown array member: " + expr->member);
+        throwRuntimeError(expr->token, "Unknown array member: " + expr->member);
     }
     
     // Handle hash maps
@@ -1147,10 +1147,10 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
             );
         }
         
-        throw RuntimeError(expr->token, "Unknown hash map member: " + expr->member);
+        throwRuntimeError(expr->token, "Unknown hash map member: " + expr->member);
     }
     
-    throw RuntimeError(expr->token, "Only arrays and hash maps have members");
+    throwRuntimeError(expr->token, "Only arrays and hash maps have members");
 }
 
 // Evaluate hash map literal expression
@@ -1192,6 +1192,9 @@ Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
                 functionEnv->define(parameters[i], arguments[i]);
             }
             
+            // Push to call stack
+            interp.getCallStack().push("<anonymous>", func_expr->token.line);
+
             // Save current environment and switch to function environment
             auto oldEnv = interp.environment_;
             interp.environment_ = functionEnv;
@@ -1202,11 +1205,17 @@ Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
                 for (const auto& stmt : func_expr->body) {
                     interp.execute(stmt.get());
                 }
+                interp.getCallStack().pop();
             } catch (const ReturnValue& returnValue) {
                 result = returnValue.value;
                 // Restore environment before returning
+                interp.getCallStack().pop();
                 interp.environment_ = oldEnv;
                 return result;
+            } catch (...) {
+                interp.getCallStack().pop();
+                interp.environment_ = oldEnv;
+                throw;
             }
             
             // Restore the original environment
@@ -1229,17 +1238,17 @@ Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
 }
 
 Value Interpreter::visitSetExpr(SetExpr* expr) {
-    throw RuntimeError(expr->token, "Set expressions not supported.");
+    throwRuntimeError(expr->token, "Set expressions not supported.");
 }
 
 void Interpreter::checkNumberOperand(const Token& op, const Value& operand) {
     if (isNumber(operand)) return;
-    throw RuntimeError(op, "Operand must be a number");
+    throwRuntimeError(op, "Operand must be a number");
 }
 
 void Interpreter::checkNumberOperands(const Token& op, const Value& left, const Value& right) {
     if (isNumber(left) && isNumber(right)) return;
-    throw RuntimeError(op, "Operands must be numbers");
+    throwRuntimeError(op, "Operands must be numbers");
 }
 
 // ==================== JSON ENCODING/DECODING METHODS ====================
@@ -1376,7 +1385,7 @@ void Interpreter::encodeJsonValue(const Value& value, std::ostringstream& oss) {
             switch (c) {
                 case '"': oss << "\\\""; break;
                 case '\\': oss << "\\\\"; break;
-                case '/': oss << "\/"; break;
+                case '/': oss << "/"; break;
                 case '\b': oss << "\\b"; break;
                 case '\f': oss << "\\f"; break;
                 case '\n': oss << "\\n"; break;

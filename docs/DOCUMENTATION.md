@@ -2,7 +2,7 @@
 
 <div align="center">
 
-## ⚡ VoltScript v0.8.3 ⚡
+## ⚡ VoltScript v0.8.4 ⚡
 ### *A Modern Programming Language Built from Scratch*
 
 [![Tests](https://img.shields.io/badge/tests-450%2B-brightgreen)]()
@@ -2040,7 +2040,7 @@ MIT License - Free to use, modify, and distribute.
 
 <div align="center">
 
-### ⚡ VoltScript v0.8.3 ⚡
+### ⚡ VoltScript v0.8.4 ⚡
 
 **Built with passion and C++20**
 
