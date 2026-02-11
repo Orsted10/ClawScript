@@ -1,14 +1,14 @@
 <div align="center">
 
-# ⚡ VoltScript v0.8.4 ⚡
+# ⚡ VoltScript v0.8.5 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
 
 > *From tokens → trees → closures → arrays → objects*  
 
-[![Tests](https://img.shields.io/badge/tests-650%2B-brightgreen)]()
-[![C++](https://img.shields.io/badge/C%2B%2B-20-blue)]()
+[![Tests](https://img.shields.io/badge/tests-566-brightgreen)]()
+[![C++](https://img.shields.io/badge/C++-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
 </div>
@@ -37,12 +37,13 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - 🔁 First-class functions & closures
 - 📦 Dynamic arrays with methods
 - 🎯 Compound operators & control flow
+- 🧪 **Comprehensive testing & benchmarking** (New in v0.8.5)
 
 If you've ever wanted to *truly* understand languages like **Python**, **JavaScript**, or **Lua** — this is your path.
 
 ---
 
-## ✨ Features (v0.8.4)
+## ✨ Features (v0.8.5)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -59,17 +60,18 @@ Enhanced with:
 
 ### ⚙️ Interpreter — *AST → Execution*
 
-Major enhancements in v0.8.4:
+Major enhancements in v0.8.5:
 
-- ✅ **Stack Trace Support**: Detailed call stacks for all runtime errors
+- ✅ **Integration Test Suite**: Automated end-to-end script validation
+- ✅ **Performance Benchmarking**: Google Benchmark integration for performance tracking
+- ✅ **Stack Trace Support**: Detailed call stacks for all runtime errors (v0.8.4)
 - ✅ **Stack Overflow Protection**: Configurable recursion depth limit (1000 frames)
-- ✅ **Visitor Pattern**: High-performance AST traversal (introduced v0.8.2)
+- ✅ **Visitor Pattern**: High-performance AST traversal
 - ✅ **Array method chaining**: `numbers.map().filter().reduce()`
 - ✅ **Enhanced array methods**: `.join()`, `.concat()`, `.slice()`, `.flat()`, `.flatMap()`
 - ✅ **Built-in functional utilities**: `reverse()`, `filter()`, `map()` for arrays
 - ✅ **Improved function call handling**: Better parameter binding and return value management
 - ✅ **Enhanced error recovery**: More robust error handling in complex scenarios
-- ✅ **Performance optimizations**: Faster execution for common patterns
 - ✅ **Memory management improvements**: Better resource cleanup
 
 VoltScript runs **real programs** with:

@@ -163,7 +163,7 @@ if(BUILD_TESTS)
     include(GoogleTest)
     gtest_discover_tests(volt_tests)
     
-    message(STATUS "✅ Tests enabled (650+ tests)")
+    message(STATUS "✅ Tests enabled (566 tests)")
 
     # ========================================
     # INTEGRATION TESTS (Phase 3.2)
