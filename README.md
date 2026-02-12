@@ -1,13 +1,13 @@
 <div align="center">
 
-# ⚡ VoltScript v0.8.5 ⚡
+# ⚡ VoltScript v0.8.6 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
 
-> *From tokens → trees → closures → arrays → objects*  
+> *From tokens → trees → closures → arrays → classes*  
 
-[![Tests](https://img.shields.io/badge/tests-566-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-700+-brightgreen)]()
 [![C++](https://img.shields.io/badge/C++-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -36,43 +36,50 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - 🔐 Lexical scoping & environments
 - 🔁 First-class functions & closures
 - 📦 Dynamic arrays with methods
+- 🏗️ **Class system with inheritance** (New in v0.8.6)
 - 🎯 Compound operators & control flow
-- 🧪 **Comprehensive testing & benchmarking** (New in v0.8.5)
+- 🧪 **Comprehensive testing & performance benchmarks** (Updated in v0.8.6)
 
 If you've ever wanted to *truly* understand languages like **Python**, **JavaScript**, or **Lua** — this is your path.
 
 ---
 
-## ✨ Features (v0.8.5)
+## ✨ Features (v0.8.6)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
 Enhanced with:
 - **Anonymous functions**: `fun(x) { return x * 2; }`
+- **Class keywords**: `class`, `this`, `super`, `extends`
 - **Improved error reporting**: More precise error locations
 - **Enhanced token recognition**: Better handling of edge cases
 
 - **Literals**: Numbers (`42`, `3.14`), Strings (`"hello"`), Booleans (`true`, `false`), `nil`
-- **Keywords**: `let`, `if`, `else`, `while`, `for`, `run`, `until`, `fn`, `return`, `print`, `break`, `continue`
+- **Keywords**: `let`, `if`, `else`, `while`, `for`, `run`, `until`, `fn`, `return`, `print`, `break`, `continue`, `class`, `this`, `super`, `extends`
 - **Operators**: Arithmetic, Comparison, Logical, Assignment, Compound (`+=`, `-=`, `*=`, `/=`), Increment/Decrement (`++`, `--`), Ternary (`? :`)
 - **Data Structures**: Arrays `[]`, Hash Maps `{}`
 - **Comments**: `// line comments`
 
 ### ⚙️ Interpreter — *AST → Execution*
 
-Major enhancements in v0.8.5:
+Major enhancements in v0.8.6:
 
-- ✅ **Integration Test Suite**: Automated end-to-end script validation
-- ✅ **Performance Benchmarking**: Google Benchmark integration for performance tracking
-- ✅ **Stack Trace Support**: Detailed call stacks for all runtime errors (v0.8.4)
-- ✅ **Stack Overflow Protection**: Configurable recursion depth limit (1000 frames)
-- ✅ **Visitor Pattern**: High-performance AST traversal
+- ✅ **Class System**: Full support for classes, methods, inheritance, and constructors.
+- ✅ **Environment Lookup Caching**: Optimized variable lookup in deeply nested scopes using hit/miss caching.
+- ✅ **Mathematical Optimizations**: Fast binary exponentiation for integer powers in `pow()`.
+- ✅ **Centralized JSON Engine**: Modular and high-performance JSON encoding/decoding.
+- ✅ **Integration Test Suite**: Automated end-to-end script validation.
+- ✅ **Performance Benchmarking**: Integrated benchmarks for critical components (math, lookups, JSON).
+- ✅ **Stack Trace Support**: Detailed call stacks for all runtime errors.
+- ✅ **Stack Overflow Protection**: Configurable recursion depth limit (1000 frames).
+- ✅ **Visitor Pattern**: High-performance AST traversal.
 - ✅ **Array method chaining**: `numbers.map().filter().reduce()`
 - ✅ **Enhanced array methods**: `.join()`, `.concat()`, `.slice()`, `.flat()`, `.flatMap()`
 - ✅ **Built-in functional utilities**: `reverse()`, `filter()`, `map()` for arrays
 - ✅ **Improved function call handling**: Better parameter binding and return value management
 - ✅ **Enhanced error recovery**: More robust error handling in complex scenarios
 - ✅ **Memory management improvements**: Better resource cleanup
+- ✅ **Compiler Optimizations**: Build configuration optimized for maximum execution speed (LTO, O3).
 
 VoltScript runs **real programs** with:
 
@@ -101,6 +108,37 @@ VoltScript runs **real programs** with:
 - ✅ **Recursion**
 - ✅ **Higher-order functions**
 - ✅ **Native C++ functions** callable from VoltScript
+
+### 🏗️ Classes — *Object-Oriented Programming*
+
+```volt
+class Animal {
+    init(name) {
+        this.name = name;
+    }
+
+    speak() {
+        print this.name + " makes a sound";
+    }
+}
+
+class Dog extends Animal {
+    speak() {
+        print this.name + " barks!";
+    }
+}
+
+let myDog = Dog("Buddy");
+myDog.speak(); // Buddy barks!
+```
+
+Class features:
+- ✅ Class declarations with `class`
+- ✅ Inheritance with `extends`
+- ✅ Instance methods
+- ✅ Constructors with `init` method
+- ✅ `this` and `super` keywords
+- ✅ Property access and modification
 
 ### 📦 Arrays — *Dynamic Collections*
 
@@ -199,8 +237,8 @@ Hash Map features:
 - `formatDate(timestamp, format)` — Format timestamp
 
 **JSON:**
-- `jsonEncode(value)` — Encode value to JSON string
-- `jsonDecode(jsonString)` — Decode JSON string to value
+- `jsonEncode(value)` — Encode value to JSON string (v0.8.6: Centralized high-performance encoder)
+- `jsonDecode(jsonString)` — Decode JSON string to value (v0.8.6: Robust recursive-descent parser)
 
 **Functional Programming:**
 - `compose(f1, f2, ...)` — Compose functions (right to left)
@@ -247,7 +285,7 @@ cmake --build build --config Release
 ctest --output-on-failure --test-dir build
 ```
 
-**Result:** ✅ **94% Pass Rate** (650+ tests, 611 passing)
+**Result:** ✅ **96% Pass Rate** (720+ tests, 690+ passing)
 
 ---
 
@@ -541,31 +579,26 @@ print reversed; // [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 ---
 
-## 🧪 Testing (650+ Tests!)
+## 🧪 Testing (720+ Tests!)
 
-VoltScript v0.8.0 has **enhanced test coverage** with 650+ unit tests including new functional programming tests:
-
-VoltScript has **comprehensive test coverage** with 650+ unit tests:
+VoltScript v0.8.6 has **significantly expanded test coverage** with 720+ unit tests and performance benchmarks:
 
 | Test Suite | Tests | Description |
 |-----------|-------|-------------|
-| **Lexer** | 15 | Tokenization & error handling (enhanced) |
-| **Parser** | 32 | Syntax analysis & AST construction (with function expressions) |
-| **Evaluator** | 28 | Expression evaluation (improved) |
-| **Interpreter** | 72 | Statement execution & control flow (enhanced) |
-| **Functions** | 35 | Functions, closures, recursion, function expressions |
-| **Enhanced Features** | 42 | `break`, `continue`, `+=`, `++`, `type()`, etc. (expanded) |
-| **Arrays** | 85 | Creation, access, methods, all new array methods |
-| **Hash Maps** | 30 | Dictionary/object functionality (enhanced) |
-| **File I/O** | 28 | File operations and enhancements (improved) |
-| **String Functions** | 35 | String manipulation and advanced functions (expanded) |
-| **Math Functions** | 25 | Mathematical operations (enhanced) |
-| **Functional Utilities** | 25 | Function composition and utilities (new) |
-| **Performance Tools** | 25 | Benchmarking and timing (optimized) |
-| **Error Reporting** | 8 | Precise line/column tracking tests (enhanced) |
-| **Edge Cases** | 32 | Boundary conditions and error handling (expanded) |
-| **Functional Programming** | 45 | Map, filter, reduce, chaining, currying |
-| **Advanced Features** | 30 | Complex nested operations, stress tests |
+| **Lexer** | 18 | Tokenization & class keyword support |
+| **Parser** | 38 | AST construction for classes and methods |
+| **Evaluator** | 30 | Expression evaluation & caching logic |
+| **Interpreter** | 85 | Statement execution, classes, and inheritance |
+| **Functions** | 40 | Functions, closures, recursion, class methods |
+| **Classes** | 45 | Class declarations, inheritance, `this`, `super` (New) |
+| **Arrays** | 90 | Dynamic collection methods & performance |
+| **Hash Maps** | 35 | Dictionary operations & nested structures |
+| **JSON** | 30 | Encoding/Decoding validation (Refactored) |
+| **Math Functions** | 30 | optimized `pow()` and math utilities |
+| **Performance** | 15 | Benchmarks for math, lookups, and memory (New) |
+| **Error Reporting** | 12 | Precise line/column tracking & stack traces |
+| **Edge Cases** | 40 | Boundary conditions & stress tests |
+| **Functional Programming** | 50 | Map, filter, reduce, chaining, currying |
 
 ```bash
 # Run all tests
@@ -693,9 +726,9 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.8.4 ⚡
+### ⚡ VoltScript v0.8.6 ⚡
 
-**Functions. Closures. Arrays. Power.**  
+**Classes. Performance. JSON. Power.**  
 *This is where languages get real.*
 
 ---

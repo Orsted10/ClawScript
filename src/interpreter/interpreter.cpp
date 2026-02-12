@@ -6,6 +6,7 @@
 #include "environment.h"
 #include "features/array.h"
 #include "features/hashmap.h"
+#include "features/class.h"
 #include "interpreter/natives/native_math.h"
 #include "interpreter/natives/native_string.h"
 #include "interpreter/natives/native_array.h"
@@ -83,24 +84,7 @@ void Interpreter::defineNatives() {
     
     // ==================== JSON HANDLING (NEW FOR v0.7.5) ====================
     
-    // jsonEncode(value) - encode value to JSON string
-    globals_->define("jsonEncode", std::make_shared<NativeFunction>(
-        1,
-        [this](const std::vector<Value>& args) -> Value {
-            return this->encodeToJson(args[0]);
-        },
-        "jsonEncode"
-    ));
-    
-    // jsonDecode(jsonString) - decode JSON string to value
-    globals_->define("jsonDecode", std::make_shared<NativeFunction>(
-        1,
-        [this](const std::vector<Value>& args) -> Value {
-            if (!isString(args[0])) throw std::runtime_error("E4005: jsonDecode() requires a string");
-            return this->decodeFromJson(asString(args[0]));
-        },
-        "jsonDecode"
-    ));
+    registerNativeJSON(globals_);
     
     
     // type(val) - get type of value as string
@@ -499,57 +483,72 @@ void Interpreter::visitContinueStmt(ContinueStmt*) {
 }
 
 void Interpreter::visitTryStmt(TryStmt* stmt) {
-    // Debug output removed for cleaner production code
-    
     if (!stmt->tryBody) return;
-    if (!stmt->catchBody) return;
     
     try {
-        // Execute the try block
         execute(stmt->tryBody.get());
     } catch (const RuntimeError& e) {
-        // Handle runtime errors
-        auto catchEnvironment = std::make_shared<Environment>(environment_);
+        if (!stmt->catchBody) return;
+        
+        // Create new environment for catch block
+        auto catchEnv = std::make_shared<Environment>(environment_);
+        
+        // Formatted error message with error code
         std::string errorMsg = errorCodeToString(e.code) + ": " + e.what();
-        catchEnvironment->define(stmt->exceptionVar, errorMsg);
+        catchEnv->define(stmt->exceptionVar, errorMsg);
         
         auto previousEnv = environment_;
         try {
-            environment_ = catchEnvironment;
+            environment_ = catchEnv;
             execute(stmt->catchBody.get());
             environment_ = previousEnv;
         } catch (...) {
             environment_ = previousEnv;
             throw;
         }
-    } catch (const std::runtime_error& e) {
-        // Also catch std::runtime_error
-        auto catchEnvironment = std::make_shared<Environment>(environment_);
-        catchEnvironment->define(stmt->exceptionVar, e.what());
+    } catch (const std::exception& e) {
+        if (!stmt->catchBody) return;
+        
+        auto catchEnv = std::make_shared<Environment>(environment_);
+        catchEnv->define(stmt->exceptionVar, std::string(e.what()));
         
         auto previousEnv = environment_;
         try {
-            environment_ = catchEnvironment;
+            environment_ = catchEnv;
             execute(stmt->catchBody.get());
             environment_ = previousEnv;
         } catch (...) {
             environment_ = previousEnv;
             throw;
         }
-    } catch (...) {
-        // Catch everything else
-        auto catchEnvironment = std::make_shared<Environment>(environment_);
-        catchEnvironment->define(stmt->exceptionVar, "Unknown exception caught");
+    }
+}
+
+void Interpreter::visitThrowStmt(ThrowStmt* stmt) {
+    Value value = evaluate(stmt->expression.get());
+    std::string message = valueToString(value);
+    
+    // We'll use a specific error code for user-thrown errors
+    throwRuntimeError(stmt->token, ErrorCode::RUNTIME_ERROR, message);
+}
+
+void Interpreter::visitImportStmt(ImportStmt* stmt) {
+    try {
+        // 1. Load the module
+        auto module = module_manager_.loadModule(stmt->modulePath, *this);
         
-        auto previousEnv = environment_;
-        try {
-            environment_ = catchEnvironment;
-            execute(stmt->catchBody.get());
-            environment_ = previousEnv;
-        } catch (...) {
-            environment_ = previousEnv;
-            throw;
+        // 2. Extract requested imports
+        for (const auto& name : stmt->imports) {
+            try {
+                Value exportedValue = module->getExport(name);
+                environment_->define(name, exportedValue);
+            } catch (...) {
+                throwRuntimeError(stmt->token, ErrorCode::UNDEFINED_VARIABLE, 
+                    "Module '" + stmt->modulePath + "' does not export '" + name + "'");
+            }
         }
+    } catch (const std::exception& e) {
+        throwRuntimeError(stmt->token, ErrorCode::RUNTIME_ERROR, e.what());
     }
 }
 
@@ -699,7 +698,12 @@ Value Interpreter::visitCallExpr(CallExpr* expr) {
         );
     }
     
-    auto function = std::get<std::shared_ptr<Callable>>(callee);
+    std::shared_ptr<Callable> function;
+    if (std::holds_alternative<std::shared_ptr<Callable>>(callee)) {
+        function = std::get<std::shared_ptr<Callable>>(callee);
+    } else if (std::holds_alternative<std::shared_ptr<VoltClass>>(callee)) {
+        function = std::get<std::shared_ptr<VoltClass>>(callee);
+    }
     
     // Check arity (number of arguments)
     if (function->arity() != -1 && arguments.size() != static_cast<size_t>(function->arity())) {
@@ -804,6 +808,56 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     
     // Return old value for postfix, new value for prefix
     return expr->prefix ? newValue : oldValue;
+}
+
+Value Interpreter::visitSetExpr(SetExpr* expr) {
+    Value object = evaluate(expr->object.get());
+
+    if (!isInstance(object)) {
+        throwRuntimeError(expr->token, ErrorCode::RUNTIME_ERROR, "Only instances have fields.");
+    }
+
+    Value value = evaluate(expr->value.get());
+    asInstance(object)->set(expr->token, value);
+    return value;
+}
+
+Value Interpreter::visitThisExpr(ThisExpr* expr) {
+    try {
+        return environment_->get("this");
+    } catch (const VoltError& e) {
+        throwRuntimeError(expr->token, e.code, e.what());
+    }
+}
+
+Value Interpreter::visitSuperExpr(SuperExpr* expr) {
+    try {
+        // 1. Look up 'super' in the environment
+        Value superValue = environment_->get("super");
+        if (!isClass(superValue)) {
+            throwRuntimeError(expr->token, ErrorCode::RUNTIME_ERROR, "Can only use 'super' in a class with a superclass.");
+        }
+        auto superclass = asClass(superValue);
+
+        // 2. Look up 'this' (the instance) to bind the method to
+        Value thisValue = environment_->get("this");
+        if (!isInstance(thisValue)) {
+             throwRuntimeError(expr->token, ErrorCode::RUNTIME_ERROR, "Can only use 'super' inside a class method.");
+        }
+        auto instance = asInstance(thisValue);
+
+        // 3. Find method in superclass
+        auto method = superclass->findMethod(expr->method);
+
+        if (!method) {
+            throwRuntimeError(expr->token, ErrorCode::RUNTIME_ERROR, "Undefined property '" + expr->method + "'.");
+        }
+
+        // 4. Bind instance to method
+        return method->bind(instance);
+    } catch (const VoltError& e) {
+        throwRuntimeError(expr->token, e.code, e.what());
+    }
 }
 
 Value Interpreter::visitTernaryExpr(TernaryExpr* expr) {
@@ -1178,10 +1232,50 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
         throwRuntimeError(expr->token, ErrorCode::UNDEFINED_VARIABLE, "Unknown hash map member: " + expr->member);
     }
     
-    throwRuntimeError(expr->token, ErrorCode::NOT_INDEXABLE, "Only arrays and hash maps have members");
+    // Handle class instances
+    if (isInstance(object)) {
+        return asInstance(object)->get(expr->token);
+    }
+    
+   throwRuntimeError(expr->token, ErrorCode::NOT_INDEXABLE, "Only arrays, hash maps, and class instances have members");
 }
 
-// Evaluate hash map literal expression
+
+void Interpreter::visitClassStmt(ClassStmt* stmt) {
+    std::shared_ptr<VoltClass> superclass = nullptr;
+    if (stmt->superclass) {
+        Value super = evaluate(stmt->superclass.get());
+        if (!isClass(super)) {
+            throwRuntimeError(stmt->token, ErrorCode::RUNTIME_ERROR, "Superclass must be a class.");
+        }
+        superclass = asClass(super);
+    }
+
+    environment_->define(stmt->name, nullptr);
+
+    // If there's a superclass, we create a new environment for the methods
+    // that contains 'super'
+    auto oldEnv = environment_;
+    if (superclass) {
+        environment_ = std::make_shared<Environment>(environment_);
+        environment_->define("super", superclass);
+    }
+
+    std::unordered_map<std::string, std::shared_ptr<VoltFunction>> methods;
+    for (auto& method : stmt->methods) {
+        auto function = std::make_shared<VoltFunction>(method.get(), environment_, method->name == "init");
+        methods[method->name] = function;
+    }
+
+    auto cls = std::make_shared<VoltClass>(stmt->name, superclass, std::move(methods));
+
+    if (superclass) {
+        environment_ = oldEnv;
+    }
+
+    environment_->assign(stmt->name, cls);
+}
+
 Value Interpreter::visitHashMapExpr(HashMapExpr* expr) {
     auto hashMap = std::make_shared<VoltHashMap>();
     
@@ -1265,10 +1359,6 @@ Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
         expr->parameters, expr, environment_));
 }
 
-Value Interpreter::visitSetExpr(SetExpr* expr) {
-    throwRuntimeError(expr->token, ErrorCode::SYNTAX_ERROR, "Set expressions not supported.");
-}
-
 void Interpreter::checkNumberOperand(const Token& op, const Value& operand) {
     if (isNumber(operand)) return;
     throwRuntimeError(op, ErrorCode::TYPE_MISMATCH, "Operand must be a number");
@@ -1282,168 +1372,18 @@ void Interpreter::checkNumberOperands(const Token& op, const Value& left, const 
 // ==================== JSON ENCODING/DECODING METHODS ====================
 
 std::string Interpreter::encodeToJson(const Value& value) {
-    std::ostringstream oss;
-    encodeJsonValue(value, oss);
-    return oss.str();
+    (void)value;
+    return "";
 }
 
 Value Interpreter::decodeFromJson(const std::string& jsonString) {
-    // Simple JSON decoder - handles basic types
-    std::string trimmed = jsonString;
-    // Remove leading/trailing whitespace
-    trimmed.erase(0, trimmed.find_first_not_of(" \t\n\r"));
-    trimmed.erase(trimmed.find_last_not_of(" \t\n\r") + 1);
-    
-    if (trimmed.empty()) {
-        return nullptr;
-    }
-    
-    // Handle null
-    if (trimmed == "null") {
-        return nullptr;
-    }
-    
-    // Handle boolean
-    if (trimmed == "true") {
-        return true;
-    }
-    if (trimmed == "false") {
-        return false;
-    }
-    
-    // Handle string (quoted)
-    if (trimmed.front() == '"' && trimmed.back() == '"') {
-        // Remove quotes and handle escape sequences
-        std::string str = trimmed.substr(1, trimmed.length() - 2);
-        // Simple escape sequence handling
-        std::string result;
-        for (size_t i = 0; i < str.length(); i++) {
-            if (str[i] == '\\' && i + 1 < str.length()) {
-                switch (str[++i]) {
-                    case '"': result += '"'; break;
-                    case '\\': result += '\\'; break;
-                    case '/': result += '/'; break;
-                    case 'b': result += '\b'; break;
-                    case 'f': result += '\f'; break;
-                    case 'n': result += '\n'; break;
-                    case 'r': result += '\r'; break;
-                    case 't': result += '\t'; break;
-                    default: result += str[i-1]; result += str[i]; break;
-                }
-            } else {
-                result += str[i];
-            }
-        }
-        return result;
-    }
-    
-    // Handle number
-    try {
-        // Check if it's a valid number
-        size_t pos;
-        double num = std::stod(trimmed, &pos);
-        if (pos == trimmed.length()) {
-            return num;
-        }
-    } catch (...) {
-        // Not a valid number
-    }
-    
-    // Handle array
-    if (trimmed.front() == '[' && trimmed.back() == ']') {
-        // Parse array elements
-        std::string content = trimmed.substr(1, trimmed.length() - 2);
-        auto array = std::make_shared<VoltArray>();
-        
-        // Simple CSV-like parsing (doesn't handle nested structures well)
-        std::istringstream iss(content);
-        std::string element;
-        while (std::getline(iss, element, ',')) {
-            // Trim whitespace
-            element.erase(0, element.find_first_not_of(" \t\n\r"));
-            element.erase(element.find_last_not_of(" \t\n\r") + 1);
-            if (!element.empty()) {
-                array->push(decodeFromJson(element));
-            }
-        }
-        return array;
-    }
-    
-    // Handle object
-    if (trimmed.front() == '{' && trimmed.back() == '}') {
-        // Parse object key-value pairs
-        // This is a simplified implementation
-        return std::make_shared<VoltHashMap>(); // Return empty hashmap for now
-    }
-    
-    // If we can't parse it, treat as string
-    return trimmed;
+    (void)jsonString;
+    return nullptr;
 }
 
 void Interpreter::encodeJsonValue(const Value& value, std::ostringstream& oss) {
-    if (isNil(value)) {
-        oss << "null";
-    } else if (isBool(value)) {
-        oss << (asBool(value) ? "true" : "false");
-    } else if (isNumber(value)) {
-        double num = asNumber(value);
-        if (num == static_cast<long long>(num)) {
-            oss << static_cast<long long>(num);
-        } else {
-            oss << std::fixed << std::setprecision(6) << num;
-            // Remove trailing zeros
-            std::string str = oss.str();
-            oss.str("");
-            oss.clear();
-            size_t dotPos = str.find('.');
-            if (dotPos != std::string::npos) {
-                size_t lastNonZero = str.find_last_not_of('0');
-                if (lastNonZero == dotPos) {
-                    str = str.substr(0, dotPos);
-                } else if (lastNonZero != std::string::npos) {
-                    str = str.substr(0, lastNonZero + 1);
-                }
-            }
-            oss << str;
-        }
-    } else if (isString(value)) {
-        std::string str = asString(value);
-        oss << "\"";
-        for (char c : str) {
-            switch (c) {
-                case '"': oss << "\\\""; break;
-                case '\\': oss << "\\\\"; break;
-                case '/': oss << "/"; break;
-                case '\b': oss << "\\b"; break;
-                case '\f': oss << "\\f"; break;
-                case '\n': oss << "\\n"; break;
-                case '\r': oss << "\\r"; break;
-                case '\t': oss << "\\t"; break;
-                default:
-                    if (c >= 0 && c < 32) {
-                        // Escape control characters
-                        oss << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c);
-                    } else {
-                        oss << c;
-                    }
-                    break;
-            }
-        }
-        oss << "\"";
-    } else if (isArray(value)) {
-        auto array = asArray(value);
-        oss << "[";
-        const auto& elements = array->elements();
-        for (size_t i = 0; i < elements.size(); i++) {
-            if (i > 0) oss << ",";
-            encodeJsonValue(elements[i], oss);
-        }
-        oss << "]";
-    } else if (isHashMap(value)) {
-        oss << "{}"; // Simplified - just return empty object
-    } else {
-        oss << "\"" << valueToString(value) << "\"";
-    }
+    (void)value;
+    (void)oss;
 }
 
 } // namespace volt

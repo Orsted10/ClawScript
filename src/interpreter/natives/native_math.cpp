@@ -9,6 +9,18 @@
 
 namespace volt {
 
+double fastPow(double base, int exp) {
+    if (exp == 0) return 1.0;
+    if (exp < 0) return 1.0 / fastPow(base, -exp);
+    double res = 1.0;
+    while (exp > 0) {
+        if (exp % 2 == 1) res *= base;
+        base *= base;
+        exp /= 2;
+    }
+    return res;
+}
+
 void registerNativeMath(const std::shared_ptr<Environment>& globals) {
     globals->define("abs", std::make_shared<NativeFunction>(
         1,
@@ -36,7 +48,15 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
             if (!isNumber(args[0]) || !isNumber(args[1])) {
                 throw std::runtime_error("pow() requires two numbers");
             }
-            return std::pow(asNumber(args[0]), asNumber(args[1]));
+            double base = asNumber(args[0]);
+            double exp = asNumber(args[1]);
+            
+            // Optimization: Use fastPow for integer exponents
+            if (std::floor(exp) == exp) {
+                return fastPow(base, static_cast<int>(exp));
+            }
+            
+            return std::pow(base, exp);
         },
         "pow"
     ));

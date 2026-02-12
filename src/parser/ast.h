@@ -32,6 +32,8 @@ struct IndexAssignExpr;
 struct HashMapExpr;
 struct MemberExpr;
 struct SetExpr;
+struct ThisExpr;
+struct SuperExpr;
 struct FunctionExpr;
 
 class ExprVisitor {
@@ -54,6 +56,8 @@ public:
     virtual Value visitHashMapExpr(HashMapExpr* expr) = 0;
     virtual Value visitMemberExpr(MemberExpr* expr) = 0;
     virtual Value visitSetExpr(SetExpr* expr) = 0;
+    virtual Value visitThisExpr(ThisExpr* expr) = 0;
+    virtual Value visitSuperExpr(SuperExpr* expr) = 0;
     virtual Value visitFunctionExpr(FunctionExpr* expr) = 0;
 };
 
@@ -249,6 +253,19 @@ struct SetExpr : Expr {
     
     SetExpr(Token name, ExprPtr obj, std::string mem, ExprPtr val)
         : Expr(name), object(std::move(obj)), member(std::move(mem)), value(std::move(val)) {}
+    Value accept(ExprVisitor& visitor) override;
+};
+
+// This: this
+struct ThisExpr : Expr {
+    explicit ThisExpr(Token keyword) : Expr(keyword) {}
+    Value accept(ExprVisitor& visitor) override;
+};
+
+// Super: super.method(...)
+struct SuperExpr : Expr {
+    std::string method;
+    SuperExpr(Token keyword, std::string m) : Expr(keyword), method(std::move(m)) {}
     Value accept(ExprVisitor& visitor) override;
 };
 

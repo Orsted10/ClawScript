@@ -5,6 +5,7 @@
 #include "value.h"
 #include "environment.h"
 #include "stack_trace.h"
+#include "module.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -93,6 +94,8 @@ public:
     Value visitHashMapExpr(HashMapExpr* expr) override;
     Value visitMemberExpr(MemberExpr* expr) override;
     Value visitSetExpr(SetExpr* expr) override;
+    Value visitThisExpr(ThisExpr* expr) override;
+    Value visitSuperExpr(SuperExpr* expr) override;
     Value visitFunctionExpr(FunctionExpr* expr) override;
 
     // StmtVisitor implementation
@@ -109,6 +112,15 @@ public:
     void visitBreakStmt(BreakStmt* stmt) override;
     void visitContinueStmt(ContinueStmt* stmt) override;
     void visitTryStmt(TryStmt* stmt) override;
+    void visitThrowStmt(ThrowStmt* stmt) override;
+    void visitImportStmt(ImportStmt* stmt) override;
+    void visitClassStmt(ClassStmt* stmt) override;
+    
+    // Get global environment
+    std::shared_ptr<Environment> getGlobals() const { return globals_; }
+    
+    // Get current environment
+    std::shared_ptr<Environment> getEnvironment() const { return environment_; }
     
 private:
     // Helper methods
@@ -123,11 +135,6 @@ private:
         throw RuntimeError(token, code, message, call_stack_.get_frames());
     }
     
-    // JSON encoding/decoding methods (NEW FOR v0.7.5)
-    std::string encodeToJson(const Value& value);
-    Value decodeFromJson(const std::string& jsonString);
-    void encodeJsonValue(const Value& value, std::ostringstream& oss);
-    
     // Recursion depth tracking for stress test protection
     int recursion_depth_ = 0;
     static const int MAX_RECURSION_DEPTH = 1000;
@@ -135,6 +142,7 @@ private:
     CallStack call_stack_;
     std::shared_ptr<Environment> environment_;
     std::shared_ptr<Environment> globals_;
+    ModuleManager module_manager_;
 };
 
 } // namespace volt

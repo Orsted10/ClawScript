@@ -28,6 +28,7 @@ enum class ErrorCode {
     JSON_ERROR = 4005,
     MATH_ERROR = 4006,
     ARGUMENT_COUNT_MISMATCH = 4007,
+    RUNTIME_ERROR = 4008,
     
     UNKNOWN_ERROR = 9999
 };
@@ -47,6 +48,7 @@ inline std::string errorCodeToString(ErrorCode code) {
         case ErrorCode::JSON_ERROR: return "E4005";
         case ErrorCode::MATH_ERROR: return "E4006";
         case ErrorCode::ARGUMENT_COUNT_MISMATCH: return "E4007";
+        case ErrorCode::RUNTIME_ERROR: return "E4008";
         case ErrorCode::SYNTAX_ERROR: return "E1001";
         case ErrorCode::UNKNOWN_ERROR:
         default: return "E9999";

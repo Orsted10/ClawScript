@@ -1,4 +1,4 @@
-# VoltScript v0.8.0 API Reference
+# VoltScript v0.8.6 API Reference
 
 ## Table of Contents
 1. [Global Functions](#global-functions)
@@ -9,8 +9,9 @@
 6. [File I/O Functions](#file-io-functions)
 7. [Date/Time Functions](#datetime-functions)
 8. [JSON Functions](#json-functions)
-9. [Functional Utilities](#functional-utilities)
-10. [Performance Tools](#performance-tools)
+9. [Class System](#class-system)
+10. [Functional Utilities](#functional-utilities)
+11. [Performance Tools](#performance-tools)
 
 ## Global Functions
 
@@ -208,6 +209,33 @@ formatDate(timestamp, format)  // Format timestamp (placeholder)
 ```volt
 jsonEncode(value)              // Convert value to JSON string
 jsonDecode(jsonString)         // Parse JSON string to value
+```
+
+## Class System
+
+### Class Declaration
+```volt
+class Name {
+    init(args) { ... }         // Constructor
+    method() { ... }           // Instance method
+}
+```
+
+### Inheritance
+```volt
+class Child extends Parent {
+    method() {
+        super.method();        // Call parent method
+    }
+}
+```
+
+### Instance Operations
+```volt
+let instance = ClassName(args) // Create instance
+instance.property = value      // Set property
+print instance.property        // Get property
+instance.method()              // Call method
 ```
 
 ## Functional Utilities
@@ -416,5 +444,5 @@ if (exists("data.txt")) {
 
 ---
 
-**Last Updated:** February 4, 2026  
-**Version:** 0.8.0
+**Last Updated:** February 12, 2026  
+**Version:** 0.8.6

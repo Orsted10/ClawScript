@@ -25,9 +25,21 @@ public:
     // Check if variable exists
     bool exists(const std::string& name) const;
 
+    // Environment Caching (v0.8.6 Optimization)
+    struct CacheEntry {
+        std::shared_ptr<Environment> env;
+        Value value;
+        bool found;
+    };
+    
+    static void clearGlobalCache();
+
 private:
     std::unordered_map<std::string, Value> values_;
     std::shared_ptr<Environment> enclosing_;
+    
+    // Performance: Fast lookup cache for deeply nested environments
+    mutable std::unordered_map<std::string, CacheEntry> lookup_cache_;
 };
 
 } // namespace volt

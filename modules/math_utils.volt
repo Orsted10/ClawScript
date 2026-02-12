@@ -1,0 +1,17 @@
+// math_utils.volt
+
+fn square(x) {
+    return x * x;
+}
+
+fn cube(x) {
+    return x * x * x;
+}
+
+let PI = 3.14159265359;
+
+fn circleArea(radius) {
+    return PI * square(radius);
+}
+
+print "Math utils module loaded!";

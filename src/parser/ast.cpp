@@ -144,6 +144,8 @@ Value IndexAssignExpr::accept(ExprVisitor& visitor) { return visitor.visitIndexA
 Value HashMapExpr::accept(ExprVisitor& visitor) { return visitor.visitHashMapExpr(this); }
 Value MemberExpr::accept(ExprVisitor& visitor) { return visitor.visitMemberExpr(this); }
 Value SetExpr::accept(ExprVisitor& visitor) { return visitor.visitSetExpr(this); }
+Value ThisExpr::accept(ExprVisitor& visitor) { return visitor.visitThisExpr(this); }
+Value SuperExpr::accept(ExprVisitor& visitor) { return visitor.visitSuperExpr(this); }
 Value FunctionExpr::accept(ExprVisitor& visitor) { return visitor.visitFunctionExpr(this); }
 
 void ExprStmt::accept(StmtVisitor& visitor) { visitor.visitExprStmt(this); }
@@ -159,5 +161,8 @@ void ReturnStmt::accept(StmtVisitor& visitor) { visitor.visitReturnStmt(this); }
 void BreakStmt::accept(StmtVisitor& visitor) { visitor.visitBreakStmt(this); }
 void ContinueStmt::accept(StmtVisitor& visitor) { visitor.visitContinueStmt(this); }
 void TryStmt::accept(StmtVisitor& visitor) { visitor.visitTryStmt(this); }
+void ThrowStmt::accept(StmtVisitor& visitor) { visitor.visitThrowStmt(this); }
+void ImportStmt::accept(StmtVisitor& visitor) { visitor.visitImportStmt(this); }
+void ClassStmt::accept(StmtVisitor& visitor) { visitor.visitClassStmt(this); }
 
 } // namespace volt

@@ -3,6 +3,7 @@
 #include "stmt.h"
 #include "environment.h"
 #include "stack_trace.h"
+#include "class.h"
 #include <sstream>
 
 namespace volt {
@@ -12,8 +13,15 @@ namespace volt {
 // ========================================
 
 VoltFunction::VoltFunction(FnStmt* declaration, 
-                           std::shared_ptr<Environment> closure)
-    : declaration_(declaration), closure_(closure) {}
+                           std::shared_ptr<Environment> closure,
+                           bool isInitializer)
+    : declaration_(declaration), closure_(closure), isInitializer_(isInitializer) {}
+
+std::shared_ptr<VoltFunction> VoltFunction::bind(std::shared_ptr<VoltInstance> instance) {
+    auto environment = std::make_shared<Environment>(closure_);
+    environment->define("this", instance);
+    return std::make_shared<VoltFunction>(declaration_, environment, isInitializer_);
+}
 
 Value VoltFunction::call(Interpreter& interpreter, 
                         const std::vector<Value>& arguments) {
@@ -40,12 +48,19 @@ Value VoltFunction::call(Interpreter& interpreter,
     } catch (const ReturnValue& returnValue) {
         // Return statement throws a special exception with the value
         interpreter.getCallStack().pop();
+        
+        // If it's an initializer, we always return 'this' (the instance)
+        if (isInitializer_) return closure_->get("this");
+        
         return returnValue.value;
     } catch (...) {
         // Ensure we pop even on other exceptions (like RuntimeErrors)
         interpreter.getCallStack().pop();
         throw;
     }
+    
+    // If it's an initializer, we always return 'this' (the instance)
+    if (isInitializer_) return closure_->get("this");
     
     // If no return statement, functions return nil
     return nullptr;

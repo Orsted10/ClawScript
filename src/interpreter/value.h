@@ -11,6 +11,8 @@ namespace volt {
 class Callable;
 class VoltArray;  // Added!
 struct VoltHashMap;  // Added - Changed from class to struct to match definition
+class VoltClass;    // Added!
+class VoltInstance; // Added!
 
 // Runtime value types
 using Value = std::variant<
@@ -20,7 +22,9 @@ using Value = std::variant<
     std::string,                 // string
     std::shared_ptr<Callable>,   // function
     std::shared_ptr<VoltArray>,  // array - Added!
-    std::shared_ptr<VoltHashMap> // hash map - Added!
+    std::shared_ptr<VoltHashMap>, // hash map - Added!
+    std::shared_ptr<VoltClass>,   // class - Added!
+    std::shared_ptr<VoltInstance> // instance - Added!
 >;
 
 // Easy ways to check what type of value we're dealing with
@@ -41,7 +45,8 @@ inline bool isString(const Value& v) {
 }
 
 inline bool isCallable(const Value& v) {
-    return std::holds_alternative<std::shared_ptr<Callable>>(v);
+    return std::holds_alternative<std::shared_ptr<Callable>>(v) || 
+           std::holds_alternative<std::shared_ptr<VoltClass>>(v);
 }
 
 inline bool isArray(const Value& v) {  // Added!
@@ -50,6 +55,14 @@ inline bool isArray(const Value& v) {  // Added!
 
 inline bool isHashMap(const Value& v) {  // Added!
     return std::holds_alternative<std::shared_ptr<VoltHashMap>>(v);
+}
+
+inline bool isClass(const Value& v) {  // Added!
+    return std::holds_alternative<std::shared_ptr<VoltClass>>(v);
+}
+
+inline bool isInstance(const Value& v) {  // Added!
+    return std::holds_alternative<std::shared_ptr<VoltInstance>>(v);
 }
 
 // Extract actual values from our variant wrapper
@@ -71,6 +84,14 @@ inline std::shared_ptr<VoltArray> asArray(const Value& v) {  // Added!
 
 inline std::shared_ptr<VoltHashMap> asHashMap(const Value& v) {  // Added!
     return std::get<std::shared_ptr<VoltHashMap>>(v);
+}
+
+inline std::shared_ptr<VoltClass> asClass(const Value& v) {  // Added!
+    return std::get<std::shared_ptr<VoltClass>>(v);
+}
+
+inline std::shared_ptr<VoltInstance> asInstance(const Value& v) {  // Added!
+    return std::get<std::shared_ptr<VoltInstance>>(v);
 }
 
 inline std::shared_ptr<Callable> asCallable(const Value& v) {

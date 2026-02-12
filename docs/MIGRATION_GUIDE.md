@@ -1,14 +1,77 @@
-# VoltScript v0.8.0 Migration Guide
+# VoltScript Migration Guide
 
-## Overview
+## v0.8.6 Migration
 
-This guide helps you migrate your existing VoltScript code to take advantage of the new features in v0.8.0 while maintaining compatibility with older versions.
+### Overview
+VoltScript v0.8.6 completes the Class System and introduces significant performance optimizations. It is fully backward compatible with v0.8.0+.
 
-## Backward Compatibility
+### New Features to Adopt
 
-✅ **Fully backward compatible** - All existing code continues to work without changes
+#### 1. Class-Based Object-Oriented Programming
+You can now transition from hash-map based objects to proper classes.
 
-## New Features You Can Adopt
+**Old approach (Hash Map):**
+```volt
+fn makePerson(name, age) {
+    let self = {
+        "name": name,
+        "age": age
+    };
+    
+    fn speak() {
+        print self["name"] + " says hello";
+    }
+    
+    self["speak"] = speak;
+    return self;
+}
+
+let alice = makePerson("Alice", 30);
+alice["speak"]();
+```
+
+**New approach (v0.8.6 Classes):**
+```volt
+class Person {
+    init(name, age) {
+        this.name = name;
+        this.age = age;
+    }
+    
+    speak() {
+        print this.name + " says hello";
+    }
+}
+
+let alice = Person("Alice", 30);
+alice.speak();
+```
+
+#### 2. Class Inheritance
+Leverage code reuse through class inheritance.
+
+```volt
+class Employee extends Person {
+    init(name, age, id) {
+        super.init(name, age);
+        this.id = id;
+    }
+    
+    work() {
+        print this.name + " is working";
+    }
+}
+```
+
+### Performance Benefits (Automatic)
+Your existing code will automatically benefit from:
+- **Cached Environment Lookups**: Faster variable access in nested functions and recursive calls.
+- **Optimized Math**: Faster `pow()` calls for integer exponents.
+- **Improved JSON**: More robust and faster `jsonEncode`/`jsonDecode`.
+
+---
+
+## v0.8.0 Migration
 
 ### 1. Array Method Chaining
 

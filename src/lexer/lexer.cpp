@@ -21,6 +21,13 @@ const std::unordered_map<std::string_view, TokenType> Lexer::keywords_ = {
     {"continue", TokenType::Continue},
     {"try", TokenType::Try},
     {"catch", TokenType::Catch},
+    {"throw", TokenType::Throw},
+    {"import", TokenType::Import},
+    {"from", TokenType::From},
+    {"export", TokenType::Export},
+    {"class", TokenType::Class},
+    {"this", TokenType::This},
+    {"super", TokenType::Super},
     {"fun", TokenType::Fn},  // Alias for fn
 };
 

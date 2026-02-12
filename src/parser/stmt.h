@@ -24,6 +24,9 @@ struct ReturnStmt;
 struct BreakStmt;
 struct ContinueStmt;
 struct TryStmt;
+struct ThrowStmt;
+struct ImportStmt;
+struct ClassStmt;
 
 class StmtVisitor {
 public:
@@ -41,6 +44,9 @@ public:
     virtual void visitBreakStmt(BreakStmt* stmt) = 0;
     virtual void visitContinueStmt(ContinueStmt* stmt) = 0;
     virtual void visitTryStmt(TryStmt* stmt) = 0;
+    virtual void visitThrowStmt(ThrowStmt* stmt) = 0;
+    virtual void visitImportStmt(ImportStmt* stmt) = 0;
+    virtual void visitClassStmt(ClassStmt* stmt) = 0;
 };
 
 // Base statement node
@@ -194,6 +200,35 @@ struct TryStmt : Stmt {
     
     TryStmt(Token tryTok, StmtPtr tryB, std::string exVar, StmtPtr catchB)
         : Stmt(tryTok), tryBody(std::move(tryB)), exceptionVar(std::move(exVar)), catchBody(std::move(catchB)) {}
+    void accept(StmtVisitor& visitor) override;
+};
+
+// Throw statement: throw expr;
+struct ThrowStmt : Stmt {
+    ExprPtr expression;
+    
+    ThrowStmt(Token throwTok, ExprPtr expr) : Stmt(throwTok), expression(std::move(expr)) {}
+    void accept(StmtVisitor& visitor) override;
+};
+
+// Import statement: import { a, b } from "module";
+struct ImportStmt : Stmt {
+    std::vector<std::string> imports;
+    std::string modulePath;
+    
+    ImportStmt(Token importTok, std::vector<std::string> imps, std::string path)
+        : Stmt(importTok), imports(std::move(imps)), modulePath(std::move(path)) {}
+    void accept(StmtVisitor& visitor) override;
+};
+
+// Class statement: class Name [< Super] { methods... }
+struct ClassStmt : Stmt {
+    std::string name;
+    ExprPtr superclass; // Optional
+    std::vector<std::unique_ptr<FnStmt>> methods;
+    
+    ClassStmt(Token nameTok, ExprPtr super, std::vector<std::unique_ptr<FnStmt>> m)
+        : Stmt(nameTok), name(std::string(nameTok.lexeme)), superclass(std::move(super)), methods(std::move(m)) {}
     void accept(StmtVisitor& visitor) override;
 };
 

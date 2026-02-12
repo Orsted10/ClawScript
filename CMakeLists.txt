@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.8.5 LANGUAGES CXX)  # Feature-Rich Release
+project(VoltScript VERSION 0.8.6 LANGUAGES CXX)  # Optimization & Refinement Release
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,11 +17,13 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Compiler warnings
+# Compiler warnings and optimizations
 if(MSVC)
-    add_compile_options(/W4 /permissive-)
+    add_compile_options(/W4 /permissive- /O2 /Oi /Ot /GL)
+    add_link_options(/LTCG)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    add_compile_options(-Wall -Wextra -Wpedantic -O3 -march=native -flto)
+    add_link_options(-flto)
 endif()
 
 # Sanitizers for Debug build
@@ -97,6 +99,7 @@ if(BUILD_TESTS)
         src/interpreter/environment.cpp
         src/features/callable.cpp
         src/interpreter/interpreter.cpp
+        src/interpreter/module.cpp
         src/interpreter/natives/native_math.cpp
         src/interpreter/natives/native_string.cpp
         src/interpreter/natives/native_array.cpp
@@ -105,6 +108,7 @@ if(BUILD_TESTS)
         src/interpreter/natives/native_json.cpp
         src/features/array.cpp
         src/features/hashmap.cpp
+        src/features/class.cpp
         tests/test_lexer.cpp
         tests/test_parser.cpp
         tests/test_evaluator.cpp
@@ -130,6 +134,9 @@ if(BUILD_TESTS)
         tests/test_variable_operations.cpp
         tests/test_control_flow.cpp
         tests/test_string_operations.cpp
+        tests/test_classes.cpp
+        tests/test_json.cpp
+        tests/test_performance.cpp
     )
     
     # Test executable
@@ -187,6 +194,8 @@ if(BUILD_TESTS)
         src/interpreter/natives/native_json.cpp
         src/features/array.cpp
         src/features/hashmap.cpp
+        src/features/class.cpp
+        src/interpreter/module.cpp
     )
     
     add_executable(volt_integration_tests ${INTEGRATION_TEST_SOURCES})

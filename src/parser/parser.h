@@ -36,6 +36,9 @@ private:
     StmtPtr forStatement();
     StmtPtr blockStatement();
     StmtPtr tryStatement();
+    StmtPtr throwStatement();
+    StmtPtr importStatement();
+    StmtPtr classStatement();
     StmtPtr expressionStatement();
     
     // Expression parsing (by precedence level)

@@ -46,7 +46,10 @@ public:
 class VoltFunction : public Callable {
 public:
     VoltFunction(struct FnStmt* declaration, 
-                 std::shared_ptr<Environment> closure);
+                 std::shared_ptr<Environment> closure,
+                 bool isInitializer = false);
+    
+    std::shared_ptr<VoltFunction> bind(std::shared_ptr<class VoltInstance> instance);
     
     Value call(Interpreter& interpreter, 
               const std::vector<Value>& arguments) override;
@@ -57,6 +60,7 @@ public:
 private:
     struct FnStmt* declaration_;   // The function's AST node
     std::shared_ptr<Environment> closure_;         // The environment where it was defined
+    bool isInitializer_;
 };
 
 /**

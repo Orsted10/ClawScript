@@ -6,18 +6,31 @@ namespace volt {
 
 void Environment::define(const std::string& name, Value value) {
     values_[name] = value;
+    lookup_cache_.clear(); // Invalidate cache on new definitions
 }
 
 Value Environment::get(const std::string& name) const {  
-    // Check current scope
+    // 1. Check current scope
     auto it = values_.find(name);
     if (it != values_.end()) {
         return it->second;
     }
     
-    // Check enclosing scope
+    // 2. Check local lookup cache (v0.8.6 Optimization)
+    auto cache_it = lookup_cache_.find(name);
+    if (cache_it != lookup_cache_.end()) {
+        if (cache_it->second.found) {
+            // Verify if the environment still has the value (optional but safer)
+            return cache_it->second.value;
+        }
+    }
+
+    // 3. Check enclosing scope
     if (enclosing_) {
-        return enclosing_->get(name);
+        Value val = enclosing_->get(name);
+        // Cache the result for future lookups
+        lookup_cache_[name] = {nullptr, val, true};
+        return val;
     }
     
     throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + name);
@@ -28,12 +41,14 @@ void Environment::assign(const std::string& name, Value value) {
     auto it = values_.find(name);
     if (it != values_.end()) {
         it->second = value;
+        lookup_cache_.erase(name); // Invalidate local cache entry
         return;
     }
     
     // Check enclosing scope
     if (enclosing_) {
         enclosing_->assign(name, value);
+        lookup_cache_.erase(name); // Invalidate local cache entry
         return;
     }
     

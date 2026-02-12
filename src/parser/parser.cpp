@@ -47,6 +47,9 @@ StmtPtr Parser::statement() {
     if (match(TokenType::Run)) return runUntilStatement();
     if (match(TokenType::For)) return forStatement();
     if (match(TokenType::Try)) return tryStatement();
+    if (match(TokenType::Throw)) return throwStatement();
+    if (match(TokenType::Import)) return importStatement();
+    if (match(TokenType::Class)) return classStatement();
     if (match(TokenType::LeftBrace)) return blockStatement();
     
     return expressionStatement();
@@ -228,7 +231,7 @@ StmtPtr Parser::blockStatement() {
         statements.push_back(statement());
     }
     
-    consume(TokenType::RightBrace, "Expected '\}' after block");
+    consume(TokenType::RightBrace, "Expected '}' after block");
     return std::make_unique<BlockStmt>(brace, std::move(statements));
 }
 
@@ -260,6 +263,68 @@ StmtPtr Parser::tryStatement() {
     return std::make_unique<TryStmt>(keyword, std::move(tryBody), 
                                      std::string(exceptionVar.lexeme), 
                                      std::move(catchBody));
+}
+
+StmtPtr Parser::throwStatement() {
+    Token keyword = previous();
+    ExprPtr expr = expression();
+    consume(TokenType::Semicolon, "Expected ';' after throw expression");
+    return std::make_unique<ThrowStmt>(keyword, std::move(expr));
+}
+
+StmtPtr Parser::importStatement() {
+    Token keyword = previous();
+    
+    std::vector<std::string> imports;
+    consume(TokenType::LeftBrace, "Expected '{' after 'import'");
+    
+    if (!check(TokenType::RightBrace)) {
+        do {
+            Token importName = consume(TokenType::Identifier, "Expected import name");
+            imports.push_back(std::string(importName.lexeme));
+        } while (match(TokenType::Comma));
+    }
+    
+    consume(TokenType::RightBrace, "Expected '}' after import list");
+    consume(TokenType::From, "Expected 'from' after import list");
+    
+    Token modulePathTok = consume(TokenType::String, "Expected module path string");
+    std::string modulePath = std::string(modulePathTok.stringValue);
+    
+    consume(TokenType::Semicolon, "Expected ';' after import statement");
+    
+    return std::make_unique<ImportStmt>(keyword, std::move(imports), std::move(modulePath));
+}
+
+StmtPtr Parser::classStatement() {
+    Token keyword = previous();
+    Token name = consume(TokenType::Identifier, "Expected class name");
+
+    ExprPtr superclass = nullptr;
+    if (match(TokenType::Less)) {
+        consume(TokenType::Identifier, "Expected superclass name");
+        superclass = std::make_unique<VariableExpr>(previous(), std::string(previous().lexeme));
+    }
+
+    consume(TokenType::LeftBrace, "Expected '{' before class body");
+
+    std::vector<std::unique_ptr<FnStmt>> methods;
+    while (!check(TokenType::RightBrace) && !isAtEnd()) {
+        consume(TokenType::Fn, "Expected method declaration in class body");
+        StmtPtr method = fnStatement();
+        // Cast StmtPtr to unique_ptr<FnStmt>
+        auto* fnStmt = dynamic_cast<FnStmt*>(method.get());
+        if (fnStmt) {
+            method.release(); // Release ownership from StmtPtr
+            methods.push_back(std::unique_ptr<FnStmt>(fnStmt));
+        } else {
+            error("Expected method declaration");
+        }
+    }
+
+    consume(TokenType::RightBrace, "Expected '}' after class body");
+
+    return std::make_unique<ClassStmt>(name, std::move(superclass), std::move(methods));
 }
 
 StmtPtr Parser::expressionStatement() {
@@ -638,6 +703,17 @@ ExprPtr Parser::primary() {
         return LiteralExpr::nil(previous());
     }
     
+    if (match(TokenType::This)) {
+        return std::make_unique<ThisExpr>(previous());
+    }
+
+    if (match(TokenType::Super)) {
+        Token keyword = previous();
+        consume(TokenType::Dot, "Expected '.' after 'super'");
+        Token method = consume(TokenType::Identifier, "Expected superclass method name");
+        return std::make_unique<SuperExpr>(keyword, std::string(method.lexeme));
+    }
+
     if (match(TokenType::Identifier)) {
         Token tok = previous();
         return std::make_unique<VariableExpr>(tok, std::string(tok.lexeme));
