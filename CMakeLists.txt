@@ -249,6 +249,8 @@ if(BUILD_TESTS)
         src/interpreter/natives/native_json.cpp
         src/features/array.cpp
         src/features/hashmap.cpp
+        src/features/class.cpp
+        src/interpreter/module.cpp
     )
     
     add_executable(volt_benchmarks ${BENCHMARK_SOURCES})

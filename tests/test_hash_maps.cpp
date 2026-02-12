@@ -398,5 +398,5 @@ TEST(HashMap, NonObjectMemberAccess) {
     )";
     
     std::string output = runCode(code);
-    EXPECT_EQ(output, "RUNTIME_ERROR: Only arrays and hash maps have members");
+    EXPECT_EQ(output, "RUNTIME_ERROR: Only arrays, hash maps, and class instances have members");
 }

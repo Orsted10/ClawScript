@@ -813,13 +813,17 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
 Value Interpreter::visitSetExpr(SetExpr* expr) {
     Value object = evaluate(expr->object.get());
 
-    if (!isInstance(object)) {
-        throwRuntimeError(expr->token, ErrorCode::RUNTIME_ERROR, "Only instances have fields.");
+    if (isInstance(object)) {
+        Value value = evaluate(expr->value.get());
+        asInstance(object)->set(expr->token, value);
+        return value;
+    } else if (isHashMap(object)) {
+        Value value = evaluate(expr->value.get());
+        asHashMap(object)->set(expr->member, value);
+        return value;
     }
 
-    Value value = evaluate(expr->value.get());
-    asInstance(object)->set(expr->token, value);
-    return value;
+    throwRuntimeError(expr->token, ErrorCode::RUNTIME_ERROR, "Only instances and hash maps have fields.");
 }
 
 Value Interpreter::visitThisExpr(ThisExpr* expr) {
@@ -1229,6 +1233,11 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
             );
         }
         
+        // Dynamic key lookup for hash maps
+        if (map->contains(expr->member)) {
+            return map->get(expr->member);
+        }
+        
         throwRuntimeError(expr->token, ErrorCode::UNDEFINED_VARIABLE, "Unknown hash map member: " + expr->member);
     }
     
@@ -1367,23 +1376,6 @@ void Interpreter::checkNumberOperand(const Token& op, const Value& operand) {
 void Interpreter::checkNumberOperands(const Token& op, const Value& left, const Value& right) {
     if (isNumber(left) && isNumber(right)) return;
     throwRuntimeError(op, ErrorCode::TYPE_MISMATCH, "Operands must be numbers");
-}
-
-// ==================== JSON ENCODING/DECODING METHODS ====================
-
-std::string Interpreter::encodeToJson(const Value& value) {
-    (void)value;
-    return "";
-}
-
-Value Interpreter::decodeFromJson(const std::string& jsonString) {
-    (void)jsonString;
-    return nullptr;
-}
-
-void Interpreter::encodeJsonValue(const Value& value, std::ostringstream& oss) {
-    (void)value;
-    (void)oss;
 }
 
 } // namespace volt

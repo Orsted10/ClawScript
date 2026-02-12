@@ -46,9 +46,9 @@ TEST_F(JSONTest, BasicJSONDecode) {
     std::cout.rdbuf(old_buf);
     
     std::string output = ss.str();
-    // Hashmap toString might vary in order, so we check for presence of keys
-    EXPECT_TRUE(output.find("name: Alice") != std::string::npos || output.find("\"name\": \"Alice\"") != std::string::npos);
-    EXPECT_TRUE(output.find("age: 30") != std::string::npos || output.find("\"age\": 30") != std::string::npos);
+    // VoltHashMap::toString returns {"key": value} where value is not quoted if it's a string
+    EXPECT_TRUE(output.find("\"name\": Alice") != std::string::npos);
+    EXPECT_TRUE(output.find("\"age\": 30") != std::string::npos);
 }
 
 TEST_F(JSONTest, NestedJSONDecode) {

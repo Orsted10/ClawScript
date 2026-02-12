@@ -16,21 +16,9 @@ Value Environment::get(const std::string& name) const {
         return it->second;
     }
     
-    // 2. Check local lookup cache (v0.8.6 Optimization)
-    auto cache_it = lookup_cache_.find(name);
-    if (cache_it != lookup_cache_.end()) {
-        if (cache_it->second.found) {
-            // Verify if the environment still has the value (optional but safer)
-            return cache_it->second.value;
-        }
-    }
-
-    // 3. Check enclosing scope
+    // 2. Check enclosing scope
     if (enclosing_) {
-        Value val = enclosing_->get(name);
-        // Cache the result for future lookups
-        lookup_cache_[name] = {nullptr, val, true};
-        return val;
+        return enclosing_->get(name);
     }
     
     throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + name);
