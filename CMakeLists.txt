@@ -62,6 +62,8 @@ target_include_directories(volt PRIVATE
     ${CMAKE_SOURCE_DIR}/src/parser
     ${CMAKE_SOURCE_DIR}/src/interpreter
     ${CMAKE_SOURCE_DIR}/src/features
+    ${CMAKE_SOURCE_DIR}/src/vm
+    ${CMAKE_SOURCE_DIR}/src/compiler
 )
 
 # Set output directory
@@ -109,6 +111,9 @@ if(BUILD_TESTS)
         src/features/array.cpp
         src/features/hashmap.cpp
         src/features/class.cpp
+        src/features/string_pool.cpp
+        src/vm/vm.cpp
+        src/compiler/compiler.cpp
         tests/test_lexer.cpp
         tests/test_parser.cpp
         tests/test_evaluator.cpp
@@ -137,6 +142,7 @@ if(BUILD_TESTS)
         tests/test_classes.cpp
         tests/test_json.cpp
         tests/test_performance.cpp
+        tests/test_vm.cpp
     )
     
     # Test executable
@@ -153,6 +159,8 @@ if(BUILD_TESTS)
         ${CMAKE_SOURCE_DIR}/src/parser
         ${CMAKE_SOURCE_DIR}/src/interpreter
         ${CMAKE_SOURCE_DIR}/src/features
+        ${CMAKE_SOURCE_DIR}/src/vm
+        ${CMAKE_SOURCE_DIR}/src/compiler
     )
     
     # Link GoogleTest
@@ -195,6 +203,7 @@ if(BUILD_TESTS)
         src/features/array.cpp
         src/features/hashmap.cpp
         src/features/class.cpp
+        src/features/string_pool.cpp
         src/interpreter/module.cpp
     )
     
@@ -232,7 +241,7 @@ if(BUILD_TESTS)
     FetchContent_MakeAvailable(googlebenchmark)
     
     set(BENCHMARK_SOURCES
-        benchmarks/benchmark_interpreter.cpp
+        benchmarks/benchmark_main.cpp
         src/lexer/token.cpp
         src/lexer/lexer.cpp
         src/parser/ast.cpp
@@ -250,7 +259,10 @@ if(BUILD_TESTS)
         src/features/array.cpp
         src/features/hashmap.cpp
         src/features/class.cpp
+        src/features/string_pool.cpp
         src/interpreter/module.cpp
+        src/vm/vm.cpp
+        src/compiler/compiler.cpp
     )
     
     add_executable(volt_benchmarks ${BENCHMARK_SOURCES})

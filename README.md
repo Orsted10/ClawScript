@@ -31,7 +31,10 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - ⚡ Lexical analysis
 - 🌳 Parsing with recursive descent  
 - 🧠 AST construction
-- ⚙️ Tree-walk interpretation
+- ⚙️ **Stack-based Bytecode VM** (New in v0.8.6)
+- 🛠️ **AST-to-Bytecode Compiler** (New in v0.8.6)
+- 🧵 **Thread-safe String Interning** (New in v0.8.6)
+- ⚙️ Tree-walk interpretation (Original fallback)
 - 📍 Precise error reporting
 - 🔐 Lexical scoping & environments
 - 🔁 First-class functions & closures
@@ -64,12 +67,14 @@ Enhanced with:
 
 Major enhancements in v0.8.6:
 
+- ✅ **Bytecode VM & Compiler**: Transitioned from tree-walk to a high-performance stack-based virtual machine with AST-to-bytecode compilation.
+- ✅ **String Interning**: Implemented a thread-safe `StringPool` for O(1) string comparisons and reduced memory allocations.
 - ✅ **Class System**: Full support for classes, methods, inheritance, and constructors.
 - ✅ **Environment Lookup Caching**: Optimized variable lookup in deeply nested scopes using hit/miss caching.
 - ✅ **Mathematical Optimizations**: Fast binary exponentiation for integer powers in `pow()`.
 - ✅ **Centralized JSON Engine**: Modular and high-performance JSON encoding/decoding.
 - ✅ **Integration Test Suite**: Automated end-to-end script validation.
-- ✅ **Performance Benchmarking**: Integrated benchmarks for critical components (math, lookups, JSON).
+- ✅ **Performance Benchmarking**: Integrated benchmarks for critical components (math, lookups, VM, JSON).
 - ✅ **Stack Trace Support**: Detailed call stacks for all runtime errors.
 - ✅ **Stack Overflow Protection**: Configurable recursion depth limit (1000 frames).
 - ✅ **Visitor Pattern**: High-performance AST traversal.

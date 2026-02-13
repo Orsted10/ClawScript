@@ -2,6 +2,8 @@
 #include "lexer.h"
 #include "parser.h"
 #include "interpreter.h"
+#include "compiler/compiler.h"
+#include "vm/vm.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -68,5 +70,3 @@ static void BM_LoopPerformance(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_LoopPerformance);
-
-BENCHMARK_MAIN();

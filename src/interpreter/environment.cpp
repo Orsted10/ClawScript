@@ -1,49 +1,73 @@
 #include "environment.h"
 #include "errors.h"
+#include "features/string_pool.h"
 #include <stdexcept>
 
 namespace volt {
 
-void Environment::define(const std::string& name, Value value) {
-    values_[name] = value;
+void Environment::define(std::string_view name, Value value) {
+    // Intern the name to ensure it has a stable lifetime and fast comparison
+    values_[StringPool::intern(name)] = value;
     lookup_cache_.clear(); // Invalidate cache on new definitions
 }
 
-Value Environment::get(const std::string& name) const {  
+Value Environment::get(std::string_view name) const {  
+    // Intern the name to ensure pointer-based comparison works
+    name = StringPool::intern(name);
+
+    // 0. Check cache
+    auto cache_it = lookup_cache_.find(name);
+    if (cache_it != lookup_cache_.end()) {
+        return cache_it->second.value;
+    }
+
     // 1. Check current scope
     auto it = values_.find(name);
     if (it != values_.end()) {
-        return it->second;
+        Value val = it->second;
+        lookup_cache_[name] = {nullptr, val, true};
+        return val;
     }
     
     // 2. Check enclosing scope
     if (enclosing_) {
-        return enclosing_->get(name);
+        try {
+            Value val = enclosing_->get(name);
+            lookup_cache_[name] = {enclosing_, val, true};
+            return val;
+        } catch (const VoltError&) {
+            // Re-throw if not found in parent
+            throw;
+        }
     }
     
-    throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + name);
+    throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + std::string(name));
 }
 
-void Environment::assign(const std::string& name, Value value) {
+void Environment::assign(std::string_view name, Value value) {
+    // Intern the name to ensure pointer-based comparison works
+    name = StringPool::intern(name);
+
     // Check current scope
     auto it = values_.find(name);
     if (it != values_.end()) {
         it->second = value;
-        lookup_cache_.erase(name); // Invalidate local cache entry
+        lookup_cache_[name] = {nullptr, value, true}; // Update cache
         return;
     }
     
     // Check enclosing scope
     if (enclosing_) {
         enclosing_->assign(name, value);
-        lookup_cache_.erase(name); // Invalidate local cache entry
+        lookup_cache_[name] = {enclosing_, value, true}; // Update cache
         return;
     }
     
-    throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + name);
+    throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + std::string(name));
 }
 
-bool Environment::exists(const std::string& name) const {
+bool Environment::exists(std::string_view name) const {
+    name = StringPool::intern(name);
     if (values_.find(name) != values_.end()) {
         return true;
     }

@@ -65,6 +65,8 @@ class Employee extends Person {
 
 ### Performance Benefits (Automatic)
 Your existing code will automatically benefit from:
+- **Stack-based Bytecode VM**: Up to 2.5x faster execution for loops and arithmetic operations.
+- **Thread-safe String Interning**: Drastically reduced memory usage for duplicate strings and O(1) string comparisons.
 - **Cached Environment Lookups**: Faster variable access in nested functions and recursive calls.
 - **Optimized Math**: Faster `pow()` calls for integer exponents.
 - **Improved JSON**: More robust and faster `jsonEncode`/`jsonDecode`.

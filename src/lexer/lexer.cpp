@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "features/string_pool.h"
 #include <iostream>
 
 namespace volt {
@@ -152,7 +153,8 @@ Token Lexer::identifier() {
     auto it = keywords_.find(text);
     TokenType type = (it != keywords_.end()) ? it->second : TokenType::Identifier;
     
-    return Token(type, text, line_, startColumn_);
+    // Intern the identifier/keyword lexeme
+    return Token(type, StringPool::intern(text), line_, startColumn_);
 }
 
 Token Lexer::string() {
@@ -196,8 +198,10 @@ Token Lexer::string() {
     advance(); // closing "
     
     // Return token with both raw lexeme and processed value
-    std::string_view rawLexeme = source_.substr(start_, current_ - start_);
-    return Token(TokenType::String, rawLexeme, line_, stringStartColumn, std::move(processed));
+    // Intern both the raw lexeme and the processed string value
+    std::string_view rawLexeme = StringPool::intern(source_.substr(start_, current_ - start_));
+    std::string internedProcessed = std::string(StringPool::intern(processed));
+    return Token(TokenType::String, rawLexeme, line_, stringStartColumn, std::move(internedProcessed));
 }
 
 void Lexer::skipWhitespace() {

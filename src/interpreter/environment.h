@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include <string_view>
 
 namespace volt {
 
@@ -14,16 +15,16 @@ public:
         : enclosing_(enclosing) {}
     
     // Define new variable
-    void define(const std::string& name, Value value);
+    void define(std::string_view name, Value value);
     
     // Get variable value
-    Value get(const std::string& name) const;
+    Value get(std::string_view name) const;
     
     // Assign to existing variable
-    void assign(const std::string& name, Value value);
+    void assign(std::string_view name, Value value);
     
     // Check if variable exists
-    bool exists(const std::string& name) const;
+    bool exists(std::string_view name) const;
 
     // Environment Caching (v0.8.6 Optimization)
     struct CacheEntry {
@@ -31,15 +32,28 @@ public:
         Value value;
         bool found;
     };
+
+    struct InternedStringHash {
+        size_t operator()(std::string_view sv) const {
+            return std::hash<const char*>{}(sv.data());
+        }
+    };
+
+    struct InternedStringEqual {
+        bool operator()(std::string_view sv1, std::string_view sv2) const {
+            return sv1.data() == sv2.data();
+        }
+    };
     
     static void clearGlobalCache();
 
 private:
-    std::unordered_map<std::string, Value> values_;
+    // Using string_view as key for performance (guaranteed interned)
+    std::unordered_map<std::string_view, Value, InternedStringHash, InternedStringEqual> values_;
     std::shared_ptr<Environment> enclosing_;
     
     // Performance: Fast lookup cache for deeply nested environments
-    mutable std::unordered_map<std::string, CacheEntry> lookup_cache_;
+    mutable std::unordered_map<std::string_view, CacheEntry, InternedStringHash, InternedStringEqual> lookup_cache_;
 };
 
 } // namespace volt
