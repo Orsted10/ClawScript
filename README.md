@@ -300,7 +300,7 @@ ctest --output-on-failure --test-dir build
 ### Interactive REPL
 
 ```bash
-⚡ VoltScript v0.8.0 REPL
+⚡ VoltScript v0.9.0 REPL
 Type 'exit' to quit
 >> 
 ```
@@ -622,28 +622,21 @@ ctest --test-dir build --output-on-failure
 
 ```
 VoltScript/
-├── src/                    # Core implementation
-│   ├── token.{h,cpp}      # Token definitions
-│   ├── lexer.{h,cpp}      # Lexical analyzer
-│   ├── ast.{h,cpp}        # AST nodes
-│   ├── stmt.h             # Statement nodes
-│   ├── parser.{h,cpp}     # Recursive descent parser
-│   ├── value.{h,cpp}      # Value system
-│   ├── environment.{h,cpp}# Variable scoping
-│   ├── callable.{h,cpp}   # Function objects
-│   ├── array.{h,cpp}      # Array implementation
-│   ├── interpreter.{h,cpp}# Execution engine
-│   └── main.cpp           # REPL & file runner
-├── tests/                  # 450+ comprehensive tests
-│   ├── test_lexer.cpp
-│   ├── test_parser.cpp
-│   ├── test_interpreter.cpp
-│   ├── test_functions.cpp
-│   ├── test_arrays.cpp
-│   ├── test_hash_maps.cpp
-│   ├── test_new_features.cpp
-│   └── test_builtin_functions.cpp
-├── examples/               # 76+ Example programs (organized by category)
+├── src/                     # Core implementation (lexer, parser, VM, runtime)
+│   ├── lexer/              # Tokens and lexical analysis
+│   ├── parser/             # AST nodes and recursive descent parser
+│   ├── interpreter/        # Tree-walk interpreter and runtime
+│   ├── features/           # Arrays, hash maps, classes, string pool
+│   ├── vm/                 # Bytecode virtual machine
+│   ├── compiler/           # AST-to-bytecode compiler
+│   ├── aot/                # AoT compilation stubs (optional)
+│   ├── jit/                # JIT compilation stubs (optional)
+│   └── main.cpp            # REPL & file runner
+├── tests/                   # Automated tests (unit, integration, perf)
+│   ├── test_*.cpp          # Unit and feature tests (GTest)
+│   ├── integration_tests.cpp# End-to-end script tests
+│   └── perf/               # Performance and stress tests (benchmarks)
+├── examples/                # 50+ example programs (organized by category)
 │   ├── basic/              # 12 beginner-friendly examples
 │   ├── math/               # 9 mathematical operations
 │   ├── strings/            # 4 string manipulation examples
@@ -665,6 +658,8 @@ VoltScript/
 │   ├── string_processing.volt # String manipulation
 │   ├── sorting_algorithms.volt # Sorting examples
 │   └── game_simulation.volt # Game simulation
+├── benchmarks/             # C++ microbenchmarks for core components
+├── docs/                   # Language documentation and migration guides
 ├── CMakeLists.txt
 └── README.md
 ```
@@ -732,9 +727,9 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.8.6 ⚡
+### ⚡ VoltScript v0.9.0 ⚡
 
-**Classes. Performance. JSON. Power.**  
+**VM. NaN-boxing. Classes. Performance. JSON. Power.**  
 *This is where languages get real.*
 
 ---

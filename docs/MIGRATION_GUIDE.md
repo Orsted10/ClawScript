@@ -1,9 +1,9 @@
 # VoltScript Migration Guide
 
-## v0.8.6 Migration
+## v0.9.0 Migration
 
 ### Overview
-VoltScript v0.8.6 completes the Class System and introduces significant performance optimizations. It is fully backward compatible with v0.8.0+.
+VoltScript v0.9.0 focuses on runtime performance and maintainability. It extends the v0.8.6 class and VM work with NaN-boxed values, optimized bytecode execution, and improved profiling, while remaining backward compatible with v0.8.0+.
 
 ### New Features to Adopt
 
@@ -65,15 +65,16 @@ class Employee extends Person {
 
 ### Performance Benefits (Automatic)
 Your existing code will automatically benefit from:
-- **Stack-based Bytecode VM**: Up to 2.5x faster execution for loops and arithmetic operations.
+- **NaN-Boxed Value Representation**: Compact tagged values for numbers, booleans, nil, strings, and objects.
+- **Stack-based Bytecode VM**: Further tuned for tight loops and arithmetic-heavy workloads.
 - **Thread-safe String Interning**: Drastically reduced memory usage for duplicate strings and O(1) string comparisons.
-- **Cached Environment Lookups**: Faster variable access in nested functions and recursive calls.
-- **Optimized Math**: Faster `pow()` calls for integer exponents.
+- **Cached Environment Lookups with Profiling**: Faster variable access in nested functions and recursive calls with hit counters for hot paths.
+- **Optimized Math**: Faster `pow()` calls for integer exponents and refined math natives.
 - **Improved JSON**: More robust and faster `jsonEncode`/`jsonDecode`.
 
 ---
 
-## v0.8.0 Migration
+## v0.8.0 Migration (Historical)
 
 ### 1. Array Method Chaining
 
@@ -446,11 +447,11 @@ let result = data.map(fun(item) {
 
 ## Resources
 
-- [Full Release Notes](v0.8.0_RELEASE_NOTES.md)
+- [Language Documentation](DOCUMENTATION.md)
 - [API Documentation](API_REFERENCE.md)
 - [Examples Directory](../examples/)
 - [Test Suite](../tests/)
 
 ---
 
-**Happy coding with VoltScript v0.8.0! 🚀**
+**Happy coding with VoltScript v0.9.0! 🚀**

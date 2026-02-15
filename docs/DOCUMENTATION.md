@@ -32,7 +32,9 @@
 15. [Built-in Functions](#built-in-functions)
 16. [Best Practices](#best-practices)
 17. [Examples](#examples)
-18. [FAQ](#faq)
+18. [Project Structure](#project-structure)
+19. [Development Workflow](#development-workflow)
+20. [FAQ](#faq)
 
 ---
 
@@ -1984,6 +1986,112 @@ processFile("document.txt");
 
 ---
 
+## 🏗️ Project Structure
+
+This section describes how the VoltScript repository is organized for v0.9.0.
+
+```text
+VoltScript/
+├── src/                     # Core implementation (lexer, parser, VM, runtime)
+│   ├── lexer/              # Tokens and lexical analysis
+│   ├── parser/             # AST nodes and recursive descent parser
+│   ├── interpreter/        # Tree-walk interpreter and runtime
+│   ├── features/           # Arrays, hash maps, classes, string pool
+│   ├── vm/                 # Bytecode virtual machine
+│   ├── compiler/           # AST-to-bytecode compiler
+│   ├── aot/                # AoT compilation stubs (optional)
+│   ├── jit/                # JIT compilation stubs (optional)
+│   └── main.cpp            # REPL & file runner
+├── tests/                   # Automated tests (unit, integration, perf)
+│   ├── test_*.cpp          # Unit and feature tests (GTest)
+│   ├── integration_tests.cpp# End-to-end script tests
+│   └── perf/               # Performance and stress tests (benchmarks)
+├── examples/                # 50+ example programs (organized by category)
+│   ├── basic/              # Beginner-friendly examples
+│   ├── math/               # Mathematical operations
+│   ├── strings/            # String manipulation examples
+│   ├── data_structures/    # Arrays and hash maps
+│   ├── functional/         # Functional programming patterns
+│   ├── algorithms/         # Algorithmic examples
+│   ├── intermediate/       # Intermediate complexity programs
+│   ├── advanced/           # Advanced/debug examples
+│   └── advanced_examples/  # Complex real-world examples
+├── benchmarks/             # C++ microbenchmarks for core components
+├── docs/                   # Language documentation and migration guides
+├── CMakeLists.txt
+└── README.md
+```
+
+At a high level, the core implementation is split into a classic interpreter
+pipeline and a bytecode pipeline:
+
+- The lexer and parser turn source text into a typed AST.
+- The interpreter walks the AST directly for clarity and debugging.
+- The compiler lowers the AST into bytecode instructions.
+- The VM executes bytecode using a stack-based eval loop and NaN-boxed values.
+
+The most important modules for new contributors are:
+
+- `src/lexer/`
+  - Tokenizes raw source into a stream of tokens with line/column metadata.
+  - Implements keyword tables, number/string scanning, and error tokens.
+- `src/parser/`
+  - Builds the AST and statement nodes using recursive descent.
+  - Encodes all language grammar rules and precedence rules.
+- `src/interpreter/`
+  - Contains the tree-walk interpreter, environments, and runtime error types.
+  - Hosts native functions (I/O, math, time, JSON) and the module loader.
+- `src/features/`
+  - Implements shared runtime helpers such as arrays, hash maps, and the string pool.
+  - Provides the building blocks used by both interpreter and VM.
+- `src/vm/`
+  - Implements the bytecode virtual machine and its execution loop.
+  - Uses NaN-boxing to represent values efficiently and supports profiling.
+- `src/compiler/`
+  - Compiles AST programs into bytecode chunks consumed by the VM.
+  - Handles scopes, locals, upvalues, and constant tables.
+
+Start by reading `src/lexer`, then `src/parser`, and finally either
+`src/interpreter` or the `src/compiler` + `src/vm` pair depending on whether
+you are more interested in the tree-walk or VM pipeline.
+
+---
+
+## ⚙️ Development Workflow
+
+This is the recommended workflow for building, testing, and running VoltScript.
+
+### Build
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Debug   # Development builds
+cmake -B build -DCMAKE_BUILD_TYPE=Release # Optimized builds
+cmake --build build
+```
+
+### Run the REPL or a Script
+
+```bash
+./build/bin/volt               # Start interactive REPL
+./build/bin/volt script.volt   # Run a script file
+```
+
+### Run Tests
+
+```bash
+ctest --test-dir build                 # Run all tests (if enabled)
+./build/bin/volt_tests                # Run unit and feature tests
+./build/bin/volt_integration_tests    # Run integration tests
+```
+
+### Run Benchmarks
+
+```bash
+./build/bin/volt_benchmarks
+```
+
+---
+
 ## ❓ FAQ
 
 ### General Questions
@@ -2022,7 +2130,7 @@ A: Arrays, hash maps, strings, numbers, booleans, and functions.
 ### Development
 
 **Q: How many tests does it have?**
-A: Over 650 comprehensive unit tests covering all language features.
+A: Around 580 automated tests across unit, integration, and performance suites in v0.9.0.
 
 **Q: How is error reporting handled?**
 A: Precise error messages with line and column numbers for exact source location.
