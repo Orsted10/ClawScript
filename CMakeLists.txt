@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.8.6 LANGUAGES CXX)  # Optimization & Refinement Release
+project(VoltScript VERSION 0.9.0 LANGUAGES CXX)  # NaN-boxing, VM & Runtime Optimizations
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -39,12 +39,21 @@ endif()
 
 # Options
 option(BUILD_TESTS "Build tests" ON)
+option(VOLT_ENABLE_AOT "Enable LLVM-based AoT compilation (requires LLVM)" OFF)
+option(VOLT_ENABLE_JIT "Enable adaptive JIT (experimental stubs)" OFF)
 
 # Source files
 file(GLOB_RECURSE VOLT_SOURCES
     src/*.cpp
     src/features/*.cpp  # Include feature files
 )
+
+if(NOT VOLT_ENABLE_AOT)
+    list(FILTER VOLT_SOURCES EXCLUDE REGEX ".*/aot/.*")
+endif()
+if(NOT VOLT_ENABLE_JIT)
+    list(FILTER VOLT_SOURCES EXCLUDE REGEX ".*/jit/.*")
+endif()
 
 # Main executable
 add_executable(volt

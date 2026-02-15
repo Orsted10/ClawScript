@@ -11,6 +11,10 @@ void Environment::define(std::string_view name, Value value) {
     lookup_cache_.clear(); // Invalidate cache on new definitions
 }
 
+void Environment::define(std::string_view name, std::shared_ptr<Callable> fn) {
+    values_[StringPool::intern(name)] = callableValue(std::move(fn));
+    lookup_cache_.clear();
+}
 Value Environment::get(std::string_view name) const {  
     // Intern the name to ensure pointer-based comparison works
     name = StringPool::intern(name);

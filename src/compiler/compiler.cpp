@@ -25,10 +25,10 @@ std::unique_ptr<Chunk> Compiler::compile(const std::vector<StmtPtr>& program) {
 Value Compiler::visitLiteralExpr(LiteralExpr* expr) {
     switch (expr->type) {
         case LiteralExpr::Type::Number:
-            emitConstant(expr->numberValue);
+            emitConstant(numberToValue(expr->numberValue));
             break;
         case LiteralExpr::Type::String:
-            emitConstant(expr->stringValue);
+            emitConstant(stringValue(StringPool::intern(expr->stringValue).data()));
             break;
         case LiteralExpr::Type::Bool:
             emitOp(expr->boolValue ? OpCode::True : OpCode::False);
@@ -37,7 +37,7 @@ Value Compiler::visitLiteralExpr(LiteralExpr* expr) {
             emitOp(OpCode::Nil);
             break;
     }
-    return nullptr; // Compiler doesn't return Values during compilation
+    return nilValue(); // Compiler doesn't return Values during compilation
 }
 
 Value Compiler::visitVariableExpr(VariableExpr* expr) {
@@ -49,9 +49,10 @@ Value Compiler::visitVariableExpr(VariableExpr* expr) {
         emitByte(static_cast<uint8_t>(arg));
     } else {
         emitOp(OpCode::GetGlobal);
-        emitByte(makeConstant(std::string(name)));
+        auto sv = StringPool::intern(name);
+        emitByte(makeConstant(stringValue(sv.data())));
     }
-    return nullptr;
+    return nilValue();
 }
 
 Value Compiler::visitBinaryExpr(BinaryExpr* expr) {
@@ -81,9 +82,9 @@ Value Compiler::visitBinaryExpr(BinaryExpr* expr) {
             emitOp(OpCode::Not);
             break;
         }
-        default: return nullptr;
+        default: return nilValue();
     }
-    return nullptr;
+    return nilValue();
 }
 
 Value Compiler::visitUnaryExpr(UnaryExpr* expr) {
@@ -92,24 +93,23 @@ Value Compiler::visitUnaryExpr(UnaryExpr* expr) {
     switch (expr->op.type) {
         case TokenType::Minus: emitOp(OpCode::Negate); break;
         case TokenType::Bang:  emitOp(OpCode::Not); break;
-        default: return nullptr;
+        default: return nilValue();
     }
-    return nullptr;
+    return nilValue();
 }
 
 Value Compiler::visitLogicalExpr(LogicalExpr* expr) {
     // Basic logical op - could be optimized with short-circuiting jumps
     expr->left->accept(*this);
     expr->right->accept(*this);
-    // Dummy for now
-    return nullptr;
+    return nilValue();
 }
 
 Value Compiler::visitGroupingExpr(GroupingExpr* expr) {
     return expr->expr->accept(*this);
 }
 
-Value Compiler::visitCallExpr(CallExpr* expr) { return nullptr; }
+Value Compiler::visitCallExpr(CallExpr* expr) { return nilValue(); }
 
 Value Compiler::visitAssignExpr(AssignExpr* expr) {
     expr->value->accept(*this);
@@ -121,23 +121,24 @@ Value Compiler::visitAssignExpr(AssignExpr* expr) {
         emitByte(static_cast<uint8_t>(arg));
     } else {
         emitOp(OpCode::SetGlobal);
-        emitByte(makeConstant(std::string(name)));
+        auto sv = StringPool::intern(name);
+        emitByte(makeConstant(stringValue(sv.data())));
     }
-    return nullptr;
+    return nilValue();
 }
 
-Value Compiler::visitCompoundAssignExpr(CompoundAssignExpr* expr) { return nullptr; }
-Value Compiler::visitUpdateExpr(UpdateExpr* expr) { return nullptr; }
-Value Compiler::visitTernaryExpr(TernaryExpr* expr) { return nullptr; }
-Value Compiler::visitArrayExpr(ArrayExpr* expr) { return nullptr; }
-Value Compiler::visitIndexExpr(IndexExpr* expr) { return nullptr; }
-Value Compiler::visitIndexAssignExpr(IndexAssignExpr* expr) { return nullptr; }
-Value Compiler::visitHashMapExpr(HashMapExpr* expr) { return nullptr; }
-Value Compiler::visitMemberExpr(MemberExpr* expr) { return nullptr; }
-Value Compiler::visitSetExpr(SetExpr* expr) { return nullptr; }
-Value Compiler::visitThisExpr(ThisExpr* expr) { return nullptr; }
-Value Compiler::visitSuperExpr(SuperExpr* expr) { return nullptr; }
-Value Compiler::visitFunctionExpr(FunctionExpr* expr) { return nullptr; }
+Value Compiler::visitCompoundAssignExpr(CompoundAssignExpr* expr) { return nilValue(); }
+Value Compiler::visitUpdateExpr(UpdateExpr* expr) { return nilValue(); }
+Value Compiler::visitTernaryExpr(TernaryExpr* expr) { return nilValue(); }
+Value Compiler::visitArrayExpr(ArrayExpr* expr) { return nilValue(); }
+Value Compiler::visitIndexExpr(IndexExpr* expr) { return nilValue(); }
+Value Compiler::visitIndexAssignExpr(IndexAssignExpr* expr) { return nilValue(); }
+Value Compiler::visitHashMapExpr(HashMapExpr* expr) { return nilValue(); }
+Value Compiler::visitMemberExpr(MemberExpr* expr) { return nilValue(); }
+Value Compiler::visitSetExpr(SetExpr* expr) { return nilValue(); }
+Value Compiler::visitThisExpr(ThisExpr* expr) { return nilValue(); }
+Value Compiler::visitSuperExpr(SuperExpr* expr) { return nilValue(); }
+Value Compiler::visitFunctionExpr(FunctionExpr* expr) { return nilValue(); }
 
 // StmtVisitor implementation
 
@@ -163,7 +164,8 @@ void Compiler::visitLetStmt(LetStmt* stmt) {
         addLocal(name);
     } else {
         emitOp(OpCode::DefineGlobal);
-        emitByte(makeConstant(std::string(name)));
+        auto sv = StringPool::intern(name);
+        emitByte(makeConstant(stringValue(sv.data())));
     }
 }
 

@@ -2,6 +2,7 @@
 #include "interpreter/environment.h"
 #include "features/callable.h"
 #include "interpreter/value.h"
+#include "features/string_pool.h"
 #include "features/hashmap.h"
 #include "features/array.h"
 #include "features/class.h"
@@ -18,7 +19,7 @@ public:
 
     Value parse() {
         skipWhitespace();
-        if (pos_ >= source_.length()) return nullptr;
+        if (pos_ >= source_.length()) return nilValue();
         
         Value val = parseValue();
         skipWhitespace();
@@ -48,12 +49,12 @@ private:
         skipWhitespace();
         if (peek() == '}') {
             consume('}');
-            return map;
+            return hashMapValue(map);
         }
 
         while (true) {
             skipWhitespace();
-            std::string key = std::get<std::string>(parseString());
+            std::string key = asString(parseString());
             skipWhitespace();
             consume(':');
             Value val = parseValue();
@@ -66,7 +67,7 @@ private:
             }
             consume(',');
         }
-        return map;
+        return hashMapValue(map);
     }
 
     Value parseArray() {
@@ -76,7 +77,7 @@ private:
         skipWhitespace();
         if (peek() == ']') {
             consume(']');
-            return arr;
+            return arrayValue(arr);
         }
 
         while (true) {
@@ -88,7 +89,7 @@ private:
             }
             consume(',');
         }
-        return arr;
+        return arrayValue(arr);
     }
 
     Value parseString() {
@@ -122,7 +123,8 @@ private:
             pos_++;
         }
         consume('"');
-        return result;
+        auto sv = StringPool::intern(result);
+        return stringValue(sv.data());
     }
 
     Value parseNumber() {
@@ -131,17 +133,17 @@ private:
         while (pos_ < source_.length() && (isdigit(source_[pos_]) || source_[pos_] == '.')) pos_++;
         
         std::string numStr = source_.substr(start, pos_ - start);
-        return std::stod(numStr);
+        return numberToValue(std::stod(numStr));
     }
 
     Value parseBool() {
         if (source_.substr(pos_, 4) == "true") {
             pos_ += 4;
-            return true;
+            return boolValue(true);
         }
         if (source_.substr(pos_, 5) == "false") {
             pos_ += 5;
-            return false;
+            return boolValue(false);
         }
         throw std::runtime_error("Invalid boolean");
     }
@@ -149,7 +151,7 @@ private:
     Value parseNull() {
         if (source_.substr(pos_, 4) == "null") {
             pos_ += 4;
-            return nullptr;
+            return nilValue();
         }
         throw std::runtime_error("Invalid null");
     }
@@ -266,7 +268,8 @@ void registerNativeJSON(const std::shared_ptr<Environment>& globals) {
     globals->define("jsonEncode", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
-            return JSONEncoder::encode(args[0]);
+            auto sv = StringPool::intern(JSONEncoder::encode(args[0]));
+            return stringValue(sv.data());
         },
         "jsonEncode"
     ));

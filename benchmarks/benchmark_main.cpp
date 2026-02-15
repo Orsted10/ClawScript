@@ -14,53 +14,29 @@ using namespace volt;
 // INTERPRETER BENCHMARKS
 // ========================================
 
-static void BM_FibonacciRecursive(benchmark::State& state) {
-    std::string source = 
-        "fn fib(n) {"
-        "  if (n < 2) return n;"
-        "  return fib(n-1) + fib(n-2);"
-        "}"
-        "fib(15);";
-
-    for (auto _ : state) {
-        Lexer lexer(source);
-        auto tokens = lexer.tokenize();
-        Parser parser(tokens);
-        auto statements = parser.parseProgram();
-        
-        Interpreter interpreter;
-        interpreter.execute(statements);
-    }
-}
-BENCHMARK(BM_FibonacciRecursive);
-
-static void BM_LoopPerformance(benchmark::State& state) {
+static void BM_Interpreter_Loop(benchmark::State& state) {
     std::string source = 
         "let sum = 0;"
-        "for (let i = 0; i < 1000; i = i + 1) {"
+        "for (let i = 0; i < 100000; i = i + 1) {"
         "  sum = sum + i;"
         "}";
 
+    Lexer lexer(source);
+    auto tokens = lexer.tokenize();
+    Parser parser(tokens);
+    auto statements = parser.parseProgram();
+    
     for (auto _ : state) {
-        Lexer lexer(source);
-        auto tokens = lexer.tokenize();
-        Parser parser(tokens);
-        auto statements = parser.parseProgram();
-        
         Interpreter interpreter;
         interpreter.execute(statements);
     }
 }
-BENCHMARK(BM_LoopPerformance);
-
-// ========================================
-// VM BENCHMARKS
-// ========================================
+BENCHMARK(BM_Interpreter_Loop);
 
 static void BM_VM_Loop(benchmark::State& state) {
     std::string source = 
         "let sum = 0;"
-        "for (let i = 0; i < 1000; i = i + 1) {"
+        "for (let i = 0; i < 100000; i = i + 1) {"
         "  sum = sum + i;"
         "}";
 
@@ -78,6 +54,51 @@ static void BM_VM_Loop(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_VM_Loop);
+
+/*
+static void BM_Interpreter_Fibonacci(benchmark::State& state) {
+    std::string source = 
+        "fn fib(n) {"
+        "  if (n < 2) return n;"
+        "  return fib(n-1) + fib(n-2);"
+        "}"
+        "fib(15);";
+
+    Lexer lexer(source);
+    auto tokens = lexer.tokenize();
+    Parser parser(tokens);
+    auto statements = parser.parseProgram();
+    
+    for (auto _ : state) {
+        Interpreter interpreter;
+        interpreter.execute(statements);
+    }
+}
+BENCHMARK(BM_Interpreter_Fibonacci);
+
+static void BM_VM_Fibonacci(benchmark::State& state) {
+    std::string source = 
+        "fn fib(n) {"
+        "  if (n < 2) return n;"
+        "  return fib(n-1) + fib(n-2);"
+        "}"
+        "fib(15);";
+
+    Lexer lexer(source);
+    auto tokens = lexer.tokenize();
+    Parser parser(tokens);
+    auto statements = parser.parseProgram();
+    
+    Compiler compiler;
+    auto chunk = compiler.compile(statements);
+
+    for (auto _ : state) {
+        VM vm;
+        vm.interpret(*chunk);
+    }
+}
+BENCHMARK(BM_VM_Fibonacci);
+*/
 
 // ========================================
 // STRING POOL BENCHMARKS

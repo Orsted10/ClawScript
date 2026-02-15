@@ -4,6 +4,7 @@
 #include "chunk.h"
 #include "interpreter/value.h"
 #include "interpreter/environment.h"
+#include "jit/jit.h"
 
 namespace volt {
 
@@ -21,31 +22,39 @@ public:
     VM();
     ~VM() = default;
 
+    static constexpr int STACK_MAX = 256;
+
     InterpretResult interpret(const Chunk& chunk);
 
 private:
     InterpretResult run();
 
     // Stack operations
-    void push(Value value) { stack_.push_back(value); }
+    void push(Value value) {
+        if (stackTop_ - stack_ >= STACK_MAX) {
+            // Handle stack overflow
+            return;
+        }
+        *stackTop_++ = value;
+    }
     Value pop() {
-        Value val = stack_.back();
-        stack_.pop_back();
-        return val;
+        return *(--stackTop_);
     }
     Value peek(int distance = 0) const {
-        return stack_[stack_.size() - 1 - distance];
+        return stackTop_[-1 - distance];
     }
 
     bool isFalsey(Value value) const {
         if (isNil(value)) return true;
-        if (isBool(value)) return !std::get<bool>(value);
+        if (isBool(value)) return !asBool(value);
         return false;
     }
 
     const Chunk* chunk_;
-    uint32_t ip_; // Instruction pointer
-    std::vector<Value> stack_;
+    const uint8_t* ip_; // Instruction pointer (raw pointer for speed)
+    Value stack_[STACK_MAX];
+    Value* stackTop_;
+    JitEngine jit_;
     
     // Global variables are shared with the interpreter for now
     std::shared_ptr<Environment> globals_;

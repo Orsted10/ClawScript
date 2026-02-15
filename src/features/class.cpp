@@ -31,7 +31,7 @@ Value VoltClass::call(Interpreter& interpreter, const std::vector<Value>& argume
         initializer->bind(instance)->call(interpreter, arguments);
     }
 
-    return instance;
+    return instanceValue(instance);
 }
 
 int VoltClass::arity() const {
@@ -47,26 +47,32 @@ int VoltClass::arity() const {
 // ========================================
 
 Value VoltInstance::get(const Token& name) {
-    std::string fieldName(name.lexeme);
+    std::string_view sv = StringPool::intern(name.lexeme);
     
     // 1. Check fields
-    auto it = fields_.find(fieldName);
+    auto it = fields_.find(sv);
     if (it != fields_.end()) {
         return it->second;
     }
 
     // 2. Check methods
-    auto method = class_->findMethod(fieldName);
+    auto cacheIt = ic_get_cache_.find(sv);
+    if (cacheIt != ic_get_cache_.end()) {
+        return cacheIt->second;
+    }
+    auto method = class_->findMethod(std::string(sv));
     if (method) {
-        // Bind 'this' to this instance
-        return method->bind(shared_from_this());
+        Value bound = callableValue(method->bind(shared_from_this()));
+        ic_get_cache_[sv] = bound;
+        return bound;
     }
 
-    throw RuntimeError(name, ErrorCode::RUNTIME_ERROR, "Undefined property '" + fieldName + "'.", {});
+    throw RuntimeError(name, ErrorCode::RUNTIME_ERROR, "Undefined property '" + std::string(sv) + "'.", {});
 }
 
 void VoltInstance::set(const Token& name, Value value) {
-    fields_[std::string(name.lexeme)] = value;
+    std::string_view sv = StringPool::intern(name.lexeme);
+    fields_[sv] = value;
 }
 
 } // namespace volt

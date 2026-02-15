@@ -16,6 +16,7 @@ public:
     
     // Define new variable
     void define(std::string_view name, Value value);
+    void define(std::string_view name, std::shared_ptr<class Callable> fn);
     
     // Get variable value
     Value get(std::string_view name) const;
@@ -31,6 +32,10 @@ public:
         std::shared_ptr<Environment> env;
         Value value;
         bool found;
+    };
+
+    struct ProfileEntry {
+        uint64_t hits;
     };
 
     struct InternedStringHash {
@@ -54,6 +59,7 @@ private:
     
     // Performance: Fast lookup cache for deeply nested environments
     mutable std::unordered_map<std::string_view, CacheEntry, InternedStringHash, InternedStringEqual> lookup_cache_;
+    mutable std::unordered_map<std::string_view, ProfileEntry, InternedStringHash, InternedStringEqual> profile_;
 };
 
 } // namespace volt

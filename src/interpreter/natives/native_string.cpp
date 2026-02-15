@@ -4,6 +4,7 @@
 #include "interpreter/value.h"
 #include "features/array.h"
 #include "features/hashmap.h"
+#include "features/string_pool.h"
 #include <string>
 #include <sstream>
 #include <cctype>
@@ -15,13 +16,13 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (isString(args[0])) {
-                return static_cast<double>(asString(args[0]).length());
+                return numberToValue(static_cast<double>(asString(args[0]).length()));
             }
             if (isArray(args[0])) {
-                return static_cast<double>(asArray(args[0])->length());
+                return numberToValue(static_cast<double>(asArray(args[0])->length()));
             }
             if (isHashMap(args[0])) {
-                return static_cast<double>(asHashMap(args[0])->size());
+                return numberToValue(static_cast<double>(asHashMap(args[0])->size()));
             }
             throw std::runtime_error("len() requires a string, array, or hash map argument");
         },
@@ -31,7 +32,8 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
     globals->define("str", std::make_shared<NativeFunction>(
         1,
         [](const std::vector<Value>& args) -> Value {
-            return valueToString(args[0]);
+            auto sv = StringPool::intern(valueToString(args[0]));
+            return stringValue(sv.data());
         },
         "str"
     ));
@@ -42,7 +44,8 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             if (!isString(args[0])) throw std::runtime_error("toUpper() requires a string");
             std::string s = asString(args[0]);
             for (auto& c : s) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-            return s;
+            auto sv = StringPool::intern(s);
+            return stringValue(sv.data());
         },
         "toUpper"
     ));
@@ -53,7 +56,8 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             if (!isString(args[0])) throw std::runtime_error("toLower() requires a string");
             std::string s = asString(args[0]);
             for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-            return s;
+            auto sv = StringPool::intern(s);
+            return stringValue(sv.data());
         },
         "toLower"
     ));
@@ -68,12 +72,16 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             int start = static_cast<int>(asNumber(args[1]));
             int length = static_cast<int>(asNumber(args[2]));
             if (start < 0) start = 0;
-            if (start >= static_cast<int>(s.length())) return std::string("");
+            if (start >= static_cast<int>(s.length())) {
+                auto sv = StringPool::intern(std::string(""));
+                return stringValue(sv.data());
+            }
             if (length < 0) length = 0;
             if (start + length > static_cast<int>(s.length())) {
                 length = static_cast<int>(s.length()) - start;
             }
-            return s.substr(start, length);
+            auto sv = StringPool::intern(s.substr(start, length));
+            return stringValue(sv.data());
         },
         "substr"
     ));
@@ -87,9 +95,9 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             std::string sub = asString(args[1]);
             size_t pos = s.find(sub);
             if (pos == std::string::npos) {
-                return -1.0;
+                return numberToValue(-1.0);
             }
-            return static_cast<double>(pos);
+            return numberToValue(static_cast<double>(pos));
         },
         "indexOf"
     ));
@@ -103,7 +111,8 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             while (start < s.length() && std::isspace(static_cast<unsigned char>(s[start]))) start++;
             size_t end = s.length();
             while (end > start && std::isspace(static_cast<unsigned char>(s[end - 1]))) end--;
-            return s.substr(start, end - start);
+            auto sv = StringPool::intern(s.substr(start, end - start));
+            return stringValue(sv.data());
         },
         "trim"
     ));
@@ -118,21 +127,24 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             auto result = std::make_shared<VoltArray>();
             if (delimiter.empty()) {
                 for (char c : s) {
-                    result->push(std::string(1, c));
+                    auto sv = StringPool::intern(std::string(1, c));
+                    result->push(stringValue(sv.data()));
                 }
-                return result;
+                return arrayValue(result);
             }
             size_t pos = 0;
             while (true) {
                 size_t next = s.find(delimiter, pos);
                 if (next == std::string::npos) {
-                    result->push(s.substr(pos));
+                    auto sv = StringPool::intern(s.substr(pos));
+                    result->push(stringValue(sv.data()));
                     break;
                 }
-                result->push(s.substr(pos, next - pos));
+                auto sv = StringPool::intern(s.substr(pos, next - pos));
+                result->push(stringValue(sv.data()));
                 pos = next + delimiter.length();
             }
-            return result;
+            return arrayValue(result);
         },
         "split"
     ));
@@ -146,7 +158,10 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             std::string s = asString(args[0]);
             std::string search = asString(args[1]);
             std::string replacement = asString(args[2]);
-            if (search.empty()) return s;
+            if (search.empty()) {
+                auto sv0 = StringPool::intern(s);
+                return stringValue(sv0.data());
+            }
             std::string result = s;
             size_t pos = 0;
             while ((pos = result.find(search, pos)) != std::string::npos) {
@@ -154,7 +169,8 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
                 pos += replacement.length();
                 if (replacement.empty()) pos++;
             }
-            return result;
+            auto sv = StringPool::intern(result);
+            return stringValue(sv.data());
         },
         "replace"
     ));
@@ -166,8 +182,8 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             if (!isString(args[1])) throw std::runtime_error("startsWith() requires a string prefix");
             std::string s = asString(args[0]);
             std::string prefix = asString(args[1]);
-            if (prefix.length() > s.length()) return false;
-            return s.compare(0, prefix.length(), prefix) == 0;
+            if (prefix.length() > s.length()) return boolValue(false);
+            return boolValue(s.compare(0, prefix.length(), prefix) == 0);
         },
         "startsWith"
     ));
@@ -179,8 +195,8 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             if (!isString(args[1])) throw std::runtime_error("endsWith() requires a string suffix");
             std::string s = asString(args[0]);
             std::string suffix = asString(args[1]);
-            if (suffix.length() > s.length()) return false;
-            return s.compare(s.length() - suffix.length(), suffix.length(), suffix) == 0;
+            if (suffix.length() > s.length()) return boolValue(false);
+            return boolValue(s.compare(s.length() - suffix.length(), suffix.length(), suffix) == 0);
         },
         "endsWith"
     ));
@@ -197,7 +213,8 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             for (int i = 0; i < count; i++) {
                 oss << s;
             }
-            return oss.str();
+            auto sv = StringPool::intern(oss.str());
+            return stringValue(sv.data());
         },
         "repeat"
     ));

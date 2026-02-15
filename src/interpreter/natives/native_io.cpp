@@ -2,6 +2,7 @@
 #include "interpreter/environment.h"
 #include "features/callable.h"
 #include "interpreter/value.h"
+#include "features/string_pool.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -18,7 +19,8 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             }
             std::string line;
             std::getline(std::cin, line);
-            return line;
+            auto sv = StringPool::intern(line);
+            return stringValue(sv.data());
         },
         "input"
     ));
@@ -35,7 +37,8 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             }
             std::stringstream buffer;
             buffer << file.rdbuf();
-            return buffer.str();
+            auto sv = StringPool::intern(buffer.str());
+            return stringValue(sv.data());
         },
         "readFile"
     ));
@@ -51,7 +54,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
                 throw std::runtime_error("Could not open file for writing: " + asString(args[0]));
             }
             file << asString(args[1]);
-            return true;
+            return nilValue();
         },
         "writeFile"
     ));
@@ -67,7 +70,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
                 throw std::runtime_error("Could not open file for appending: " + asString(args[0]));
             }
             file << asString(args[1]);
-            return true;
+            return boolValue(true);
         },
         "appendFile"
     ));
@@ -79,7 +82,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
                 throw std::runtime_error("fileExists() requires a string path");
             }
             std::ifstream file(asString(args[0]));
-            return file.good();
+            return boolValue(file.good());
         },
         "fileExists"
     ));
@@ -91,7 +94,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
                 throw std::runtime_error("exists() requires a string path");
             }
             std::ifstream file(asString(args[0]));
-            return file.good();
+            return boolValue(file.good());
         },
         "exists"
     ));
@@ -104,9 +107,9 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             }
             std::string path = asString(args[0]);
             if (std::remove(path.c_str()) == 0) {
-                return true;
+                return boolValue(true);
             } else {
-                return false;
+                return boolValue(false);
             }
         },
         "deleteFile"
@@ -123,7 +126,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             if (!file) {
                 throw std::runtime_error("Could not open file: " + path);
             }
-            return static_cast<double>(file.tellg());
+            return numberToValue(static_cast<double>(file.tellg()));
         },
         "fileSize"
     ));

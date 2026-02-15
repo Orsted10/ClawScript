@@ -1,13 +1,13 @@
 <div align="center">
 
-# ⚡ VoltScript v0.8.6 ⚡
+# ⚡ VoltScript v0.9.0 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
 
 > *From tokens → trees → closures → arrays → classes*  
 
-[![Tests](https://img.shields.io/badge/tests-700+-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-580+-brightgreen)]()
 [![C++](https://img.shields.io/badge/C++-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -31,23 +31,23 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - ⚡ Lexical analysis
 - 🌳 Parsing with recursive descent  
 - 🧠 AST construction
-- ⚙️ **Stack-based Bytecode VM** (New in v0.8.6)
-- 🛠️ **AST-to-Bytecode Compiler** (New in v0.8.6)
-- 🧵 **Thread-safe String Interning** (New in v0.8.6)
+- ⚙️ **Stack-based Bytecode VM** (Optimized in v0.9.0)
+- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v0.9.0)
+- 🧵 **Thread-safe String Interning** (Improved in v0.9.0)
 - ⚙️ Tree-walk interpretation (Original fallback)
 - 📍 Precise error reporting
 - 🔐 Lexical scoping & environments
 - 🔁 First-class functions & closures
 - 📦 Dynamic arrays with methods
-- 🏗️ **Class system with inheritance** (New in v0.8.6)
+- 🏗️ **Class system with inheritance**
 - 🎯 Compound operators & control flow
-- 🧪 **Comprehensive testing & performance benchmarks** (Updated in v0.8.6)
+- 🧪 **Comprehensive testing & performance benchmarks** (Expanded in v0.9.0)
 
 If you've ever wanted to *truly* understand languages like **Python**, **JavaScript**, or **Lua** — this is your path.
 
 ---
 
-## ✨ Features (v0.8.6)
+## ✨ Features (v0.9.0)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -63,18 +63,19 @@ Enhanced with:
 - **Data Structures**: Arrays `[]`, Hash Maps `{}`
 - **Comments**: `// line comments`
 
-### ⚙️ Interpreter — *AST → Execution*
+### ⚙️ Interpreter & VM — *AST → Execution*
 
-Major enhancements in v0.8.6:
+Major enhancements in v0.9.0:
 
-- ✅ **Bytecode VM & Compiler**: Transitioned from tree-walk to a high-performance stack-based virtual machine with AST-to-bytecode compilation.
-- ✅ **String Interning**: Implemented a thread-safe `StringPool` for O(1) string comparisons and reduced memory allocations.
+- ✅ **NaN-Boxed Value Representation**: Compact 64-bit tagged values for numbers, booleans, nil, strings, and objects.
+- ✅ **Optimized Bytecode VM & Compiler**: High-performance stack-based VM with optimized bytecode generation.
+- ✅ **String Interning**: Thread-safe `StringPool` for pointer-based string comparison and reduced allocations.
 - ✅ **Class System**: Full support for classes, methods, inheritance, and constructors.
-- ✅ **Environment Lookup Caching**: Optimized variable lookup in deeply nested scopes using hit/miss caching.
-- ✅ **Mathematical Optimizations**: Fast binary exponentiation for integer powers in `pow()`.
+- ✅ **Environment Lookup Caching + Profiling**: Optimized variable lookup with hit caches and counters for hot paths.
+- ✅ **Mathematical Optimizations**: Fast binary exponentiation for integer powers in `pow()` and tuned math natives.
 - ✅ **Centralized JSON Engine**: Modular and high-performance JSON encoding/decoding.
 - ✅ **Integration Test Suite**: Automated end-to-end script validation.
-- ✅ **Performance Benchmarking**: Integrated benchmarks for critical components (math, lookups, VM, JSON).
+- ✅ **Performance Benchmarking**: Benchmarks for interpreter vs VM, string interning, math, lookups, and JSON.
 - ✅ **Stack Trace Support**: Detailed call stacks for all runtime errors.
 - ✅ **Stack Overflow Protection**: Configurable recursion depth limit (1000 frames).
 - ✅ **Visitor Pattern**: High-performance AST traversal.
@@ -584,9 +585,9 @@ print reversed; // [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 ---
 
-## 🧪 Testing (720+ Tests!)
+## 🧪 Testing (580+ Tests!)
 
-VoltScript v0.8.6 has **significantly expanded test coverage** with 720+ unit tests and performance benchmarks:
+VoltScript v0.9.0 has **significantly expanded test coverage** with 580+ unit tests and performance benchmarks:
 
 | Test Suite | Tests | Description |
 |-----------|-------|-------------|
@@ -613,7 +614,7 @@ VoltScript v0.8.6 has **significantly expanded test coverage** with 720+ unit te
 ctest --test-dir build --output-on-failure
 ```
 
-**Result:** ✅ **94% Pass Rate** (650+ tests, 611 passing)
+**Result:** ✅ **>95% Pass Rate** (580+ tests)
 
 ---
 

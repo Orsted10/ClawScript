@@ -26,7 +26,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (!isNumber(args[0])) throw std::runtime_error("abs() requires a number");
-            return std::abs(asNumber(args[0]));
+            return numberToValue(std::abs(asNumber(args[0])));
         },
         "abs"
     ));
@@ -37,7 +37,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
             if (!isNumber(args[0])) throw std::runtime_error("sqrt() requires a number");
             double val = asNumber(args[0]);
             if (val < 0) throw std::runtime_error("sqrt() argument must be non-negative");
-            return std::sqrt(val);
+            return numberToValue(std::sqrt(val));
         },
         "sqrt"
     ));
@@ -53,10 +53,10 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
             
             // Optimization: Use fastPow for integer exponents
             if (std::floor(exp) == exp) {
-                return fastPow(base, static_cast<int>(exp));
+                return numberToValue(fastPow(base, static_cast<int>(exp)));
             }
             
-            return std::pow(base, exp);
+            return numberToValue(std::pow(base, exp));
         },
         "pow"
     ));
@@ -67,7 +67,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
             if (!isNumber(args[0]) || !isNumber(args[1])) {
                 throw std::runtime_error("min() requires two numbers");
             }
-            return std::min(asNumber(args[0]), asNumber(args[1]));
+            return numberToValue(std::min(asNumber(args[0]), asNumber(args[1])));
         },
         "min"
     ));
@@ -78,7 +78,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
             if (!isNumber(args[0]) || !isNumber(args[1])) {
                 throw std::runtime_error("max() requires two numbers");
             }
-            return std::max(asNumber(args[0]), asNumber(args[1]));
+            return numberToValue(std::max(asNumber(args[0]), asNumber(args[1])));
         },
         "max"
     ));
@@ -87,7 +87,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (!isNumber(args[0])) throw std::runtime_error("round() requires a number");
-            return std::round(asNumber(args[0]));
+            return numberToValue(std::round(asNumber(args[0])));
         },
         "round"
     ));
@@ -96,7 +96,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (!isNumber(args[0])) throw std::runtime_error("floor() requires a number");
-            return std::floor(asNumber(args[0]));
+            return numberToValue(std::floor(asNumber(args[0])));
         },
         "floor"
     ));
@@ -105,7 +105,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (!isNumber(args[0])) throw std::runtime_error("ceil() requires a number");
-            return std::ceil(asNumber(args[0]));
+            return numberToValue(std::ceil(asNumber(args[0])));
         },
         "ceil"
     ));
@@ -113,7 +113,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
     globals->define("random", std::make_shared<NativeFunction>(
         0,
         [](const std::vector<Value>&) -> Value {
-            return static_cast<double>(std::rand()) / RAND_MAX;
+            return numberToValue(static_cast<double>(std::rand()) / RAND_MAX);
         },
         "random"
     ));
@@ -122,7 +122,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (!isNumber(args[0])) throw std::runtime_error("sin() requires a number");
-            return std::sin(asNumber(args[0]));
+            return numberToValue(std::sin(asNumber(args[0])));
         },
         "sin"
     ));
@@ -131,7 +131,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (!isNumber(args[0])) throw std::runtime_error("cos() requires a number");
-            return std::cos(asNumber(args[0]));
+            return numberToValue(std::cos(asNumber(args[0])));
         },
         "cos"
     ));
@@ -140,7 +140,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (!isNumber(args[0])) throw std::runtime_error("tan() requires a number");
-            return std::tan(asNumber(args[0]));
+            return numberToValue(std::tan(asNumber(args[0])));
         },
         "tan"
     ));
@@ -151,7 +151,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
             if (!isNumber(args[0])) throw std::runtime_error("log() requires a number");
             double x = asNumber(args[0]);
             if (x <= 0) throw std::runtime_error("log() argument must be positive");
-            return std::log(x);
+            return numberToValue(std::log(x));
         },
         "log"
     ));
@@ -160,7 +160,7 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         1,
         [](const std::vector<Value>& args) -> Value {
             if (!isNumber(args[0])) throw std::runtime_error("exp() requires a number");
-            return std::exp(asNumber(args[0]));
+            return numberToValue(std::exp(asNumber(args[0])));
         },
         "exp"
     ));

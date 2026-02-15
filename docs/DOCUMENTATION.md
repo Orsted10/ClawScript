@@ -2,10 +2,10 @@
 
 <div align="center">
 
-## ⚡ VoltScript v0.8.4 ⚡
+## ⚡ VoltScript v0.9.0 ⚡
 ### *A Modern Programming Language Built from Scratch*
 
-[![Tests](https://img.shields.io/badge/tests-450%2B-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-580%2B-brightgreen)]()
 [![C++](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -101,7 +101,7 @@ cmake --build build
 This starts an interactive session where you can type and execute VoltScript code directly:
 
 ```
-⚡ VoltScript v0.7.9 REPL
+⚡ VoltScript v0.9.0 REPL
 Type 'exit' to quit
 >> let x = 42;
 >> print x;
@@ -2003,7 +2003,7 @@ A: While functional and well-tested, it's primarily educational. For production 
 A: C++20 or higher is required for modern features and standard library support.
 
 **Q: How fast is VoltScript?**
-A: As a tree-walk interpreter, it's slower than compiled languages but suitable for learning and small scripts.
+A: v0.9.0 includes a bytecode VM, NaN-boxed values, and optimized natives, making it significantly faster than the original tree-walk-only versions while remaining educational and portable.
 
 **Q: Does it have garbage collection?**
 A: It uses C++ smart pointers (shared_ptr) for automatic memory management.
@@ -2040,7 +2040,7 @@ MIT License - Free to use, modify, and distribute.
 
 <div align="center">
 
-### ⚡ VoltScript v0.8.4 ⚡
+### ⚡ VoltScript v0.9.0 ⚡
 
 **Built with passion and C++20**
 

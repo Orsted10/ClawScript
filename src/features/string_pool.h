@@ -2,7 +2,7 @@
 #include <string>
 #include <unordered_set>
 #include <string_view>
-#include <mutex>
+#include <shared_mutex>
 
 namespace volt {
 
@@ -40,8 +40,21 @@ private:
     std::string_view internImpl(const std::string& str);
     std::string_view internImpl(std::string_view str);
 
-    std::unordered_set<std::string> pool_;
-    mutable std::mutex mutex_;
+    struct TransparentHash {
+        using is_transparent = void;
+        size_t operator()(std::string_view sv) const noexcept { return std::hash<std::string_view>{}(sv); }
+        size_t operator()(const std::string& s) const noexcept { return std::hash<std::string_view>{}(s); }
+    };
+    struct TransparentEqual {
+        using is_transparent = void;
+        bool operator()(std::string_view a, std::string_view b) const noexcept { return a == b; }
+        bool operator()(const std::string& a, const std::string& b) const noexcept { return a == b; }
+        bool operator()(const std::string& a, std::string_view b) const noexcept { return a == b; }
+        bool operator()(std::string_view a, const std::string& b) const noexcept { return a == b; }
+    };
+
+    std::unordered_set<std::string, TransparentHash, TransparentEqual> pool_;
+    mutable std::shared_mutex mutex_;
 };
 
 } // namespace volt

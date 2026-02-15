@@ -2,6 +2,7 @@
 #include "interpreter/environment.h"
 #include "features/callable.h"
 #include "interpreter/value.h"
+#include "features/string_pool.h"
 #include <chrono>
 #include <thread>
 #include <sstream>
@@ -16,7 +17,7 @@ void registerNativeTime(const std::shared_ptr<Environment>& globals) {
             auto now = std::chrono::system_clock::now();
             auto duration = now.time_since_epoch();
             auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-            return static_cast<double>(millis) / 1000.0;
+            return numberToValue(static_cast<double>(millis) / 1000.0);
         },
         "clock"
     ));
@@ -27,7 +28,7 @@ void registerNativeTime(const std::shared_ptr<Environment>& globals) {
             auto now = std::chrono::system_clock::now();
             auto duration = now.time_since_epoch();
             auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-            return static_cast<double>(millis);
+            return numberToValue(static_cast<double>(millis));
         },
         "now"
     ));
@@ -50,7 +51,8 @@ void registerNativeTime(const std::shared_ptr<Environment>& globals) {
             if (format.find('%') != std::string::npos) {
                 char buf[128];
                 std::strftime(buf, sizeof(buf), format.c_str(), &tm);
-                return std::string(buf);
+                auto sv = StringPool::intern(std::string(buf));
+                return stringValue(sv.data());
             } else {
                 auto pad2 = [](int v) {
                     std::ostringstream oss;
@@ -74,11 +76,13 @@ void registerNativeTime(const std::shared_ptr<Environment>& globals) {
                     out = replaceAll(out, "HH", pad2(tm.tm_hour));
                     out = replaceAll(out, "mm", pad2(tm.tm_min));
                     out = replaceAll(out, "ss", pad2(tm.tm_sec));
-                    return out;
+                    auto sv = StringPool::intern(out);
+                    return stringValue(sv.data());
                 } else {
                     std::ostringstream oss;
                     oss << "Date(" << static_cast<long long>(timestampMs) << ") formatted as '" << format << "'";
-                    return oss.str();
+                    auto sv = StringPool::intern(oss.str());
+                    return stringValue(sv.data());
                 }
             }
         },
@@ -94,7 +98,7 @@ void registerNativeTime(const std::shared_ptr<Environment>& globals) {
             int ms = static_cast<int>(asNumber(args[0]));
             if (ms < 0) ms = 0;
             std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-            return true;
+            return boolValue(true);
         },
         "sleep"
     ));

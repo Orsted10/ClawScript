@@ -12,17 +12,50 @@ namespace volt {
 // Thread-local set to track visited objects for cycle detection during string conversion
 thread_local std::set<const void*> visitedObjects;
 
-bool isTruthy(const Value& v) {
+// Global registries to keep shared_ptr lifetimes while storing raw pointers in Values
+static std::unordered_map<void*, std::shared_ptr<Callable>> g_callableRegistry;
+static std::unordered_map<void*, std::shared_ptr<VoltArray>> g_arrayRegistry;
+static std::unordered_map<void*, std::shared_ptr<VoltHashMap>> g_hashMapRegistry;
+static std::unordered_map<void*, std::shared_ptr<VoltClass>> g_classRegistry;
+static std::unordered_map<void*, std::shared_ptr<VoltInstance>> g_instanceRegistry;
+
+Value callableValue(std::shared_ptr<Callable> fn) {
+    void* p = fn.get();
+    g_callableRegistry[p] = std::move(fn);
+    return objectValue(p);
+}
+Value arrayValue(std::shared_ptr<VoltArray> arr) {
+    void* p = arr.get();
+    g_arrayRegistry[p] = std::move(arr);
+    return objectValue(p);
+}
+Value hashMapValue(std::shared_ptr<VoltHashMap> map) {
+    void* p = map.get();
+    g_hashMapRegistry[p] = std::move(map);
+    return objectValue(p);
+}
+Value classValue(std::shared_ptr<VoltClass> cls) {
+    void* p = cls.get();
+    g_classRegistry[p] = std::move(cls);
+    return objectValue(p);
+}
+Value instanceValue(std::shared_ptr<VoltInstance> inst) {
+    void* p = inst.get();
+    g_instanceRegistry[p] = std::move(inst);
+    return objectValue(p);
+}
+
+bool isTruthy(Value v) {
     if (isNil(v)) return false;
     if (isBool(v)) return asBool(v);
     if (isNumber(v)) return asNumber(v) != 0.0;
-    if (isString(v)) return !asString(v).empty();
+    if (isString(v)) return *asStringPtr(v) != '\0';
     if (isArray(v)) return asArray(v)->length() > 0;
     if (isHashMap(v)) return asHashMap(v)->size() > 0;  // Added!
     return true;
 }
 
-bool isEqual(const Value& a, const Value& b) {
+bool isEqual(Value a, Value b) {
     if (isNil(a) && isNil(b)) return true;
     if (isNil(a) || isNil(b)) return false;
     
@@ -30,14 +63,13 @@ bool isEqual(const Value& a, const Value& b) {
         return asNumber(a) == asNumber(b);
     }
     if (isString(a) && isString(b)) {
-        return asString(a) == asString(b);
+        return asStringPtr(a) == asStringPtr(b);
     }
     if (isBool(a) && isBool(b)) {
         return asBool(a) == asBool(b);
     }
     if (isCallable(a) && isCallable(b)) {
-        return std::get<std::shared_ptr<Callable>>(a) ==
-               std::get<std::shared_ptr<Callable>>(b);
+        return asObjectPtr(a) == asObjectPtr(b);
     }
     // Arrays compare by reference
     if (isArray(a) && isArray(b)) {
@@ -78,8 +110,8 @@ std::string valueToStringWithCycleDetection(const Value& v, std::set<const void*
     } else if (isBool(v)) {
         return asBool(v) ? "true" : "false";
     } else if (isCallable(v)) {
-        auto func = std::get<std::shared_ptr<Callable>>(v);
-        return func->toString();
+        auto fn = asCallable(v);
+        return fn ? fn->toString() : "<fn>";
     } else if (isArray(v)) {
         // For arrays, we need to also check for circular references
         auto arr = asArray(v);
@@ -121,5 +153,17 @@ std::string valueToStringWithCycleDetection(const Value& v, std::set<const void*
     }
     return "unknown";
 }
+
+bool isCallable(Value v) { return isObject(v) && g_callableRegistry.count(asObjectPtr(v)) > 0; }
+bool isArray(Value v) { return isObject(v) && g_arrayRegistry.count(asObjectPtr(v)) > 0; }
+bool isHashMap(Value v) { return isObject(v) && g_hashMapRegistry.count(asObjectPtr(v)) > 0; }
+bool isClass(Value v) { return isObject(v) && g_classRegistry.count(asObjectPtr(v)) > 0; }
+bool isInstance(Value v) { return isObject(v) && g_instanceRegistry.count(asObjectPtr(v)) > 0; }
+
+std::shared_ptr<VoltArray> asArray(Value v) { auto it = g_arrayRegistry.find(asObjectPtr(v)); return it != g_arrayRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<VoltHashMap> asHashMap(Value v) { auto it = g_hashMapRegistry.find(asObjectPtr(v)); return it != g_hashMapRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<VoltClass> asClass(Value v) { auto it = g_classRegistry.find(asObjectPtr(v)); return it != g_classRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<VoltInstance> asInstance(Value v) { auto it = g_instanceRegistry.find(asObjectPtr(v)); return it != g_instanceRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<Callable> asCallable(Value v) { auto it = g_callableRegistry.find(asObjectPtr(v)); return it != g_callableRegistry.end() ? it->second : nullptr; }
 
 } // namespace volt

@@ -28,7 +28,7 @@ void VoltArray::set(size_t index, Value value) {
         if (index >= elements_.size() + 10000) {  // Prevent massive allocations
             throw std::runtime_error("Array extension too large: " + std::to_string(index));
         }
-        elements_.resize(index + 1, nullptr);
+        elements_.resize(index + 1, volt::nilValue());
     }
     elements_[index] = value;
 }
@@ -39,7 +39,7 @@ void VoltArray::push(Value value) {
 
 Value VoltArray::pop() {
     if (elements_.empty()) {
-        return nullptr;  // Return nil for empty array
+        return volt::nilValue();  // Return nil for empty array
     }
     Value last = elements_.back();
     elements_.pop_back();
@@ -137,7 +137,7 @@ Value VoltArray::find(std::function<bool(Value)> predicate) const {
             return element;
         }
     }
-    return nullptr; // Return nil if not found
+    return volt::nilValue(); // Return nil if not found
 }
 
 bool VoltArray::some(std::function<bool(Value)> predicate) const {
@@ -231,7 +231,7 @@ std::shared_ptr<VoltArray> VoltArray::splice(int start, int deleteCount, const s
 }
 
 Value VoltArray::shift() {
-    if (elements_.empty()) return nullptr;
+    if (elements_.empty()) return volt::nilValue();
     Value first = elements_[0];
     elements_.erase(elements_.begin());
     return first;

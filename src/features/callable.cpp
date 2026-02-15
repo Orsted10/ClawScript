@@ -19,7 +19,7 @@ VoltFunction::VoltFunction(FnStmt* declaration,
 
 std::shared_ptr<VoltFunction> VoltFunction::bind(std::shared_ptr<VoltInstance> instance) {
     auto environment = std::make_shared<Environment>(closure_);
-    environment->define("this", instance);
+    environment->define("this", instanceValue(instance));
     return std::make_shared<VoltFunction>(declaration_, environment, isInitializer_);
 }
 
@@ -63,7 +63,7 @@ Value VoltFunction::call(Interpreter& interpreter,
     if (isInitializer_) return closure_->get("this");
     
     // If no return statement, functions return nil
-    return nullptr;
+    return nilValue();
 }
 
 int VoltFunction::arity() const {

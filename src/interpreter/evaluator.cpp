@@ -1,6 +1,7 @@
 #include "evaluator.h"
 #include <cmath>
 #include <sstream>
+#include "features/string_pool.h"
 
 namespace volt {
 
@@ -50,19 +51,19 @@ Value Evaluator::evaluate(Expr* expr) {
 Value Evaluator::evaluateLiteral(LiteralExpr* expr) {
     switch (expr->type) {
         case LiteralExpr::Type::Number:
-            return expr->numberValue;
+            return numberToValue(expr->numberValue);
         
         case LiteralExpr::Type::String:
-            return expr->stringValue;
+            return stringValue(StringPool::intern(expr->stringValue).data());
         
         case LiteralExpr::Type::Bool:
-            return expr->boolValue;
+            return boolValue(expr->boolValue);
         
         case LiteralExpr::Type::Nil:
-            return nullptr;
+            return nilValue();
     }
     
-    return nullptr;
+    return nilValue();
 }
 
 Value Evaluator::evaluateVariable(VariableExpr* expr) {
@@ -79,10 +80,10 @@ Value Evaluator::evaluateUnary(UnaryExpr* expr) {
     switch (expr->op.type) {
         case TokenType::Minus:
             checkNumberOperand(expr->op, right);
-            return -asNumber(right);
+            return numberToValue(-asNumber(right));
         
         case TokenType::Bang:
-            return !isTruthy(right);
+            return boolValue(!isTruthy(right));
         
         default:
             throw RuntimeError(expr->op, "Unknown unary operator");
@@ -97,62 +98,62 @@ Value Evaluator::evaluateBinary(BinaryExpr* expr) {
         // Arithmetic
         case TokenType::Plus:
             if (isNumber(left) && isNumber(right)) {
-                return asNumber(left) + asNumber(right);
+                return numberToValue(asNumber(left) + asNumber(right));
             }
             if (isString(left) && isString(right)) {
-                return asString(left) + asString(right);
+                return stringValue(StringPool::intern(asString(left) + asString(right)).data());
             }
             // Type coercion: string + number or number + string
             if (isString(left) && isNumber(right)) {
-                return asString(left) + valueToString(right);
+                return stringValue(StringPool::intern(asString(left) + valueToString(right)).data());
             }
             if (isNumber(left) && isString(right)) {
-                return valueToString(left) + asString(right);
+                return stringValue(StringPool::intern(valueToString(left) + asString(right)).data());
             }
             throw RuntimeError(expr->op, "Operands must be two numbers or two strings");
         
         case TokenType::Minus:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) - asNumber(right);
+            return numberToValue(asNumber(left) - asNumber(right));
         
         case TokenType::Star:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) * asNumber(right);
+            return numberToValue(asNumber(left) * asNumber(right));
         
         case TokenType::Slash:
             checkNumberOperands(expr->op, left, right);
             if (asNumber(right) == 0.0) {
                 throw RuntimeError(expr->op, "Division by zero");
             }
-            return asNumber(left) / asNumber(right);
+            return numberToValue(asNumber(left) / asNumber(right));
         
         case TokenType::Percent:
             checkNumberOperands(expr->op, left, right);
-            return std::fmod(asNumber(left), asNumber(right));
+            return numberToValue(std::fmod(asNumber(left), asNumber(right)));
         
         // Comparison
         case TokenType::Greater:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) > asNumber(right);
+            return boolValue(asNumber(left) > asNumber(right));
         
         case TokenType::GreaterEqual:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) >= asNumber(right);
+            return boolValue(asNumber(left) >= asNumber(right));
         
         case TokenType::Less:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) < asNumber(right);
+            return boolValue(asNumber(left) < asNumber(right));
         
         case TokenType::LessEqual:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) <= asNumber(right);
+            return boolValue(asNumber(left) <= asNumber(right));
         
         // Equality
         case TokenType::EqualEqual:
-            return isEqual(left, right);
+            return boolValue(isEqual(left, right));
         
         case TokenType::BangEqual:
-            return !isEqual(left, right);
+            return boolValue(!isEqual(left, right));
         
         default:
             throw RuntimeError(expr->op, "Unknown binary operator");

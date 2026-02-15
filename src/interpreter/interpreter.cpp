@@ -7,6 +7,7 @@
 #include "features/array.h"
 #include "features/hashmap.h"
 #include "features/class.h"
+#include "features/string_pool.h"
 #include "interpreter/natives/native_math.h"
 #include "interpreter/natives/native_string.h"
 #include "interpreter/natives/native_array.h"
@@ -55,13 +56,13 @@ void Interpreter::defineNatives() {
             if (isNumber(args[0])) return args[0];
             if (isString(args[0])) {
                 try {
-                    return std::stod(asString(args[0]));
+                    return numberToValue(std::stod(asString(args[0])));
                 } catch (...) {
                     throw std::runtime_error("E2001: Cannot convert string to number: " + asString(args[0]));
                 }
             }
             if (isBool(args[0])) {
-                return asBool(args[0]) ? 1.0 : 0.0;
+                return numberToValue(asBool(args[0]) ? 1.0 : 0.0);
             }
             throw std::runtime_error("E2001: Cannot convert to number");
         },
@@ -92,14 +93,16 @@ void Interpreter::defineNatives() {
         1,
         [](const std::vector<Value>& args) -> Value {
             const Value& v = args[0];
-            if (isNil(v)) return "nil";
-            if (isBool(v)) return "bool";
-            if (isNumber(v)) return "number";
-            if (isString(v)) return "string";
-            if (isCallable(v)) return "function";
-            if (isArray(v)) return "array";
-            if (isHashMap(v)) return "hashmap";
-            return "unknown";
+            std::string t = "unknown";
+            if (isNil(v)) t = "nil";
+            else if (isBool(v)) t = "bool";
+            else if (isNumber(v)) t = "number";
+            else if (isString(v)) t = "string";
+            else if (isCallable(v)) t = "function";
+            else if (isArray(v)) t = "array";
+            else if (isHashMap(v)) t = "hashmap";
+            auto sv = StringPool::intern(t);
+            return stringValue(sv.data());
         },
         "type"
     ));
@@ -118,10 +121,11 @@ void Interpreter::defineNatives() {
             // Create an array with the keys
             auto resultArray = std::make_shared<VoltArray>();
             for (const auto& key : keysVec) {
-                resultArray->push(key);
+                auto sv = StringPool::intern(key);
+                resultArray->push(stringValue(sv.data()));
             }
             
-            return resultArray;
+            return arrayValue(resultArray);
         },
         "keys"
     ));
@@ -143,7 +147,7 @@ void Interpreter::defineNatives() {
                 resultArray->push(value);
             }
             
-            return resultArray;
+            return arrayValue(resultArray);
         },
         "values"
     ));
@@ -164,7 +168,7 @@ void Interpreter::defineNatives() {
             // Convert key to string
             std::string keyStr = valueToString(args[1]);
             
-            return map->contains(keyStr);
+            return boolValue(map->contains(keyStr));
         },
         "has"
     ));
@@ -185,7 +189,7 @@ void Interpreter::defineNatives() {
             // Convert key to string
             std::string keyStr = valueToString(args[1]);
             
-            return map->remove(keyStr);  // Returns true if removed, false if not found
+            return boolValue(map->remove(keyStr));  // Returns true if removed, false if not found
         },
         "remove"
     ));
@@ -205,10 +209,10 @@ void Interpreter::defineNatives() {
             int index = static_cast<int>(asNumber(args[1]));
             
             if (index < 0 || index >= static_cast<int>(str.length())) {
-                return -1.0; // Return -1 if index is out of bounds
+                return numberToValue(-1.0); // Return -1 if index is out of bounds
             }
             
-            return static_cast<double>(static_cast<unsigned char>(str[index]));
+            return numberToValue(static_cast<double>(static_cast<unsigned char>(str[index])));
         },
         "charCodeAt"
     ));
@@ -225,7 +229,8 @@ void Interpreter::defineNatives() {
                 throw std::runtime_error("Character code must be between 0 and 255");
             }
             
-            return std::string(1, static_cast<char>(code));
+            auto sv = StringPool::intern(std::string(1, static_cast<char>(code)));
+            return stringValue(sv.data());
         },
         "fromCharCode"
     ));
@@ -244,7 +249,7 @@ void Interpreter::defineNatives() {
             }
             
             // Create a function that applies the composed functions
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1, // Takes one argument
                 [args](const std::vector<Value>& callArgs) -> Value {
                     if (callArgs.empty()) {
@@ -258,7 +263,7 @@ void Interpreter::defineNatives() {
                     return result;
                 },
                 "composedFunction"
-            );
+            ));
         },
         "compose"
     ));
@@ -275,7 +280,7 @@ void Interpreter::defineNatives() {
             }
             
             // Create a function that pipes the value through functions
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1, // Takes one argument
                 [args](const std::vector<Value>& callArgs) -> Value {
                     if (callArgs.empty()) {
@@ -289,7 +294,7 @@ void Interpreter::defineNatives() {
                     return result;
                 },
                 "pipeFunction"
-            );
+            ));
         },
         "pipe"
     ));
@@ -317,10 +322,10 @@ void Interpreter::defineNatives() {
             // Return an object with result and execution time
             auto resultMap = std::make_shared<VoltHashMap>();
             resultMap->set("result", result);
-            resultMap->set("timeMicroseconds", static_cast<double>(duration.count()));
-            resultMap->set("timeMilliseconds", static_cast<double>(duration.count()) / 1000.0);
+            resultMap->set("timeMicroseconds", numberToValue(static_cast<double>(duration.count())));
+            resultMap->set("timeMilliseconds", numberToValue(static_cast<double>(duration.count()) / 1000.0));
             
-            return resultMap;
+            return hashMapValue(resultMap);
         },
         "benchmark"
     ));
@@ -352,7 +357,7 @@ void Interpreter::visitPrintStmt(PrintStmt* stmt) {
 }
 
 void Interpreter::visitLetStmt(LetStmt* stmt) {
-    Value value = nullptr;
+    Value value = nilValue();
     if (stmt->initializer) {
         value = evaluate(stmt->initializer.get());
     }
@@ -465,7 +470,7 @@ void Interpreter::visitFnStmt(FnStmt* stmt) {
 }
 
 void Interpreter::visitReturnStmt(ReturnStmt* stmt) {
-    Value value = nullptr;
+    Value value = nilValue();
     if (stmt->value) {
         value = evaluate(stmt->value.get());
     }
@@ -495,7 +500,8 @@ void Interpreter::visitTryStmt(TryStmt* stmt) {
         
         // Formatted error message with error code
         std::string errorMsg = errorCodeToString(e.code) + ": " + e.what();
-        catchEnv->define(stmt->exceptionVar, errorMsg);
+        auto sv = StringPool::intern(errorMsg);
+        catchEnv->define(stmt->exceptionVar, stringValue(sv.data()));
         
         auto previousEnv = environment_;
         try {
@@ -510,7 +516,8 @@ void Interpreter::visitTryStmt(TryStmt* stmt) {
         if (!stmt->catchBody) return;
         
         auto catchEnv = std::make_shared<Environment>(environment_);
-        catchEnv->define(stmt->exceptionVar, std::string(e.what()));
+        auto sv2 = StringPool::intern(std::string(e.what()));
+        catchEnv->define(stmt->exceptionVar, stringValue(sv2.data()));
         
         auto previousEnv = environment_;
         try {
@@ -560,21 +567,21 @@ Value Interpreter::evaluate(Expr* expr) {
     if (expr) {
         return expr->accept(*this);
     }
-    return nullptr;
+    return nilValue();
 }
 
 Value Interpreter::visitLiteralExpr(LiteralExpr* expr) {
     switch (expr->type) {
         case LiteralExpr::Type::Number:
-            return expr->numberValue;
+            return numberToValue(expr->numberValue);
         case LiteralExpr::Type::String:
-            return expr->stringValue;
+            return stringValue(StringPool::intern(expr->stringValue).data());
         case LiteralExpr::Type::Bool:
-            return expr->boolValue;
+            return boolValue(expr->boolValue);
         case LiteralExpr::Type::Nil:
-            return nullptr;
+            return nilValue();
     }
-    return nullptr;
+    return nilValue();
 }
 
 Value Interpreter::visitVariableExpr(VariableExpr* expr) {
@@ -591,9 +598,9 @@ Value Interpreter::visitUnaryExpr(UnaryExpr* expr) {
     switch (expr->op.type) {
         case TokenType::Minus:
             checkNumberOperand(expr->op, right);
-            return -asNumber(right);
+            return numberToValue(-asNumber(right));
         case TokenType::Bang:
-            return !isTruthy(right);
+            return boolValue(!isTruthy(right));
         default:
             throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown unary operator");
     }
@@ -606,56 +613,56 @@ Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
     switch (expr->op.type) {
         case TokenType::Plus:
             if (isNumber(left) && isNumber(right)) {
-                return asNumber(left) + asNumber(right);
+                return numberToValue(asNumber(left) + asNumber(right));
             }
             if (isString(left) && isString(right)) {
-                return asString(left) + asString(right);
+                return stringValue(StringPool::intern(asString(left) + asString(right)).data());
             }
             // Type coercion: string + number or number + string
             if (isString(left) && isNumber(right)) {
-                return asString(left) + valueToString(right);
+                return stringValue(StringPool::intern(asString(left) + valueToString(right)).data());
             }
             if (isNumber(left) && isString(right)) {
-                return valueToString(left) + asString(right);
+                return stringValue(StringPool::intern(valueToString(left) + asString(right)).data());
             }
             throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operands must be two numbers or two strings");
             
         case TokenType::Minus:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) - asNumber(right);
+            return numberToValue(asNumber(left) - asNumber(right));
         case TokenType::Star:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) * asNumber(right);
+            return numberToValue(asNumber(left) * asNumber(right));
         case TokenType::Slash:
             checkNumberOperands(expr->op, left, right);
             if (asNumber(right) == 0.0) {
                 throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
             }
-            return asNumber(left) / asNumber(right);
+            return numberToValue(asNumber(left) / asNumber(right));
         case TokenType::Percent:
             checkNumberOperands(expr->op, left, right);
             if (asNumber(right) == 0.0) {
                 throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
             }
-            return std::fmod(asNumber(left), asNumber(right));
+            return numberToValue(std::fmod(asNumber(left), asNumber(right)));
             
         case TokenType::Greater:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) > asNumber(right);
+            return boolValue(asNumber(left) > asNumber(right));
         case TokenType::GreaterEqual:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) >= asNumber(right);
+            return boolValue(asNumber(left) >= asNumber(right));
         case TokenType::Less:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) < asNumber(right);
+            return boolValue(asNumber(left) < asNumber(right));
         case TokenType::LessEqual:
             checkNumberOperands(expr->op, left, right);
-            return asNumber(left) <= asNumber(right);
+            return boolValue(asNumber(left) <= asNumber(right));
             
         case TokenType::EqualEqual:
-            return isEqual(left, right);
+            return boolValue(isEqual(left, right));
         case TokenType::BangEqual:
-            return !isEqual(left, right);
+            return boolValue(!isEqual(left, right));
             
         default:
             throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown binary operator");
@@ -689,8 +696,7 @@ Value Interpreter::visitCallExpr(CallExpr* expr) {
         arguments.push_back(evaluate(arg.get()));
     }
     
-    // Make sure it's actually a function
-    if (!isCallable(callee)) {
+    if (!isCallable(callee) && !isClass(callee)) {
         throwRuntimeError(
             expr->token,
             ErrorCode::NOT_CALLABLE,
@@ -699,10 +705,10 @@ Value Interpreter::visitCallExpr(CallExpr* expr) {
     }
     
     std::shared_ptr<Callable> function;
-    if (std::holds_alternative<std::shared_ptr<Callable>>(callee)) {
-        function = std::get<std::shared_ptr<Callable>>(callee);
-    } else if (std::holds_alternative<std::shared_ptr<VoltClass>>(callee)) {
-        function = std::get<std::shared_ptr<VoltClass>>(callee);
+    if (isClass(callee)) {
+        function = asClass(callee);
+    } else {
+        function = asCallable(callee);
     }
     
     // Check arity (number of arguments)
@@ -739,34 +745,36 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
     }
     
     Value operand = evaluate(expr->value.get());
-    Value result;
+    Value result = nilValue();
     
     switch (expr->op.type) {
         case TokenType::PlusEqual:
             if (isNumber(current) && isNumber(operand)) {
-                result = asNumber(current) + asNumber(operand);
+                result = numberToValue(asNumber(current) + asNumber(operand));
             } else if (isString(current) && isString(operand)) {
-                result = asString(current) + asString(operand);
+                auto sv = StringPool::intern(asString(current) + asString(operand));
+                result = stringValue(sv.data());
             } else if (isString(current) && isNumber(operand)) {
-                result = asString(current) + valueToString(operand);
+                auto sv = StringPool::intern(asString(current) + valueToString(operand));
+                result = stringValue(sv.data());
             } else {
                 throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operands must be compatible for +=");
             }
             break;
         case TokenType::MinusEqual:
             checkNumberOperands(expr->op, current, operand);
-            result = asNumber(current) - asNumber(operand);
+            result = numberToValue(asNumber(current) - asNumber(operand));
             break;
         case TokenType::StarEqual:
             checkNumberOperands(expr->op, current, operand);
-            result = asNumber(current) * asNumber(operand);
+            result = numberToValue(asNumber(current) * asNumber(operand));
             break;
         case TokenType::SlashEqual:
             checkNumberOperands(expr->op, current, operand);
             if (asNumber(operand) == 0.0) {
                 throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
             }
-            result = asNumber(current) / asNumber(operand);
+            result = numberToValue(asNumber(current) / asNumber(operand));
             break;
         default:
             throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown compound assignment operator");
@@ -801,13 +809,13 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     }
     
     try {
-        environment_->assign(expr->name, newValue);
+        environment_->assign(expr->name, numberToValue(newValue));
     } catch (const VoltError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
     
     // Return old value for postfix, new value for prefix
-    return expr->prefix ? newValue : oldValue;
+    return expr->prefix ? numberToValue(newValue) : numberToValue(oldValue);
 }
 
 Value Interpreter::visitSetExpr(SetExpr* expr) {
@@ -858,7 +866,7 @@ Value Interpreter::visitSuperExpr(SuperExpr* expr) {
         }
 
         // 4. Bind instance to method
-        return method->bind(instance);
+        return callableValue(method->bind(instance));
     } catch (const VoltError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
@@ -884,7 +892,7 @@ Value Interpreter::visitArrayExpr(ArrayExpr* expr) {
     }
     
     // Create and return array
-    return std::make_shared<VoltArray>(elements);
+    return arrayValue(std::make_shared<VoltArray>(elements));
 }
 
 Value Interpreter::visitIndexExpr(IndexExpr* expr) {
@@ -1009,52 +1017,52 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
         
         // Handle array.length
         if (expr->member == "length") {
-            return static_cast<double>(array->length());
+            return numberToValue(static_cast<double>(array->length()));
         }
         
         // Handle array.push - return a callable that modifies the array
         if (expr->member == "push") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1,
                 [array](const std::vector<Value>& args) -> Value {
                     if (!args.empty()) {
                         array->push(args[0]);
                     }
-                    return nullptr; // returns nil
+                    return nilValue(); // returns nil
                 },
                 "push"
-            );
+            ));
         }
         
         // Handle array.pop
         if (expr->member == "pop") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 0,
                 [array](const std::vector<Value>&) -> Value {
                     if (array->size() > 0) {
                         return array->pop();
                     }
-                    return nullptr; // return nil for empty array
+                    return nilValue(); // return nil for empty array
                 },
                 "pop"
-            );
+            ));
         }
         
         // Handle array.reverse
         if (expr->member == "reverse") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 0,
                 [array](const std::vector<Value>&) -> Value {
                     array->reverse();
-                    return nullptr;
+                    return nilValue();
                 },
                 "reverse"
-            );
+            ));
         }
         
         // Handle array.map
         if (expr->member == "map") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1,
                 [this, array](const std::vector<Value>& args) -> Value {
                     if (!isCallable(args[0])) {
@@ -1069,15 +1077,15 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                         newArray->push(function->call(*this, callArgs));
                     }
                     
-                    return newArray;
+                    return arrayValue(newArray);
                 },
                 "map"
-            );
+            ));
         }
         
         // Handle array.filter
         if (expr->member == "filter") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1,
                 [this, array](const std::vector<Value>& args) -> Value {
                     if (!isCallable(args[0])) {
@@ -1095,15 +1103,15 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                         }
                     }
                     
-                    return newArray;
+                    return arrayValue(newArray);
                 },
                 "filter"
-            );
+            ));
         }
         
         // Handle array.reduce
         if (expr->member == "reduce") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 2, // accumulator function and initial value
                 [this, array](const std::vector<Value>& args) -> Value {
                     if (!isCallable(args[0])) {
@@ -1121,12 +1129,12 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                     return accumulator;
                 },
                 "reduce"
-            );
+            ));
         }
         
         // Handle array.forEach
         if (expr->member == "forEach") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1,
                 [this, array](const std::vector<Value>& args) -> Value {
                     if (!isCallable(args[0])) {
@@ -1140,25 +1148,26 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                         function->call(*this, callArgs);
                     }
                     
-                    return nullptr;
+                    return nilValue();
                 },
                 "forEach"
-            );
+            ));
         }
         
         // Handle array.join
         if (expr->member == "join") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1,
                 [array](const std::vector<Value>& args) -> Value {
                     std::string separator = ", ";
                     if (!args.empty() && isString(args[0])) {
                         separator = asString(args[0]);
                     }
-                    return array->join(separator);
+                    auto sv = StringPool::intern(array->join(separator));
+                    return stringValue(sv.data());
                 },
                 "join"
-            );
+            ));
         }
         
         throwRuntimeError(expr->token, ErrorCode::UNDEFINED_VARIABLE, "Unknown array member: " + expr->member);
@@ -1170,11 +1179,11 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
         
         // Handle hash map properties/methods
         if (expr->member == "size") {
-            return static_cast<double>(map->size());
+            return numberToValue(static_cast<double>(map->size()));
         }
         
         if (expr->member == "keys") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 0,
                 [map](const std::vector<Value>&) -> Value {
                     auto keysVec = map->getKeys();
@@ -1182,17 +1191,18 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                     // Create an array with the keys
                     auto resultArray = std::make_shared<VoltArray>();
                     for (const auto& key : keysVec) {
-                        resultArray->push(key);
+                        auto sv = StringPool::intern(key);
+                        resultArray->push(stringValue(sv.data()));
                     }
                     
-                    return resultArray;
+                    return arrayValue(resultArray);
                 },
                 "hashmap.keys"
-            );
+            ));
         }
         
         if (expr->member == "values") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 0,
                 [map](const std::vector<Value>&) -> Value {
                     auto valuesVec = map->getValues();
@@ -1203,34 +1213,34 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                         resultArray->push(value);
                     }
                     
-                    return resultArray;
+                    return arrayValue(resultArray);
                 },
                 "hashmap.values"
-            );
+            ));
         }
         
         if (expr->member == "has") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1,
                 [map](const std::vector<Value>& args) -> Value {
                     // Convert key to string
                     std::string keyStr = valueToString(args[0]);
-                    return map->contains(keyStr);
+                    return boolValue(map->contains(keyStr));
                 },
                 "hashmap.has"
-            );
+            ));
         }
         
         if (expr->member == "remove") {
-            return std::make_shared<NativeFunction>(
+            return callableValue(std::make_shared<NativeFunction>(
                 1,
                 [map](const std::vector<Value>& args) -> Value {
                     // Convert key to string
                     std::string keyStr = valueToString(args[0]);
-                    return map->remove(keyStr);  // Returns true if removed, false if not found
+                    return boolValue(map->remove(keyStr));  // Returns true if removed, false if not found
                 },
                 "hashmap.remove"
-            );
+            ));
         }
         
         // Dynamic key lookup for hash maps
@@ -1260,14 +1270,14 @@ void Interpreter::visitClassStmt(ClassStmt* stmt) {
         superclass = asClass(super);
     }
 
-    environment_->define(stmt->name, nullptr);
+    environment_->define(stmt->name, nilValue());
 
     // If there's a superclass, we create a new environment for the methods
     // that contains 'super'
     auto oldEnv = environment_;
     if (superclass) {
         environment_ = std::make_shared<Environment>(environment_);
-        environment_->define("super", superclass);
+        environment_->define("super", classValue(superclass));
     }
 
     std::unordered_map<std::string, std::shared_ptr<VoltFunction>> methods;
@@ -1282,7 +1292,7 @@ void Interpreter::visitClassStmt(ClassStmt* stmt) {
         environment_ = oldEnv;
     }
 
-    environment_->assign(stmt->name, cls);
+    environment_->assign(stmt->name, classValue(cls));
 }
 
 Value Interpreter::visitHashMapExpr(HashMapExpr* expr) {
@@ -1298,7 +1308,7 @@ Value Interpreter::visitHashMapExpr(HashMapExpr* expr) {
         hashMap->set(keyStr, value);
     }
     
-    return hashMap;
+    return hashMapValue(hashMap);
 }
 
 Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
@@ -1331,7 +1341,7 @@ Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
             interp.environment_ = functionEnv;
             
             // Execute function body
-            Value result = nullptr;
+            Value result = nilValue();
             try {
                 for (const auto& stmt : func_expr->body) {
                     interp.execute(stmt.get());
@@ -1364,7 +1374,7 @@ Value Interpreter::visitFunctionExpr(FunctionExpr* expr) {
         }
     };
     
-    return Value(std::make_shared<FunctionExpressionCallable>(
+    return callableValue(std::make_shared<FunctionExpressionCallable>(
         expr->parameters, expr, environment_));
 }
 

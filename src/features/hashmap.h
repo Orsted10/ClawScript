@@ -44,7 +44,7 @@ struct VoltHashMap {
         if (it != data.end()) {
             return it->second;
         }
-        return nullptr; // Return nil if key doesn't exist
+        return volt::nilValue(); // Return nil if key doesn't exist
     }
     
     // Set key-value pair

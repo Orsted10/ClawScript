@@ -4,8 +4,10 @@
 #include "../parser/stmt.h"
 #include <unordered_map>
 #include <string>
+#include <string_view>
 #include <memory>
 #include <vector>
+#include "features/string_pool.h"
 
 namespace volt {
 
@@ -51,7 +53,18 @@ public:
 
 private:
     std::shared_ptr<VoltClass> class_;
-    std::unordered_map<std::string, Value> fields_;
+    struct InternedStringHash {
+        size_t operator()(std::string_view sv) const {
+            return std::hash<const char*>{}(sv.data());
+        }
+    };
+    struct InternedStringEqual {
+        bool operator()(std::string_view sv1, std::string_view sv2) const {
+            return sv1.data() == sv2.data();
+        }
+    };
+    std::unordered_map<std::string_view, Value, InternedStringHash, InternedStringEqual> fields_;
+    std::unordered_map<std::string_view, Value, InternedStringHash, InternedStringEqual> ic_get_cache_;
 };
 
 } // namespace volt

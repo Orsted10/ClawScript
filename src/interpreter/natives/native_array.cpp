@@ -19,7 +19,7 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
             for (int i = original->length() - 1; i >= 0; i--) {
                 reversed->push(original->get(i));
             }
-            return reversed;
+            return arrayValue(reversed);
         },
         "reverse"
     ));
@@ -43,7 +43,7 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
                     result->push(element);
                 }
             }
-            return result;
+            return arrayValue(result);
         },
         "filter"
     ));
@@ -65,7 +65,7 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
                 Value mappedValue = func->call(interpreter, {element});
                 result->push(mappedValue);
             }
-            return result;
+            return arrayValue(result);
         },
         "map"
     ));

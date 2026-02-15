@@ -9,7 +9,7 @@ namespace volt {
 
 class JSONTest : public ::testing::Test {
 protected:
-    Value runExpression(const std::string& source) {
+    std::string runExpression(const std::string& source) {
         Lexer lexer(source);
         auto tokens = lexer.tokenize();
         Parser parser(tokens);
