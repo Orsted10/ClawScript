@@ -1,6 +1,44 @@
 # VoltScript Migration Guide
 
+## v0.9.2 Migration
+
+### Overview
+VoltScript v0.9.2 focuses on performance and distribution readiness. It adds inline caches in the VM hot paths, an optional LLVM AoT compilation pipeline, and new performance-oriented math helpers while remaining backward compatible with v0.9.0 scripts.
+
+### New Features to Adopt
+
+#### 1. Optional LLVM AoT Builds
+Enable AoT builds to emit native object files and link binaries directly.
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DVOLT_ENABLE_AOT=ON
+cmake --build build --config Release
+./build/bin/Release/volt --aot-output=main.o script.volt
+```
+
+#### 2. Performance Math Helpers
+Use native helpers for benchmark-focused workloads.
+
+```volt
+print fibFast(35);
+print arraySumFast(1000000);
+```
+
+### Automatic Performance Gains
+Your existing code benefits from:
+- **Inline caches**: Monomorphic caches for globals, properties, and calls.
+- **Call-site caching**: Reduced overhead in hot call paths.
+
+### Breaking Changes
+None in v0.9.2.
+
+### Migration Notes
+- AoT builds require LLVM 16+ and an available system linker (lld-link on Windows, ld on Linux/macOS).
+- If AoT is not enabled, the VM path remains the default behavior.
+
 ## v0.9.0 Migration
+
+### Overview
 
 ### Overview
 VoltScript v0.9.0 focuses on runtime performance and maintainability. It extends the v0.8.6 class and VM work with NaN-boxed values, optimized bytecode execution, and improved profiling, while remaining backward compatible with v0.8.0+.

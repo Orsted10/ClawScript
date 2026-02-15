@@ -2,7 +2,7 @@
 
 <div align="center">
 
-## ⚡ VoltScript v0.9.0 ⚡
+## ⚡ VoltScript v0.9.2 ⚡
 ### *A Modern Programming Language Built from Scratch*
 
 [![Tests](https://img.shields.io/badge/tests-580%2B-brightgreen)]()
@@ -92,6 +92,14 @@ cmake --build build
 ./build/bin/volt
 ```
 
+#### LLVM AoT Build (Optional)
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DVOLT_ENABLE_AOT=ON
+cmake --build build --config Release
+./build/bin/Release/volt --aot-output=main.o script.volt
+```
+
 ### Running VoltScript
 
 #### Interactive Mode (REPL)
@@ -103,7 +111,7 @@ cmake --build build
 This starts an interactive session where you can type and execute VoltScript code directly:
 
 ```
-⚡ VoltScript v0.9.0 REPL
+⚡ VoltScript v0.9.2 REPL
 Type 'exit' to quit
 >> let x = 42;
 >> print x;
@@ -1233,6 +1241,13 @@ print ceil(3.2);    // 4
 print random();     // Random number between 0 and 1
 ```
 
+### Performance Helpers
+
+```volt
+print fibFast(35);        // Fast Fibonacci for benchmarks
+print arraySumFast(1000); // Sum 0..999 using a formula
+```
+
 ### Trigonometric Functions
 
 ```volt
@@ -1988,7 +2003,7 @@ processFile("document.txt");
 
 ## 🏗️ Project Structure
 
-This section describes how the VoltScript repository is organized for v0.9.0.
+This section describes how the VoltScript repository is organized for v0.9.2.
 
 ```text
 VoltScript/
@@ -1999,7 +2014,7 @@ VoltScript/
 │   ├── features/           # Arrays, hash maps, classes, string pool
 │   ├── vm/                 # Bytecode virtual machine
 │   ├── compiler/           # AST-to-bytecode compiler
-│   ├── aot/                # AoT compilation stubs (optional)
+│   ├── aot/                # AoT compilation pipeline (optional, LLVM 16+)
 │   ├── jit/                # JIT compilation stubs (optional)
 │   └── main.cpp            # REPL & file runner
 ├── tests/                   # Automated tests (unit, integration, perf)
@@ -2069,6 +2084,14 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release # Optimized builds
 cmake --build build
 ```
 
+### AoT Build (Optional)
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DVOLT_ENABLE_AOT=ON
+cmake --build build --config Release
+./build/bin/Release/volt --aot-output=main.o script.volt
+```
+
 ### Run the REPL or a Script
 
 ```bash
@@ -2111,7 +2134,7 @@ A: While functional and well-tested, it's primarily educational. For production 
 A: C++20 or higher is required for modern features and standard library support.
 
 **Q: How fast is VoltScript?**
-A: v0.9.0 includes a bytecode VM, NaN-boxed values, and optimized natives, making it significantly faster than the original tree-walk-only versions while remaining educational and portable.
+A: v0.9.2 includes a bytecode VM, NaN-boxed values, inline caches, and optional LLVM AoT, making it significantly faster than the original tree-walk-only versions while remaining educational and portable.
 
 **Q: Does it have garbage collection?**
 A: It uses C++ smart pointers (shared_ptr) for automatic memory management.
@@ -2119,7 +2142,7 @@ A: It uses C++ smart pointers (shared_ptr) for automatic memory management.
 ### Language Features
 
 **Q: Does it support object-oriented programming?**
-A: Basic object support through hash maps. Full OOP support is planned for future versions.
+A: Yes. VoltScript supports classes with inheritance, methods, constructors, `this`, and `super`.
 
 **Q: Are there modules or imports?**
 A: Not yet. All code must be in a single file or manually concatenated.
@@ -2130,7 +2153,7 @@ A: Arrays, hash maps, strings, numbers, booleans, and functions.
 ### Development
 
 **Q: How many tests does it have?**
-A: Around 580 automated tests across unit, integration, and performance suites in v0.9.0.
+A: Around 580 automated tests across unit, integration, and performance suites in v0.9.2.
 
 **Q: How is error reporting handled?**
 A: Precise error messages with line and column numbers for exact source location.
@@ -2148,7 +2171,7 @@ MIT License - Free to use, modify, and distribute.
 
 <div align="center">
 
-### ⚡ VoltScript v0.9.0 ⚡
+### ⚡ VoltScript v0.9.2 ⚡
 
 **Built with passion and C++20**
 

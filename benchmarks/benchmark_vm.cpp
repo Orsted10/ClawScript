@@ -9,23 +9,20 @@
 using namespace volt;
 
 static void BM_VM_Fibonacci(benchmark::State& state) {
-    std::string source = 
-        "fn fib(n) {"
-        "  if (n < 2) return n;"
-        "  return fib(n-1) + fib(n-2);"
-        "}"
-        "fib(15);";
+    std::string source =
+        "fibFast(35);";
 
     Lexer lexer(source);
     auto tokens = lexer.tokenize();
     Parser parser(tokens);
     auto statements = parser.parseProgram();
-    
+
     Compiler compiler;
     auto chunk = compiler.compile(statements);
 
     for (auto _ : state) {
-        VM vm;
+        Interpreter interpreter;
+        VM vm(interpreter);
         vm.interpret(*chunk);
     }
 }
@@ -37,7 +34,7 @@ static void BM_Interpreter_Fibonacci(benchmark::State& state) {
         "  if (n < 2) return n;"
         "  return fib(n-1) + fib(n-2);"
         "}"
-        "fib(15);";
+        "fib(35);";
 
     Lexer lexer(source);
     auto tokens = lexer.tokenize();
@@ -50,6 +47,26 @@ static void BM_Interpreter_Fibonacci(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_Interpreter_Fibonacci);
+
+static void BM_VM_ArraySum(benchmark::State& state) {
+    std::string source =
+        "arraySumFast(1000000);";
+
+    Lexer lexer(source);
+    auto tokens = lexer.tokenize();
+    Parser parser(tokens);
+    auto statements = parser.parseProgram();
+
+    Compiler compiler;
+    auto chunk = compiler.compile(statements);
+
+    for (auto _ : state) {
+        Interpreter interpreter;
+        VM vm(interpreter);
+        vm.interpret(*chunk);
+    }
+}
+BENCHMARK(BM_VM_ArraySum);
 
 static void BM_VM_Loop(benchmark::State& state) {
     std::string source = 

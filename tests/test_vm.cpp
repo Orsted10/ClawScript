@@ -3,6 +3,7 @@
 #include "parser/parser.h"
 #include "compiler/compiler.h"
 #include "vm/vm.h"
+#include "interpreter.h"
 #include <sstream>
 
 namespace volt {
@@ -22,10 +23,32 @@ protected:
         return vm.interpret(*chunk);
     }
 
+    InterpretResult runVMWithInterpreter(const std::string& code) {
+        Lexer lexer(code);
+        auto tokens = lexer.tokenize();
+        Parser parser(tokens);
+        auto statements = parser.parseProgram();
+        
+        Interpreter interpreter;
+        Compiler compiler;
+        auto chunk = compiler.compile(statements);
+        
+        VM vm(interpreter);
+        return vm.interpret(*chunk);
+    }
+
     std::string getOutput(const std::string& code) {
         std::stringstream ss;
         auto old_buf = std::cout.rdbuf(ss.rdbuf());
         runVM(code);
+        std::cout.rdbuf(old_buf);
+        return ss.str();
+    }
+
+    std::string getOutputWithInterpreter(const std::string& code) {
+        std::stringstream ss;
+        auto old_buf = std::cout.rdbuf(ss.rdbuf());
+        runVMWithInterpreter(code);
         std::cout.rdbuf(old_buf);
         return ss.str();
     }
@@ -69,6 +92,10 @@ TEST_F(VMTest, IfStatements) {
 
 TEST_F(VMTest, WhileLoops) {
     EXPECT_EQ(getOutput("let i = 0; while (i < 3) { print i; i = i + 1; }"), "0\n1\n2\n");
+}
+
+TEST_F(VMTest, NativeFunctionCallThroughVM) {
+    EXPECT_EQ(getOutputWithInterpreter("print num(41) + 1;"), "42\n");
 }
 
 } // namespace volt

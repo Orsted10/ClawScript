@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.9.0 LANGUAGES CXX)  # NaN-boxing, VM & Runtime Optimizations
+project(VoltScript VERSION 0.9.2 LANGUAGES CXX)  # NaN-boxing, VM & Runtime Optimizations
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -55,6 +55,21 @@ if(NOT VOLT_ENABLE_JIT)
     list(FILTER VOLT_SOURCES EXCLUDE REGEX ".*/jit/.*")
 endif()
 
+if(VOLT_ENABLE_AOT)
+    find_package(LLVM 16 REQUIRED CONFIG)
+    message(STATUS "✅ LLVM found: ${LLVM_PACKAGE_VERSION}")
+    llvm_map_components_to_libnames(LLVM_LIBS
+        core
+        support
+        nativecodegen
+        target
+        asmparser
+        asmprinter
+        passes
+        scalaropts
+    )
+endif()
+
 # Main executable
 add_executable(volt
     ${VOLT_SOURCES}
@@ -75,9 +90,37 @@ target_include_directories(volt PRIVATE
     ${CMAKE_SOURCE_DIR}/src/compiler
 )
 
+if(VOLT_ENABLE_AOT)
+    target_include_directories(volt PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(volt PRIVATE ${LLVM_LIBS})
+    target_compile_definitions(volt PRIVATE VOLT_ENABLE_AOT)
+endif()
+
 # Set output directory
 set_target_properties(volt PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+set(VOLT_RUNTIME_SOURCES ${VOLT_SOURCES})
+list(FILTER VOLT_RUNTIME_SOURCES EXCLUDE REGEX ".*/main.cpp$")
+add_library(volt_runtime STATIC ${VOLT_RUNTIME_SOURCES})
+target_include_directories(volt_runtime PRIVATE 
+    ${CMAKE_BINARY_DIR}/generated
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/lexer
+    ${CMAKE_SOURCE_DIR}/src/parser
+    ${CMAKE_SOURCE_DIR}/src/interpreter
+    ${CMAKE_SOURCE_DIR}/src/features
+    ${CMAKE_SOURCE_DIR}/src/vm
+    ${CMAKE_SOURCE_DIR}/src/compiler
+)
+if(VOLT_ENABLE_AOT)
+    target_include_directories(volt_runtime PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(volt_runtime PRIVATE ${LLVM_LIBS})
+    target_compile_definitions(volt_runtime PRIVATE VOLT_ENABLE_AOT)
+endif()
+set_target_properties(volt_runtime PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
 # ========================================
@@ -251,6 +294,7 @@ if(BUILD_TESTS)
     
     set(BENCHMARK_SOURCES
         benchmarks/benchmark_main.cpp
+        benchmarks/benchmark_vm.cpp
         src/lexer/token.cpp
         src/lexer/lexer.cpp
         src/parser/ast.cpp

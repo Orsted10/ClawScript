@@ -4,12 +4,15 @@
 
 namespace volt {
 
-Compiler::Compiler() : currentLine_(0), scopeDepth_(0) {}
+Compiler::Compiler() : currentLine_(0), scopeDepth_(0), enclosing_(nullptr) {}
+Compiler::Compiler(Compiler* enclosing) : currentLine_(0), scopeDepth_(0), enclosing_(enclosing) {}
 
 std::unique_ptr<Chunk> Compiler::compile(const std::vector<StmtPtr>& program) {
     chunk_ = std::make_unique<Chunk>();
     locals_.clear();
+    upvalues_.clear();
     scopeDepth_ = 0;
+    enclosing_ = nullptr;
     
     for (const auto& stmt : program) {
         currentLine_ = stmt->token.line;
@@ -46,6 +49,9 @@ Value Compiler::visitVariableExpr(VariableExpr* expr) {
     
     if (arg != -1) {
         emitOp(OpCode::GetLocal);
+        emitByte(static_cast<uint8_t>(arg));
+    } else if ((arg = resolveUpvalue(name)) != -1) {
+        emitOp(OpCode::GetUpvalue);
         emitByte(static_cast<uint8_t>(arg));
     } else {
         emitOp(OpCode::GetGlobal);
@@ -109,7 +115,19 @@ Value Compiler::visitGroupingExpr(GroupingExpr* expr) {
     return expr->expr->accept(*this);
 }
 
-Value Compiler::visitCallExpr(CallExpr* expr) { return nilValue(); }
+Value Compiler::visitCallExpr(CallExpr* expr) {
+    expr->callee->accept(*this);
+    
+    uint8_t argCount = 0;
+    for (const auto& argument : expr->arguments) {
+        argument->accept(*this);
+        argCount++;
+    }
+    
+    emitOp(OpCode::Call);
+    emitByte(argCount);
+    return nilValue();
+}
 
 Value Compiler::visitAssignExpr(AssignExpr* expr) {
     expr->value->accept(*this);
@@ -118,6 +136,9 @@ Value Compiler::visitAssignExpr(AssignExpr* expr) {
     int arg = resolveLocal(name);
     if (arg != -1) {
         emitOp(OpCode::SetLocal);
+        emitByte(static_cast<uint8_t>(arg));
+    } else if ((arg = resolveUpvalue(name)) != -1) {
+        emitOp(OpCode::SetUpvalue);
         emitByte(static_cast<uint8_t>(arg));
     } else {
         emitOp(OpCode::SetGlobal);
@@ -134,11 +155,57 @@ Value Compiler::visitArrayExpr(ArrayExpr* expr) { return nilValue(); }
 Value Compiler::visitIndexExpr(IndexExpr* expr) { return nilValue(); }
 Value Compiler::visitIndexAssignExpr(IndexAssignExpr* expr) { return nilValue(); }
 Value Compiler::visitHashMapExpr(HashMapExpr* expr) { return nilValue(); }
-Value Compiler::visitMemberExpr(MemberExpr* expr) { return nilValue(); }
-Value Compiler::visitSetExpr(SetExpr* expr) { return nilValue(); }
+Value Compiler::visitMemberExpr(MemberExpr* expr) {
+    expr->object->accept(*this);
+    emitOp(OpCode::GetProperty);
+    auto sv = StringPool::intern(expr->member);
+    emitByte(makeConstant(stringValue(sv.data())));
+    return nilValue();
+}
+Value Compiler::visitSetExpr(SetExpr* expr) {
+    expr->object->accept(*this);
+    expr->value->accept(*this);
+    emitOp(OpCode::SetProperty);
+    auto sv = StringPool::intern(expr->member);
+    emitByte(makeConstant(stringValue(sv.data())));
+    return nilValue();
+}
 Value Compiler::visitThisExpr(ThisExpr* expr) { return nilValue(); }
 Value Compiler::visitSuperExpr(SuperExpr* expr) { return nilValue(); }
-Value Compiler::visitFunctionExpr(FunctionExpr* expr) { return nilValue(); }
+Value Compiler::visitFunctionExpr(FunctionExpr* expr) {
+    Compiler functionCompiler(this);
+    functionCompiler.chunk_ = std::make_unique<Chunk>();
+    functionCompiler.beginScope();
+    functionCompiler.addLocal("");
+
+    for (const auto& param : expr->parameters) {
+        functionCompiler.addLocal(param);
+    }
+
+    for (const auto& stmt : expr->body) {
+        functionCompiler.currentLine_ = stmt->token.line;
+        stmt->accept(functionCompiler);
+    }
+
+    functionCompiler.emitOp(OpCode::Nil);
+    functionCompiler.emitOp(OpCode::Return);
+
+    auto function = std::make_shared<VMFunction>();
+    function->name = "<lambda>";
+    function->arity = static_cast<int>(expr->parameters.size());
+    function->upvalueCount = static_cast<int>(functionCompiler.upvalues_.size());
+    function->chunk = std::move(functionCompiler.chunk_);
+
+    emitOp(OpCode::Closure);
+    emitByte(makeConstant(vmFunctionValue(function)));
+
+    for (const auto& upvalue : functionCompiler.upvalues_) {
+        emitByte(upvalue.isLocal ? 1 : 0);
+        emitByte(upvalue.index);
+    }
+
+    return nilValue();
+}
 
 // StmtVisitor implementation
 
@@ -239,8 +306,55 @@ void Compiler::visitForStmt(ForStmt* stmt) {
 
     endScope();
 }
-void Compiler::visitFnStmt(FnStmt* stmt) {}
-void Compiler::visitReturnStmt(ReturnStmt* stmt) {}
+void Compiler::visitFnStmt(FnStmt* stmt) {
+    Compiler functionCompiler(this);
+    functionCompiler.chunk_ = std::make_unique<Chunk>();
+    functionCompiler.beginScope();
+    functionCompiler.addLocal(stmt->name);
+
+    for (const auto& param : stmt->parameters) {
+        functionCompiler.addLocal(param);
+    }
+
+    for (const auto& bodyStmt : stmt->body) {
+        functionCompiler.currentLine_ = bodyStmt->token.line;
+        bodyStmt->accept(functionCompiler);
+    }
+
+    functionCompiler.emitOp(OpCode::Nil);
+    functionCompiler.emitOp(OpCode::Return);
+
+    auto function = std::make_shared<VMFunction>();
+    function->name = stmt->name;
+    function->arity = static_cast<int>(stmt->parameters.size());
+    function->upvalueCount = static_cast<int>(functionCompiler.upvalues_.size());
+    function->chunk = std::move(functionCompiler.chunk_);
+
+    emitOp(OpCode::Closure);
+    emitByte(makeConstant(vmFunctionValue(function)));
+
+    for (const auto& upvalue : functionCompiler.upvalues_) {
+        emitByte(upvalue.isLocal ? 1 : 0);
+        emitByte(upvalue.index);
+    }
+
+    std::string_view name = stmt->token.lexeme;
+    if (scopeDepth_ > 0) {
+        addLocal(name);
+    } else {
+        emitOp(OpCode::DefineGlobal);
+        auto sv = StringPool::intern(name);
+        emitByte(makeConstant(stringValue(sv.data())));
+    }
+}
+void Compiler::visitReturnStmt(ReturnStmt* stmt) {
+    if (stmt->value) {
+        stmt->value->accept(*this);
+    } else {
+        emitOp(OpCode::Nil);
+    }
+    emitOp(OpCode::Return);
+}
 void Compiler::visitBreakStmt(BreakStmt* stmt) {}
 void Compiler::visitContinueStmt(ContinueStmt* stmt) {}
 void Compiler::visitTryStmt(TryStmt* stmt) {}
@@ -314,7 +428,11 @@ void Compiler::endScope() {
     scopeDepth_--;
     
     while (!locals_.empty() && locals_.back().depth > scopeDepth_) {
-        emitOp(OpCode::Pop);
+        if (locals_.back().isCaptured) {
+            emitOp(OpCode::CloseUpvalue);
+        } else {
+            emitOp(OpCode::Pop);
+        }
         locals_.pop_back();
     }
 }
@@ -340,6 +458,7 @@ void Compiler::addLocal(std::string_view name) {
     Local local;
     local.name = name;
     local.depth = scopeDepth_;
+    local.isCaptured = false;
     locals_.push_back(local);
 }
 
@@ -351,6 +470,39 @@ int Compiler::resolveLocal(std::string_view name) {
         }
     }
     return -1;
+}
+
+int Compiler::resolveUpvalue(std::string_view name) {
+    if (!enclosing_) return -1;
+
+    int local = enclosing_->resolveLocal(name);
+    if (local != -1) {
+        enclosing_->locals_[local].isCaptured = true;
+        return addUpvalue(static_cast<uint8_t>(local), true);
+    }
+
+    int upvalue = enclosing_->resolveUpvalue(name);
+    if (upvalue != -1) {
+        return addUpvalue(static_cast<uint8_t>(upvalue), false);
+    }
+
+    return -1;
+}
+
+int Compiler::addUpvalue(uint8_t index, bool isLocal) {
+    for (size_t i = 0; i < upvalues_.size(); i++) {
+        if (upvalues_[i].index == index && upvalues_[i].isLocal == isLocal) {
+            return static_cast<int>(i);
+        }
+    }
+
+    if (upvalues_.size() >= 256) {
+        error(Token(TokenType::Error, "", currentLine_), "Too many closure variables in function.");
+        return 0;
+    }
+
+    upvalues_.push_back(Upvalue{index, isLocal});
+    return static_cast<int>(upvalues_.size() - 1);
 }
 
 void Compiler::error(Token token, const std::string& message) {

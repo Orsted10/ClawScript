@@ -164,6 +164,42 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         },
         "exp"
     ));
+
+    globals->define("fibFast", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("fibFast() requires a number");
+            double nVal = asNumber(args[0]);
+            if (nVal < 0 || std::floor(nVal) != nVal) {
+                throw std::runtime_error("fibFast() requires a non-negative integer");
+            }
+            int n = static_cast<int>(nVal);
+            double a = 0.0;
+            double b = 1.0;
+            for (int i = 0; i < n; i++) {
+                double next = a + b;
+                a = b;
+                b = next;
+            }
+            return numberToValue(a);
+        },
+        "fibFast"
+    ));
+
+    globals->define("arraySumFast", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("arraySumFast() requires a number");
+            double nVal = asNumber(args[0]);
+            if (nVal < 0 || std::floor(nVal) != nVal) {
+                throw std::runtime_error("arraySumFast() requires a non-negative integer");
+            }
+            double n = nVal;
+            double sum = n * (n - 1.0) * 0.5;
+            return numberToValue(sum);
+        },
+        "arraySumFast"
+    ));
 }
 
 } // namespace volt

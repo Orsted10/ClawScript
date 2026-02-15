@@ -12,6 +12,7 @@ namespace volt {
 class Compiler : public ExprVisitor, public StmtVisitor {
 public:
     Compiler();
+    explicit Compiler(Compiler* enclosing);
     ~Compiler() = default;
 
     std::unique_ptr<Chunk> compile(const std::vector<StmtPtr>& program);
@@ -60,6 +61,11 @@ private:
     struct Local {
         std::string_view name;
         int depth;
+        bool isCaptured;
+    };
+    struct Upvalue {
+        uint8_t index;
+        bool isLocal;
     };
 
     void emitByte(uint8_t byte);
@@ -76,6 +82,8 @@ private:
     void endScope();
     void addLocal(std::string_view name);
     int resolveLocal(std::string_view name);
+    int resolveUpvalue(std::string_view name);
+    int addUpvalue(uint8_t index, bool isLocal);
 
     void error(Token token, const std::string& message);
 
@@ -83,7 +91,9 @@ private:
     int currentLine_;
     
     std::vector<Local> locals_;
+    std::vector<Upvalue> upvalues_;
     int scopeDepth_;
+    Compiler* enclosing_;
 };
 
 } // namespace volt

@@ -1,7 +1,7 @@
-# VoltScript v0.9.0 API Reference
+# VoltScript v0.9.2 API Reference
 
-This reference describes the core standard library available in VoltScript v0.9.0.
-It is based on the v0.8.6 APIs and extended with the features introduced in v0.9.0
+This reference describes the core standard library available in VoltScript v0.9.2.
+It is based on the v0.8.6 APIs and extended with the features introduced in v0.9.2
 such as the class system, JSON engine, and performance tools.
 
 ## Table of Contents
@@ -181,6 +181,12 @@ tan(x)                         // Tangent (radians)
 ```volt
 log(x)                         // Natural logarithm
 exp(x)                         // Exponential (e^x)
+```
+
+### Performance Helpers
+```volt
+fibFast(n)                     // Fast Fibonacci
+arraySumFast(n)                // Sum 0..n-1
 ```
 
 ### Random Numbers

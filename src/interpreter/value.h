@@ -14,6 +14,10 @@ class VoltArray;
 struct VoltHashMap;
 class VoltClass;
 class VoltInstance;
+class Chunk;
+struct VMFunction;
+struct VMClosure;
+struct VMUpvalue;
 
 /**
  * Value - NaN-boxed value implementation for VoltScript
@@ -73,6 +77,23 @@ inline Value objectValue(void* obj_ptr) {
     return QNAN | TAG_OBJECT | reinterpret_cast<uint64_t>(obj_ptr);
 }
 
+struct VMFunction {
+    std::string name;
+    int arity = 0;
+    int upvalueCount = 0;
+    std::shared_ptr<Chunk> chunk;
+};
+
+struct VMUpvalue {
+    Value* location = nullptr;
+    Value closed = 0;
+};
+
+struct VMClosure {
+    std::shared_ptr<VMFunction> function;
+    std::vector<std::shared_ptr<VMUpvalue>> upvalues;
+};
+
 // Type checks
 inline bool isNumber(Value v) { return (v & QNAN) != QNAN; }
 inline bool isNil(Value v) { return v == nilValue(); }
@@ -110,6 +131,8 @@ Value arrayValue(std::shared_ptr<VoltArray> arr);
 Value hashMapValue(std::shared_ptr<VoltHashMap> map);
 Value classValue(std::shared_ptr<VoltClass> cls);
 Value instanceValue(std::shared_ptr<VoltInstance> inst);
+Value vmFunctionValue(std::shared_ptr<VMFunction> fn);
+Value vmClosureValue(std::shared_ptr<VMClosure> closure);
 
 // Legacy-compatible helpers (will be updated as we refactor)
 bool isTruthy(Value v);
@@ -123,11 +146,16 @@ bool isArray(Value v);
 bool isHashMap(Value v);
 bool isClass(Value v);
 bool isInstance(Value v);
+bool isVMFunction(Value v);
+bool isVMClosure(Value v);
 
 std::shared_ptr<VoltArray> asArray(Value v);
 std::shared_ptr<VoltHashMap> asHashMap(Value v);
 std::shared_ptr<VoltClass> asClass(Value v);
 std::shared_ptr<VoltInstance> asInstance(Value v);
 std::shared_ptr<Callable> asCallable(Value v);
+std::shared_ptr<VMFunction> asVMFunction(Value v);
+std::shared_ptr<VMClosure> asVMClosure(Value v);
+VMClosure* asVMClosurePtr(Value v);
 
 } // namespace volt

@@ -18,6 +18,8 @@ static std::unordered_map<void*, std::shared_ptr<VoltArray>> g_arrayRegistry;
 static std::unordered_map<void*, std::shared_ptr<VoltHashMap>> g_hashMapRegistry;
 static std::unordered_map<void*, std::shared_ptr<VoltClass>> g_classRegistry;
 static std::unordered_map<void*, std::shared_ptr<VoltInstance>> g_instanceRegistry;
+static std::unordered_map<void*, std::shared_ptr<VMFunction>> g_vmFunctionRegistry;
+static std::unordered_map<void*, std::shared_ptr<VMClosure>> g_vmClosureRegistry;
 
 Value callableValue(std::shared_ptr<Callable> fn) {
     void* p = fn.get();
@@ -42,6 +44,16 @@ Value classValue(std::shared_ptr<VoltClass> cls) {
 Value instanceValue(std::shared_ptr<VoltInstance> inst) {
     void* p = inst.get();
     g_instanceRegistry[p] = std::move(inst);
+    return objectValue(p);
+}
+Value vmFunctionValue(std::shared_ptr<VMFunction> fn) {
+    void* p = fn.get();
+    g_vmFunctionRegistry[p] = std::move(fn);
+    return objectValue(p);
+}
+Value vmClosureValue(std::shared_ptr<VMClosure> closure) {
+    void* p = closure.get();
+    g_vmClosureRegistry[p] = std::move(closure);
     return objectValue(p);
 }
 
@@ -159,11 +171,16 @@ bool isArray(Value v) { return isObject(v) && g_arrayRegistry.count(asObjectPtr(
 bool isHashMap(Value v) { return isObject(v) && g_hashMapRegistry.count(asObjectPtr(v)) > 0; }
 bool isClass(Value v) { return isObject(v) && g_classRegistry.count(asObjectPtr(v)) > 0; }
 bool isInstance(Value v) { return isObject(v) && g_instanceRegistry.count(asObjectPtr(v)) > 0; }
+bool isVMFunction(Value v) { return isObject(v) && g_vmFunctionRegistry.count(asObjectPtr(v)) > 0; }
+bool isVMClosure(Value v) { return isObject(v) && g_vmClosureRegistry.count(asObjectPtr(v)) > 0; }
 
 std::shared_ptr<VoltArray> asArray(Value v) { auto it = g_arrayRegistry.find(asObjectPtr(v)); return it != g_arrayRegistry.end() ? it->second : nullptr; }
 std::shared_ptr<VoltHashMap> asHashMap(Value v) { auto it = g_hashMapRegistry.find(asObjectPtr(v)); return it != g_hashMapRegistry.end() ? it->second : nullptr; }
 std::shared_ptr<VoltClass> asClass(Value v) { auto it = g_classRegistry.find(asObjectPtr(v)); return it != g_classRegistry.end() ? it->second : nullptr; }
 std::shared_ptr<VoltInstance> asInstance(Value v) { auto it = g_instanceRegistry.find(asObjectPtr(v)); return it != g_instanceRegistry.end() ? it->second : nullptr; }
 std::shared_ptr<Callable> asCallable(Value v) { auto it = g_callableRegistry.find(asObjectPtr(v)); return it != g_callableRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<VMFunction> asVMFunction(Value v) { auto it = g_vmFunctionRegistry.find(asObjectPtr(v)); return it != g_vmFunctionRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<VMClosure> asVMClosure(Value v) { auto it = g_vmClosureRegistry.find(asObjectPtr(v)); return it != g_vmClosureRegistry.end() ? it->second : nullptr; }
+VMClosure* asVMClosurePtr(Value v) { auto it = g_vmClosureRegistry.find(asObjectPtr(v)); return it != g_vmClosureRegistry.end() ? it->second.get() : nullptr; }
 
 } // namespace volt

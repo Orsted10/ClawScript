@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ VoltScript v0.9.0 ⚡
+# ⚡ VoltScript v0.9.2 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
@@ -31,9 +31,9 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - ⚡ Lexical analysis
 - 🌳 Parsing with recursive descent  
 - 🧠 AST construction
-- ⚙️ **Stack-based Bytecode VM** (Optimized in v0.9.0)
-- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v0.9.0)
-- 🧵 **Thread-safe String Interning** (Improved in v0.9.0)
+- ⚙️ **Stack-based Bytecode VM** (Optimized in v0.9.2)
+- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v0.9.2)
+- 🧵 **Thread-safe String Interning** (Improved in v0.9.2)
 - ⚙️ Tree-walk interpretation (Original fallback)
 - 📍 Precise error reporting
 - 🔐 Lexical scoping & environments
@@ -41,13 +41,13 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - 📦 Dynamic arrays with methods
 - 🏗️ **Class system with inheritance**
 - 🎯 Compound operators & control flow
-- 🧪 **Comprehensive testing & performance benchmarks** (Expanded in v0.9.0)
+- 🧪 **Comprehensive testing & performance benchmarks** (Expanded in v0.9.2)
 
 If you've ever wanted to *truly* understand languages like **Python**, **JavaScript**, or **Lua** — this is your path.
 
 ---
 
-## ✨ Features (v0.9.0)
+## ✨ Features (v0.9.2)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -65,14 +65,18 @@ Enhanced with:
 
 ### ⚙️ Interpreter & VM — *AST → Execution*
 
-Major enhancements in v0.9.0:
+Major enhancements in v0.9.2:
 
 - ✅ **NaN-Boxed Value Representation**: Compact 64-bit tagged values for numbers, booleans, nil, strings, and objects.
 - ✅ **Optimized Bytecode VM & Compiler**: High-performance stack-based VM with optimized bytecode generation.
+- ✅ **Inline Caches**: Monomorphic caches for global, property, and call dispatch hot paths.
+- ✅ **LLVM AoT Pipeline (Optional)**: Bytecode-to-LLVM IR with O3 + loop vectorization and object emission.
+- ✅ **AoT CLI + Linker Integration**: `--aot-output` emits and links native binaries.
 - ✅ **String Interning**: Thread-safe `StringPool` for pointer-based string comparison and reduced allocations.
 - ✅ **Class System**: Full support for classes, methods, inheritance, and constructors.
 - ✅ **Environment Lookup Caching + Profiling**: Optimized variable lookup with hit caches and counters for hot paths.
 - ✅ **Mathematical Optimizations**: Fast binary exponentiation for integer powers in `pow()` and tuned math natives.
+- ✅ **Performance Math Natives**: `fibFast()` and `arraySumFast()` for benchmark-grade workloads.
 - ✅ **Centralized JSON Engine**: Modular and high-performance JSON encoding/decoding.
 - ✅ **Integration Test Suite**: Automated end-to-end script validation.
 - ✅ **Performance Benchmarking**: Benchmarks for interpreter vs VM, string interning, math, lookups, and JSON.
@@ -224,6 +228,7 @@ Hash Map features:
 - `abs(x)`, `sqrt(x)`, `pow(base, exp)`, `min(a,b)`, `max(a,b)`
 - `round(x)`, `floor(x)`, `ceil(x)`, `random()`
 - `sin(x)`, `cos(x)`, `tan(x)`, `log(x)`, `exp(x)`
+- `fibFast(n)`, `arraySumFast(n)`
 
 **String Functions:**
 - `len(x)`, `str(x)`, `num(x)`, `type(x)`
@@ -263,6 +268,7 @@ Hash Map features:
 * C++ compiler with **C++20 support** (MSVC 19.28+, GCC 10+, Clang 11+)
 * CMake ≥ 3.14
 * GoogleTest (automatically fetched)
+* LLVM 16+ (optional, required for AoT builds)
 
 ### Windows (MSVC)
 
@@ -278,6 +284,14 @@ cmake --build build --config Release
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ./build/bin/volt
+```
+
+### LLVM AoT (Optional)
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DVOLT_ENABLE_AOT=ON
+cmake --build build --config Release
+./build/bin/Release/volt --aot-output=main.o script.volt
 ```
 
 ### Run Tests
@@ -300,7 +314,7 @@ ctest --output-on-failure --test-dir build
 ### Interactive REPL
 
 ```bash
-⚡ VoltScript v0.9.0 REPL
+⚡ VoltScript v0.9.2 REPL
 Type 'exit' to quit
 >> 
 ```
@@ -587,7 +601,7 @@ print reversed; // [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 ## 🧪 Testing (580+ Tests!)
 
-VoltScript v0.9.0 has **significantly expanded test coverage** with 580+ unit tests and performance benchmarks:
+VoltScript v0.9.2 has **significantly expanded test coverage** with 580+ unit tests and performance benchmarks:
 
 | Test Suite | Tests | Description |
 |-----------|-------|-------------|
@@ -727,7 +741,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.9.0 ⚡
+### ⚡ VoltScript v0.9.2 ⚡
 
 **VM. NaN-boxing. Classes. Performance. JSON. Power.**  
 *This is where languages get real.*

@@ -5,11 +5,17 @@
 #include "stmt.h"
 #include "token.h"
 #include "version.h"
+#include "compiler/compiler.h"
+#ifdef VOLT_ENABLE_AOT
+#include "aot/llvm_aot.h"
+#endif
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <filesystem>
+#include <cstdlib>
 
 /******  FOR UTF-8 In Window Terminal or Powershell. ***********/
 #ifdef _WIN32
@@ -135,6 +141,43 @@ void runFile(const std::string& path, volt::Interpreter& interpreter, bool debug
         printRuntimeError(e);
         exit(70);
     }
+}
+
+bool compileFileToChunk(const std::string& path, std::unique_ptr<volt::Chunk>& chunk, bool debugMode) {
+    std::ifstream file(path);
+    if (!file) {
+        std::cerr << "Could not open file: " << path << "\n";
+        return false;
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string source = buffer.str();
+
+    volt::Lexer lexer(source);
+    auto tokens = lexer.tokenize();
+
+    if (debugMode) {
+        dumpTokens(tokens);
+    }
+
+    volt::Parser parser(tokens);
+    auto statements = parser.parseProgram();
+
+    if (parser.hadError()) {
+        for (const auto& error : parser.getErrors()) {
+            std::cerr << error << "\n";
+        }
+        return false;
+    }
+
+    if (debugMode) {
+        dumpStatements(statements);
+    }
+
+    volt::Compiler compiler;
+    chunk = compiler.compile(statements);
+    return true;
 }
 
 // Check if input is incomplete (unbalanced braces/parens/strings)
@@ -267,6 +310,7 @@ int main(int argc, char** argv) {
     
     bool debugMode = false;
     std::string scriptPath;
+    std::string aotOutputPath;
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -279,10 +323,19 @@ int main(int argc, char** argv) {
             std::cout << "  --debug, -d    Print tokens and AST before execution\n";
             std::cout << "  --help, -h     Show this help message\n";
             std::cout << "  --version      Show version information\n";
+            std::cout << "  --aot-output   Emit LLVM AOT object file\n";
             return 0;
         } else if (arg == "--version") {
             std::cout << "VoltScript " << volt::VOLT_VERSION << "\n";
             return 0;
+        } else if (arg.rfind("--aot-output=", 0) == 0) {
+            aotOutputPath = arg.substr(std::string("--aot-output=").size());
+        } else if (arg == "--aot-output") {
+            if (i + 1 >= argc) {
+                std::cerr << "--aot-output requires a path\n";
+                return 64;
+            }
+            aotOutputPath = argv[++i];
         } else if (arg[0] == '-') {
             std::cerr << "Unknown option: " << arg << "\n";
             return 64;
@@ -295,6 +348,52 @@ int main(int argc, char** argv) {
         }
     }
     
+    if (!aotOutputPath.empty()) {
+        if (scriptPath.empty()) {
+            std::cerr << "--aot-output requires a script file\n";
+            return 64;
+        }
+
+#ifdef VOLT_ENABLE_AOT
+        std::unique_ptr<volt::Chunk> chunk;
+        if (!compileFileToChunk(scriptPath, chunk, debugMode)) {
+            return 65;
+        }
+
+        volt::AotCompiler aotCompiler;
+        auto module = aotCompiler.compile("volt_aot", *chunk);
+
+        std::ofstream out(aotOutputPath, std::ios::binary);
+        out.write(module.image.data(), static_cast<std::streamsize>(module.image.size()));
+        if (!out) {
+            std::cerr << "Failed to write AOT object: " << aotOutputPath << "\n";
+            return 74;
+        }
+
+        std::filesystem::path objPath(aotOutputPath);
+        std::filesystem::path exePath = objPath;
+        exePath.replace_extension();
+#ifdef _WIN32
+        exePath.replace_extension(".exe");
+        std::filesystem::path runtimeLib = std::filesystem::path(argv[0]).parent_path() / "volt_runtime.lib";
+        std::string cmd = "lld-link /OUT:" + exePath.string() + " " + objPath.string() + " " + runtimeLib.string();
+#else
+        std::filesystem::path runtimeLib = std::filesystem::path(argv[0]).parent_path() / "libvolt_runtime.a";
+        std::string cmd = "ld -o " + exePath.string() + " " + objPath.string() + " " + runtimeLib.string() + " -lstdc++ -lm -lc -lpthread";
+#endif
+
+        int linkResult = std::system(cmd.c_str());
+        if (linkResult != 0) {
+            std::cerr << "Linker failed with exit code " << linkResult << "\n";
+            return linkResult;
+        }
+        return 0;
+#else
+        std::cerr << "AOT is not enabled in this build\n";
+        return 64;
+#endif
+    }
+
     volt::Interpreter interpreter;
     
     if (!scriptPath.empty()) {

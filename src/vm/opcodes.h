@@ -17,6 +17,7 @@ enum class OpCode : uint8_t {
     SetLocal,    // Set local variable
     GetUpvalue,  // Get upvalue (for closures)
     SetUpvalue,  // Set upvalue
+    CloseUpvalue,// Close upvalue
     
     Equal,       // ==
     Greater,     // >
