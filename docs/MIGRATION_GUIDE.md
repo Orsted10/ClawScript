@@ -1,9 +1,9 @@
 # VoltScript Migration Guide
 
-## v0.9.2 Migration
+## v0.9.5 Migration
 
 ### Overview
-VoltScript v0.9.2 focuses on performance and distribution readiness. It adds inline caches in the VM hot paths, an optional LLVM AoT compilation pipeline, and new performance-oriented math helpers while remaining backward compatible with v0.9.0 scripts.
+VoltScript v0.9.5 focuses on production runtime stability and performance. It adds ephemeral arenas for non-escaping aggregations, a benchmark mode to minimize timing jitter, SIMD-native helpers, and improves AoT vectorization while remaining backward compatible with v0.9.0 scripts.
 
 ### New Features to Adopt
 
@@ -30,7 +30,7 @@ Your existing code benefits from:
 - **Call-site caching**: Reduced overhead in hot call paths.
 
 ### Breaking Changes
-None in v0.9.2.
+None in v0.9.5.
 
 ### Migration Notes
 - AoT builds require LLVM 16+ and an available system linker (lld-link on Windows, ld on Linux/macOS).

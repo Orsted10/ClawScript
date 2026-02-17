@@ -1,7 +1,7 @@
-# VoltScript v0.9.2 API Reference
+# VoltScript v0.9.5 API Reference
 
-This reference describes the core standard library available in VoltScript v0.9.2.
-It is based on the v0.8.6 APIs and extended with the features introduced in v0.9.2
+This reference describes the core standard library available in VoltScript v0.9.5.
+It is based on the v0.8.6 APIs and extended with the features introduced in v0.9.5
 such as the class system, JSON engine, and performance tools.
 
 ## Table of Contents

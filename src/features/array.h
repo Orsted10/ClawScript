@@ -64,6 +64,9 @@ public:
     std::shared_ptr<VoltArray> splice(int start, int deleteCount = 0, const std::vector<Value>& items = {}) const;
     Value shift();
     void unshift(const Value& value);
+    void reserve(size_t n) { elements_.reserve(n); }
+    void fill(Value v, size_t n);
+    void clear() { elements_.clear(); }
     
 private:
     std::vector<Value> elements_;

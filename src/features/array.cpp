@@ -30,10 +30,12 @@ void VoltArray::set(size_t index, Value value) {
         }
         elements_.resize(index + 1, volt::nilValue());
     }
+    gcBarrierWrite(this, value);
     elements_[index] = value;
 }
 
 void VoltArray::push(Value value) {
+    gcBarrierWrite(this, value);
     elements_.push_back(value);
 }
 
@@ -48,6 +50,13 @@ Value VoltArray::pop() {
 
 void VoltArray::reverse() {
     std::reverse(elements_.begin(), elements_.end());
+}
+
+void VoltArray::fill(Value v, size_t n) {
+    gcBarrierWrite(this, v);
+    elements_.clear();
+    elements_.reserve(n);
+    elements_.insert(elements_.end(), n, v);
 }
 
 std::string VoltArray::toString() const {
@@ -238,6 +247,7 @@ Value VoltArray::shift() {
 }
 
 void VoltArray::unshift(const Value& value) {
+    gcBarrierWrite(this, value);
     elements_.insert(elements_.begin(), value);
 }
 

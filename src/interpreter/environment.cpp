@@ -83,4 +83,11 @@ bool Environment::exists(std::string_view name) const {
     return false;
 }
 
+void Environment::forEachValue(const std::function<void(Value)>& fn) const {
+    for (const auto& kv : values_) {
+        fn(kv.second);
+    }
+    if (enclosing_) enclosing_->forEachValue(fn);
+}
+
 } // namespace volt

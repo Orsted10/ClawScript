@@ -49,6 +49,7 @@ struct VoltHashMap {
     
     // Set key-value pair
     void set(const std::string& key, const Value& value) {
+        gcBarrierWrite(this, value);
         data[key] = value;
     }
     

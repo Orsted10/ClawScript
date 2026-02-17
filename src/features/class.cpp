@@ -1,5 +1,6 @@
 #include "class.h"
 #include "interpreter.h"
+#include "interpreter/gc_alloc.h"
 #include "errors.h"
 
 namespace volt {
@@ -22,7 +23,7 @@ std::shared_ptr<VoltFunction> VoltClass::findMethod(const std::string& name) con
 }
 
 Value VoltClass::call(Interpreter& interpreter, const std::vector<Value>& arguments) {
-    auto instance = std::make_shared<VoltInstance>(shared_from_this());
+    auto instance = gcNewInstance(shared_from_this());
     
     // Look for initializer
     auto initializer = findMethod("init");
@@ -72,7 +73,12 @@ Value VoltInstance::get(const Token& name) {
 
 void VoltInstance::set(const Token& name, Value value) {
     std::string_view sv = StringPool::intern(name.lexeme);
+    gcBarrierWrite(this, value);
     fields_[sv] = value;
+}
+
+void VoltInstance::forEachField(const std::function<void(Value)>& fn) const {
+    for (const auto& kv : fields_) fn(kv.second);
 }
 
 } // namespace volt

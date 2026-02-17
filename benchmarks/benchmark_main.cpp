@@ -138,4 +138,38 @@ static void BM_StringComparison_Interned(benchmark::State& state) {
 }
 BENCHMARK(BM_StringComparison_Interned);
 
+// ========================================
+// JIT Benchmarks (Adaptive OSR)
+// ========================================
+static void BM_MandelbrotJIT(benchmark::State& state) {
+    using namespace volt;
+    std::string source =
+        "let w=80; let h=40;"
+        "for (let i = 0; i < h; i = i + 1) {"
+        "  for (let j = 0; j < w; j = j + 1) {"
+        "    let x = (j / 40 - 1.5);"
+        "    let y = (i / 20 - 1.0);"
+        "    let a = 0; let b = 0; let k = 0;"
+        "    while (k < 100) {"
+        "      let aa = a * a - b * b + x;"
+        "      let bb = 2 * a * b + y;"
+        "      a = aa; b = bb;"
+        "      if (a * a + b * b > 4) { break; }"
+        "      k = k + 1;"
+        "    }"
+        "  }"
+        "}";
+    Lexer lexer(source);
+    auto tokens = lexer.tokenize();
+    Parser parser(tokens);
+    auto statements = parser.parseProgram();
+    Compiler compiler;
+    auto chunk = compiler.compile(statements);
+    for (auto _ : state) {
+        VM vm;
+        vm.interpret(*chunk);
+    }
+}
+BENCHMARK(BM_MandelbrotJIT);
+
 BENCHMARK_MAIN();

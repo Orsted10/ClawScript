@@ -35,11 +35,21 @@ public:
     const std::vector<Value>& constants() const { return constants_; }
     int getLine(int offset) const { return lines_[offset]; }
     size_t size() const { return code_.size(); }
+    int countOpcode(OpCode op) const {
+        int c = 0;
+        for (auto b : code_) {
+            if (b == static_cast<uint8_t>(op)) c++;
+        }
+        return c;
+    }
+    void setLoopCount(int c) { loopCount_ = c; }
+    int loopCount() const { return loopCount_; }
 
 private:
     std::vector<uint8_t> code_;
     std::vector<int> lines_; // For error reporting
     std::vector<Value> constants_;
+    int loopCount_ = 0;
 };
 
 } // namespace volt

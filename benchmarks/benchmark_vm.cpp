@@ -108,3 +108,43 @@ static void BM_Interpreter_Loop(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_Interpreter_Loop);
+
+static void BM_VM_ArrayMap1M(benchmark::State& state) {
+    std::string source =
+        "let arr = [];"
+        "for (let i = 0; i < 1000000; i = i + 1) {"
+        "  arr.push(i);"
+        "}"
+        "let res = map_add_scalar(arr, 1);";
+    Lexer lexer(source);
+    auto tokens = lexer.tokenize();
+    Parser parser(tokens);
+    auto statements = parser.parseProgram();
+    Compiler compiler;
+    auto chunk = compiler.compile(statements);
+    for (auto _ : state) {
+        Interpreter interpreter;
+        VM vm(interpreter);
+        vm.interpret(*chunk);
+    }
+}
+BENCHMARK(BM_VM_ArrayMap1M)->Unit(benchmark::kMillisecond);
+static void BM_JSONAlloc1M(benchmark::State& state) {
+    std::string source =
+        "jsonAllocFast(1000000);";
+    Lexer lexer(source);
+    auto tokens = lexer.tokenize();
+    Parser parser(tokens);
+    auto statements = parser.parseProgram();
+    Compiler compiler;
+    auto chunk = compiler.compile(statements);
+    Interpreter interpreter;
+    VM vm(interpreter);
+    gcSetBenchmarkMode(true);
+    for (int i = 0; i < 32; ++i) vm.interpret(*chunk);
+    for (auto _ : state) {
+        vm.interpret(*chunk);
+    }
+    gcSetBenchmarkMode(false);
+}
+BENCHMARK(BM_JSONAlloc1M)->Unit(benchmark::kMillisecond)->MinTime(10.0);

@@ -1,35 +1,46 @@
- #pragma once
- #include <cstdint>
- #include <memory>
- #include <string>
- #include <vector>
- #include "interpreter/value.h"
- 
- namespace volt {
- 
- enum class JitTier {
-     Interpreter,
-     Baseline,
-     Optimized
- };
- 
- struct JitFunction {
-     using FnPtr = Value(*)(Value* args, int argc);
-     FnPtr fn;
-     JitTier tier;
-     std::string debugName;
- };
- 
- class JitEngine {
- public:
-     JitEngine() = default;
-     ~JitEngine() = default;
- 
-     JitFunction compileBaseline(const std::string& name, const std::vector<uint8_t>& bytecode);
-     JitFunction compileOptimized(const std::string& name, const std::vector<uint8_t>& bytecode);
- 
-     void invalidateAll() {}
- };
- 
- } // namespace volt
-
+#pragma once
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <atomic>
+#include "interpreter/value.h"
+#ifdef VOLT_ENABLE_JIT
+namespace volt { class LlvJitCompiler; }
+#endif
+namespace volt {
+enum class JitTier {
+    Interpreter,
+    Baseline,
+    Optimized
+};
+struct JitEntry {
+    const uint8_t* ip;
+    void* fn;
+    JitTier tier;
+};
+struct JitConfig {
+    bool aggressive = false;
+    uint32_t loopThreshold = 1000;
+    uint32_t functionThreshold = 1000;
+};
+class JitEngine {
+public:
+    JitEngine();
+    ~JitEngine();
+    void setConfig(const JitConfig& cfg);
+    bool hasBaseline(const void* key) const;
+    void* getBaselineEntry(const void* key, const uint8_t* ip) const;
+    void registerBaseline(const void* key, const std::vector<JitEntry>& entries);
+    bool enterOSR(void* vm, const void* key, const uint8_t* ip);
+    void invalidateAll();
+private:
+    JitConfig config_;
+    std::unordered_map<const void*, std::vector<JitEntry>> baseline_;
+#ifdef VOLT_ENABLE_JIT
+    std::unique_ptr<LlvJitCompiler> compiler_;
+#endif
+};
+extern JitConfig gJitConfig;
+} // namespace volt

@@ -158,4 +158,18 @@ std::shared_ptr<VMFunction> asVMFunction(Value v);
 std::shared_ptr<VMClosure> asVMClosure(Value v);
 VMClosure* asVMClosurePtr(Value v);
 
+// GC APIs
+void gcRegisterVM(class VM* vm);
+void gcUnregisterVM(class VM* vm);
+void gcBarrierWrite(const void* parent, Value child);
+void gcMaybeCollect();
+std::shared_ptr<VoltArray> gcAcquireArrayFromPool();
+void gcReleaseArrayToPool(std::shared_ptr<VoltArray> arr);
+std::shared_ptr<VoltHashMap> gcAcquireHashMapFromPool();
+void gcReleaseHashMapToPool(std::shared_ptr<VoltHashMap> map);
+void gcEphemeralFrameEnter();
+void gcEphemeralFrameLeave();
+void gcEphemeralEscape(Value v);
+void gcSetBenchmarkMode(bool enable);
+
 } // namespace volt

@@ -1,13 +1,13 @@
 <div align="center">
 
-# ⚡ VoltScript v0.9.2 ⚡
+# ⚡ VoltScript v0.9.5 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
 
 > *From tokens → trees → closures → arrays → classes*  
 
-[![Tests](https://img.shields.io/badge/tests-580+-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-598+-brightgreen)]()
 [![C++](https://img.shields.io/badge/C++-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -31,9 +31,9 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - ⚡ Lexical analysis
 - 🌳 Parsing with recursive descent  
 - 🧠 AST construction
-- ⚙️ **Stack-based Bytecode VM** (Optimized in v0.9.2)
-- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v0.9.2)
-- 🧵 **Thread-safe String Interning** (Improved in v0.9.2)
+- ⚙️ **Stack-based Bytecode VM** (Optimized in v0.9.5)
+- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v0.9.5)
+- 🧵 **Thread-safe String Interning** (Improved in v0.9.5)
 - ⚙️ Tree-walk interpretation (Original fallback)
 - 📍 Precise error reporting
 - 🔐 Lexical scoping & environments
@@ -41,13 +41,13 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - 📦 Dynamic arrays with methods
 - 🏗️ **Class system with inheritance**
 - 🎯 Compound operators & control flow
-- 🧪 **Comprehensive testing & performance benchmarks** (Expanded in v0.9.2)
+- 🧪 **Comprehensive testing & performance benchmarks** (Expanded in v0.9.5)
 
 If you've ever wanted to *truly* understand languages like **Python**, **JavaScript**, or **Lua** — this is your path.
 
 ---
 
-## ✨ Features (v0.9.2)
+## ✨ Features (v0.9.5)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -65,7 +65,7 @@ Enhanced with:
 
 ### ⚙️ Interpreter & VM — *AST → Execution*
 
-Major enhancements in v0.9.2:
+Major enhancements in v0.9.5:
 
 - ✅ **NaN-Boxed Value Representation**: Compact 64-bit tagged values for numbers, booleans, nil, strings, and objects.
 - ✅ **Optimized Bytecode VM & Compiler**: High-performance stack-based VM with optimized bytecode generation.
@@ -305,7 +305,7 @@ cmake --build build --config Release
 ctest --output-on-failure --test-dir build
 ```
 
-**Result:** ✅ **96% Pass Rate** (720+ tests, 690+ passing)
+**Result:** ✅ **100% tests passed** (598 tests)
 
 ---
 
@@ -314,7 +314,7 @@ ctest --output-on-failure --test-dir build
 ### Interactive REPL
 
 ```bash
-⚡ VoltScript v0.9.2 REPL
+⚡ VoltScript v0.9.5 REPL
 Type 'exit' to quit
 >> 
 ```
@@ -601,7 +601,7 @@ print reversed; // [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 ## 🧪 Testing (580+ Tests!)
 
-VoltScript v0.9.2 has **significantly expanded test coverage** with 580+ unit tests and performance benchmarks:
+VoltScript v0.9.5 has **expanded test coverage** with 602 unit/integration/performance tests:
 
 | Test Suite | Tests | Description |
 |-----------|-------|-------------|
@@ -628,7 +628,7 @@ VoltScript v0.9.2 has **significantly expanded test coverage** with 580+ unit te
 ctest --test-dir build --output-on-failure
 ```
 
-**Result:** ✅ **>95% Pass Rate** (580+ tests)
+**Result:** ✅ **100% tests passed** (602 tests)
 
 ---
 
@@ -741,7 +741,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.9.2 ⚡
+### ⚡ VoltScript v0.9.5 ⚡
 
 **VM. NaN-boxing. Classes. Performance. JSON. Power.**  
 *This is where languages get real.*

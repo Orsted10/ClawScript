@@ -4,6 +4,7 @@
 #include "features/callable.h"
 #include "features/array.h"
 #include "interpreter/value.h"
+#include <immintrin.h>
 
 namespace volt {
 
@@ -68,6 +69,83 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
             return arrayValue(result);
         },
         "map"
+    ));
+
+    globals->define("map_add_scalar", std::make_shared<NativeFunction>(
+        2,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isArray(args[0])) {
+                throw std::runtime_error("map_add_scalar() requires an array as first argument");
+            }
+            if (!isNumber(args[1])) {
+                throw std::runtime_error("map_add_scalar() requires a number as second argument");
+            }
+            auto array = asArray(args[0]);
+            double add = asNumber(args[1]);
+            auto result = std::make_shared<VoltArray>();
+            size_t n = array->size();
+            size_t i = 0;
+#if defined(__AVX__) || defined(__AVX2__)
+            __m256d vadd = _mm256_set1_pd(add);
+            for (; i + 4 <= n; i += 4) {
+                double a0 = isNumber(array->get(i)) ? asNumber(array->get(i)) : 0.0;
+                double a1 = isNumber(array->get(i + 1)) ? asNumber(array->get(i + 1)) : 0.0;
+                double a2 = isNumber(array->get(i + 2)) ? asNumber(array->get(i + 2)) : 0.0;
+                double a3 = isNumber(array->get(i + 3)) ? asNumber(array->get(i + 3)) : 0.0;
+                __m256d v = _mm256_set_pd(a3, a2, a1, a0);
+                __m256d r = _mm256_add_pd(vadd, v);
+                alignas(32) double out[4];
+                _mm256_store_pd(out, r);
+                result->push(numberToValue(out[0]));
+                result->push(numberToValue(out[1]));
+                result->push(numberToValue(out[2]));
+                result->push(numberToValue(out[3]));
+            }
+#endif
+            for (; i < n; ++i) {
+                Value el = array->get(i);
+                if (isNumber(el)) {
+                    result->push(numberToValue(asNumber(el) + add));
+                } else {
+                    result->push(el);
+                }
+            }
+            return arrayValue(result);
+        },
+        "map_add_scalar"
+    ));
+
+    globals->define("array_sum", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isArray(args[0])) {
+                throw std::runtime_error("array_sum() requires an array argument");
+            }
+            auto array = asArray(args[0]);
+            size_t n = array->size();
+            size_t i = 0;
+            double sum = 0.0;
+#if defined(__AVX__) || defined(__AVX2__)
+            __m256d vacc = _mm256_set1_pd(0.0);
+            for (; i + 4 <= n; i += 4) {
+                double a0 = isNumber(array->get(i)) ? asNumber(array->get(i)) : 0.0;
+                double a1 = isNumber(array->get(i + 1)) ? asNumber(array->get(i + 1)) : 0.0;
+                double a2 = isNumber(array->get(i + 2)) ? asNumber(array->get(i + 2)) : 0.0;
+                double a3 = isNumber(array->get(i + 3)) ? asNumber(array->get(i + 3)) : 0.0;
+                __m256d v = _mm256_set_pd(a3, a2, a1, a0);
+                vacc = _mm256_add_pd(vacc, v);
+            }
+            alignas(32) double buf[4];
+            _mm256_store_pd(buf, vacc);
+            sum += buf[0] + buf[1] + buf[2] + buf[3];
+#endif
+            for (; i < n; ++i) {
+                Value el = array->get(i);
+                if (isNumber(el)) sum += asNumber(el);
+            }
+            return numberToValue(sum);
+        },
+        "array_sum"
     ));
 }
 

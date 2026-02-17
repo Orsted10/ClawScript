@@ -2,15 +2,25 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
+#include <atomic>
 #include <array>
 #include "chunk.h"
 #include "interpreter/value.h"
 #include "interpreter/environment.h"
+#ifdef VOLT_ENABLE_JIT
 #include "jit/jit.h"
+#endif
 
 namespace volt {
 
 class Interpreter;
+
+struct RuntimeFlags {
+    bool disableCallIC = false;
+    bool icDiagnostics = false;
+};
+extern RuntimeFlags gRuntimeFlags;
 
 enum class InterpretResult {
     Ok,
@@ -25,12 +35,13 @@ class VM {
 public:
     VM();
     explicit VM(Interpreter& interpreter);
-    ~VM() = default;
+    ~VM();
 
     static constexpr int STACK_MAX = 256;
     static constexpr int FRAMES_MAX = 64;
 
     InterpretResult interpret(const Chunk& chunk);
+    bool osrEnter(const uint8_t* ip);
 
 private:
     struct CallFrame {
@@ -43,7 +54,7 @@ private:
         uint64_t version;
         Value value;
     };
-    struct PropertyInlineCache {
+    struct PropertyInlineCacheEntry {
         const VoltInstance* instance;
         const char* name;
         uint64_t version;
@@ -92,15 +103,73 @@ private:
     std::array<CallFrame, FRAMES_MAX> frames_;
     int frameCount_;
     std::vector<std::shared_ptr<VMUpvalue>> openUpvalues_;
+#ifdef VOLT_ENABLE_JIT
     JitEngine jit_;
+#endif
     
     std::shared_ptr<Environment> globals_;
     Interpreter* interpreter_;
     uint64_t globalVersion_;
     std::unordered_map<const uint8_t*, GlobalInlineCache> globalInlineCache_;
-    std::unordered_map<const uint8_t*, PropertyInlineCache> propertyInlineCache_;
+    std::unordered_map<const uint8_t*, std::vector<PropertyInlineCacheEntry>> propertyInlineCache_;
     std::unordered_map<const VoltInstance*, uint64_t> instanceVersions_;
     std::unordered_map<const uint8_t*, CallInlineCache> callInlineCache_;
+    std::unordered_map<const VMFunction*, std::atomic<uint32_t>> functionHotness_;
+    std::unordered_map<const uint8_t*, std::atomic<uint32_t>> loopHotness_;
+#ifndef VOLT_DISABLE_IC_DIAGNOSTICS
+    std::unordered_map<const uint8_t*, uint32_t> propertyICMissCount_;
+    std::unordered_set<const uint8_t*> propertyICMegamorphic_;
+#endif
+    const uint8_t* lastPropertySiteIp_ = nullptr;
+#ifdef VOLT_ENABLE_JIT
+    JitConfig jitConfig_;
+#endif
+public:
+    void forEachRoot(const std::function<void(Value)>& fn) const;
+    uint8_t apiReadByte();
+    uint16_t apiReadShort();
+    uint64_t apiReadConstant();
+    const char* apiReadStringPtr();
+    void apiSetIp(const uint8_t* ip);
+    const uint8_t* apiGetIp() const;
+    void apiPush(Value v);
+    Value apiPop();
+    Value apiPeek(int distance = 0) const;
+    void apiSetLocal(int slot, Value v);
+    Value apiGetLocal(int slot);
+    void apiJump(uint16_t offset);
+    void apiJumpIfFalse(uint16_t offset);
+    void apiLoop(uint16_t offset);
+    bool apiReturn();
+    bool apiIsFalsey(Value v) const;
+    void apiDefineGlobal(const char* name, Value v);
+    bool apiGlobalExists(const char* name) const;
+    Value apiGlobalGet(const char* name) const;
+    void apiGlobalAssign(const char* name, Value v);
+    void apiBumpGlobalVersion();
+    std::shared_ptr<VMUpvalue> apiCaptureUpvalue(Value* local);
+    Value* apiCurrentSlots();
+    bool apiCallValue(Value callee, int argCount);
+    VMClosure* apiCurrentClosure();
+    void apiCloseTopUpvalue();
+    int apiTryGetGlobalCached(const char* name, const uint8_t* siteIp, Value* out);
+    int apiTryGetPropertyCached(Value instanceVal, const char* name, const uint8_t* siteIp, Value* out);
+    int apiTryCallCached(const uint8_t* siteIp, uint8_t argCount);
+    uint32_t apiGetFunctionHotness(const VMFunction* fn);
+    uint32_t apiGetLoopHotness(const uint8_t* ip);
+#ifdef VOLT_ENABLE_JIT
+    bool apiHasBaseline(const VMFunction* fn);
+#endif
+    const uint8_t* apiGetLastPropertySiteIp() const { return lastPropertySiteIp_; }
+#ifndef VOLT_DISABLE_IC_DIAGNOSTICS
+    uint32_t apiGetPropertyMisses(const uint8_t* siteIp) const {
+        auto it = propertyICMissCount_.find(siteIp);
+        return it == propertyICMissCount_.end() ? 0u : it->second;
+    }
+    bool apiIsPropertyMegamorphic(const uint8_t* siteIp) const {
+        return propertyICMegamorphic_.count(siteIp) > 0;
+    }
+#endif
 };
 
 } // namespace volt

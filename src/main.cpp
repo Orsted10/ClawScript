@@ -9,6 +9,8 @@
 #ifdef VOLT_ENABLE_AOT
 #include "aot/llvm_aot.h"
 #endif
+#include "vm/vm.h"
+#include "jit/jit.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -311,6 +313,9 @@ int main(int argc, char** argv) {
     bool debugMode = false;
     std::string scriptPath;
     std::string aotOutputPath;
+    bool jitAggressive = false;
+    bool disableCallIC = false;
+    bool icDiagnostics = false;
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -324,10 +329,19 @@ int main(int argc, char** argv) {
             std::cout << "  --help, -h     Show this help message\n";
             std::cout << "  --version      Show version information\n";
             std::cout << "  --aot-output   Emit LLVM AOT object file\n";
+            std::cout << "  --jit=aggressive   Enable aggressive adaptive JIT\n";
+            std::cout << "  --disable-call-ic   Disable interpreter call inline cache\n";
+            std::cout << "  --ic-diagnostics    Enable call IC diagnostics logging\n";
             return 0;
         } else if (arg == "--version") {
             std::cout << "VoltScript " << volt::VOLT_VERSION << "\n";
             return 0;
+        } else if (arg == "--jit=aggressive") {
+            jitAggressive = true;
+        } else if (arg == "--disable-call-ic") {
+            disableCallIC = true;
+        } else if (arg == "--ic-diagnostics") {
+            icDiagnostics = true;
         } else if (arg.rfind("--aot-output=", 0) == 0) {
             aotOutputPath = arg.substr(std::string("--aot-output=").size());
         } else if (arg == "--aot-output") {
@@ -347,6 +361,17 @@ int main(int argc, char** argv) {
             scriptPath = arg;
         }
     }
+    if (jitAggressive) {
+        volt::gJitConfig.aggressive = true;
+        volt::gJitConfig.loopThreshold = 1000;
+        volt::gJitConfig.functionThreshold = 1000;
+    }
+    const char* envDisable = std::getenv("VOLT_DISABLE_CALL_IC");
+    const char* envDiag = std::getenv("VOLT_IC_DIAGNOSTICS");
+    if (envDisable && *envDisable) disableCallIC = true;
+    if (envDiag && *envDiag) icDiagnostics = true;
+    volt::gRuntimeFlags.disableCallIC = disableCallIC;
+    volt::gRuntimeFlags.icDiagnostics = icDiagnostics;
     
     if (!aotOutputPath.empty()) {
         if (scriptPath.empty()) {
@@ -364,7 +389,7 @@ int main(int argc, char** argv) {
         auto module = aotCompiler.compile("volt_aot", *chunk);
 
         std::ofstream out(aotOutputPath, std::ios::binary);
-        out.write(module.image.data(), static_cast<std::streamsize>(module.image.size()));
+        out.write(reinterpret_cast<const char*>(module.image.data()), static_cast<std::streamsize>(module.image.size()));
         if (!out) {
             std::cerr << "Failed to write AOT object: " << aotOutputPath << "\n";
             return 74;

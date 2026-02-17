@@ -2,10 +2,10 @@
 
 <div align="center">
 
-## ⚡ VoltScript v0.9.2 ⚡
+## ⚡ VoltScript v0.9.5 ⚡
 ### *A Modern Programming Language Built from Scratch*
 
-[![Tests](https://img.shields.io/badge/tests-580%2B-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-598%2B-brightgreen)]()
 [![C++](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -111,7 +111,7 @@ cmake --build build --config Release
 This starts an interactive session where you can type and execute VoltScript code directly:
 
 ```
-⚡ VoltScript v0.9.2 REPL
+⚡ VoltScript v0.9.5 REPL
 Type 'exit' to quit
 >> let x = 42;
 >> print x;
@@ -2171,7 +2171,7 @@ MIT License - Free to use, modify, and distribute.
 
 <div align="center">
 
-### ⚡ VoltScript v0.9.2 ⚡
+### ⚡ VoltScript v0.9.5 ⚡
 
 **Built with passion and C++20**
 

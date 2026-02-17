@@ -6,6 +6,13 @@
 #include <iomanip>
 #include <cmath>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
+#include <atomic>
+#include <algorithm>
+#include <vector>
+#include "features/class.h"
+#include "vm/vm.h"
 
 namespace volt {
 
@@ -20,40 +27,207 @@ static std::unordered_map<void*, std::shared_ptr<VoltClass>> g_classRegistry;
 static std::unordered_map<void*, std::shared_ptr<VoltInstance>> g_instanceRegistry;
 static std::unordered_map<void*, std::shared_ptr<VMFunction>> g_vmFunctionRegistry;
 static std::unordered_map<void*, std::shared_ptr<VMClosure>> g_vmClosureRegistry;
+static std::unordered_map<void*, uint8_t> g_objectGeneration;
+static std::unordered_set<const void*> g_rememberedSet;
+static std::vector<class VM*> g_vmRegistry;
+static std::atomic<uint64_t> g_youngAllocations{0};
+static std::vector<std::shared_ptr<VoltArray>> g_arrayPool;
+static std::vector<std::shared_ptr<VoltHashMap>> g_hashMapPool;
+static thread_local std::vector<std::vector<void*>> g_ephemeralStack;
+static std::atomic<bool> g_benchmarkMode{false};
+
+static void gcMark(Value v);
+static void gcMinor();
+static void gcFull();
+void gcRegisterVM(VM* vm) { g_vmRegistry.push_back(vm); }
+void gcUnregisterVM(VM* vm) { g_vmRegistry.erase(std::remove(g_vmRegistry.begin(), g_vmRegistry.end(), vm), g_vmRegistry.end()); }
+void gcBarrierWrite(const void* parent, Value child) {
+    if (!isObject(child)) return;
+    auto itParentGen = g_objectGeneration.find(const_cast<void*>(parent));
+    if (itParentGen == g_objectGeneration.end()) return;
+    auto itChildGen = g_objectGeneration.find(asObjectPtr(child));
+    if (itChildGen == g_objectGeneration.end()) return;
+    if (itParentGen->second == 1 && itChildGen->second == 0) {
+        g_rememberedSet.insert(parent);
+    }
+}
+void gcMaybeCollect() {
+    if (g_benchmarkMode.load(std::memory_order_relaxed)) return;
+    uint64_t n = ++g_youngAllocations;
+    if (n % 100000 == 0) gcMinor();
+    if (g_objectGeneration.size() > 1000000) gcFull();
+}
+static void gcMarkObject(void* p) {
+    if (!p) return;
+    g_objectGeneration[p] |= 0x80;
+    auto arrIt = g_arrayRegistry.find(p);
+    if (arrIt != g_arrayRegistry.end()) {
+        const auto& elems = arrIt->second->elements();
+        for (const auto& e : elems) gcMark(e);
+        return;
+    }
+    auto mapIt = g_hashMapRegistry.find(p);
+    if (mapIt != g_hashMapRegistry.end()) {
+        for (const auto& kv : mapIt->second->data) {
+            gcMark(kv.second);
+        }
+        return;
+    }
+    auto instIt = g_instanceRegistry.find(p);
+    if (instIt != g_instanceRegistry.end()) {
+        instIt->second->forEachField([](Value v){ gcMark(v); });
+        return;
+    }
+}
+static void gcMark(Value v) {
+    if (isObject(v)) {
+        void* p = asObjectPtr(v);
+        if (!p) return;
+        if ((g_objectGeneration[p] & 0x80) == 0) {
+            gcMarkObject(p);
+        }
+    }
+}
+static void gcMarkVMRoots(VM* vm);
+static void gcMinor() {
+    for (auto vm : g_vmRegistry) gcMarkVMRoots(vm);
+    for (const void* parent : g_rememberedSet) gcMarkObject(const_cast<void*>(parent));
+    std::vector<void*> toFree;
+    toFree.reserve(g_objectGeneration.size());
+    for (auto& [p, meta] : g_objectGeneration) {
+        bool marked = (meta & 0x80) != 0;
+        uint8_t gen = meta & 0x1;
+        if (gen == 0) {
+            if (!marked) {
+                toFree.push_back(p);
+            } else {
+                g_objectGeneration[p] = 0x81;
+            }
+        } else {
+            g_objectGeneration[p] &= 0x81;
+        }
+    }
+    for (void* p : toFree) {
+        {
+            auto it = g_arrayRegistry.find(p);
+            if (it != g_arrayRegistry.end()) {
+                it->second->reserve(it->second->size());
+                it->second->fill(nilValue(), 0);
+                g_arrayPool.push_back(std::move(it->second));
+                g_arrayRegistry.erase(it);
+                continue;
+            }
+        }
+        {
+            auto it = g_hashMapRegistry.find(p);
+            if (it != g_hashMapRegistry.end()) {
+                it->second->clear();
+                g_hashMapPool.push_back(std::move(it->second));
+                g_hashMapRegistry.erase(it);
+                continue;
+            }
+        }
+        if (g_instanceRegistry.erase(p)) continue;
+        if (g_classRegistry.erase(p)) continue;
+        if (g_callableRegistry.erase(p)) continue;
+        if (g_vmFunctionRegistry.erase(p)) continue;
+        if (g_vmClosureRegistry.erase(p)) continue;
+        g_objectGeneration.erase(p);
+    }
+    g_rememberedSet.clear();
+    for (auto& [p, meta] : g_objectGeneration) { meta &= 0x01; }
+}
+static void gcFull() {
+    for (auto vm : g_vmRegistry) gcMarkVMRoots(vm);
+    for (const void* parent : g_rememberedSet) gcMarkObject(const_cast<void*>(parent));
+    std::vector<void*> toFree;
+    toFree.reserve(g_objectGeneration.size());
+    for (auto& [p, meta] : g_objectGeneration) {
+        bool marked = (meta & 0x80) != 0;
+        if (!marked) {
+            toFree.push_back(p);
+        } else {
+            if ((meta & 0x1) == 0) meta = 0x01; // promote survivors
+        }
+    }
+    for (void* p : toFree) {
+        {
+            auto it = g_arrayRegistry.find(p);
+            if (it != g_arrayRegistry.end()) {
+                it->second->reserve(it->second->size());
+                it->second->fill(nilValue(), 0);
+                g_arrayPool.push_back(std::move(it->second));
+                g_arrayRegistry.erase(it);
+                continue;
+            }
+        }
+        {
+            auto it = g_hashMapRegistry.find(p);
+            if (it != g_hashMapRegistry.end()) {
+                it->second->clear();
+                g_hashMapPool.push_back(std::move(it->second));
+                g_hashMapRegistry.erase(it);
+                continue;
+            }
+        }
+        if (g_instanceRegistry.erase(p)) continue;
+        if (g_classRegistry.erase(p)) continue;
+        if (g_callableRegistry.erase(p)) continue;
+        if (g_vmFunctionRegistry.erase(p)) continue;
+        if (g_vmClosureRegistry.erase(p)) continue;
+        g_objectGeneration.erase(p);
+    }
+    g_rememberedSet.clear();
+    for (auto& [p, meta] : g_objectGeneration) { meta &= 0x01; }
+}
 
 Value callableValue(std::shared_ptr<Callable> fn) {
     void* p = fn.get();
     g_callableRegistry[p] = std::move(fn);
+    g_objectGeneration[p] = 0;
+    gcMaybeCollect();
     return objectValue(p);
 }
 Value arrayValue(std::shared_ptr<VoltArray> arr) {
     void* p = arr.get();
     g_arrayRegistry[p] = std::move(arr);
+    g_objectGeneration[p] = 0;
+    if (!g_ephemeralStack.empty()) g_ephemeralStack.back().push_back(p);
+    gcMaybeCollect();
     return objectValue(p);
 }
 Value hashMapValue(std::shared_ptr<VoltHashMap> map) {
     void* p = map.get();
     g_hashMapRegistry[p] = std::move(map);
+    g_objectGeneration[p] = 0;
+    if (!g_ephemeralStack.empty()) g_ephemeralStack.back().push_back(p);
+    gcMaybeCollect();
     return objectValue(p);
 }
 Value classValue(std::shared_ptr<VoltClass> cls) {
     void* p = cls.get();
     g_classRegistry[p] = std::move(cls);
+    g_objectGeneration[p] = 0;
+    gcMaybeCollect();
     return objectValue(p);
 }
 Value instanceValue(std::shared_ptr<VoltInstance> inst) {
     void* p = inst.get();
     g_instanceRegistry[p] = std::move(inst);
+    g_objectGeneration[p] = 0;
+    gcMaybeCollect();
     return objectValue(p);
 }
 Value vmFunctionValue(std::shared_ptr<VMFunction> fn) {
     void* p = fn.get();
     g_vmFunctionRegistry[p] = std::move(fn);
+    g_objectGeneration[p] = 1;
     return objectValue(p);
 }
 Value vmClosureValue(std::shared_ptr<VMClosure> closure) {
     void* p = closure.get();
     g_vmClosureRegistry[p] = std::move(closure);
+    g_objectGeneration[p] = 1;
     return objectValue(p);
 }
 
@@ -182,5 +356,78 @@ std::shared_ptr<Callable> asCallable(Value v) { auto it = g_callableRegistry.fin
 std::shared_ptr<VMFunction> asVMFunction(Value v) { auto it = g_vmFunctionRegistry.find(asObjectPtr(v)); return it != g_vmFunctionRegistry.end() ? it->second : nullptr; }
 std::shared_ptr<VMClosure> asVMClosure(Value v) { auto it = g_vmClosureRegistry.find(asObjectPtr(v)); return it != g_vmClosureRegistry.end() ? it->second : nullptr; }
 VMClosure* asVMClosurePtr(Value v) { auto it = g_vmClosureRegistry.find(asObjectPtr(v)); return it != g_vmClosureRegistry.end() ? it->second.get() : nullptr; }
+
+static void gcMarkVMRoots(VM* vm) {
+    if (!vm) return;
+    std::vector<Value> roots;
+    roots.reserve(512);
+    vm->forEachRoot([&](Value v) { roots.push_back(v); });
+    for (auto v : roots) gcMark(v);
+}
+
+std::shared_ptr<VoltArray> gcAcquireArrayFromPool() {
+    if (!g_arrayPool.empty()) {
+        auto a = std::move(g_arrayPool.back());
+        g_arrayPool.pop_back();
+        return a;
+    }
+    return nullptr;
+}
+void gcReleaseArrayToPool(std::shared_ptr<VoltArray> arr) {
+    if (arr) {
+        arr->fill(nilValue(), 0);
+        g_arrayPool.push_back(std::move(arr));
+    }
+}
+std::shared_ptr<VoltHashMap> gcAcquireHashMapFromPool() {
+    if (!g_hashMapPool.empty()) {
+        auto m = std::move(g_hashMapPool.back());
+        g_hashMapPool.pop_back();
+        return m;
+    }
+    return nullptr;
+}
+void gcReleaseHashMapToPool(std::shared_ptr<VoltHashMap> map) {
+    if (map) {
+        map->clear();
+        g_hashMapPool.push_back(std::move(map));
+    }
+}
+
+void gcEphemeralFrameEnter() { g_ephemeralStack.emplace_back(); }
+void gcEphemeralEscape(Value v) {
+    if (g_ephemeralStack.empty()) return;
+    if (!isObject(v)) return;
+    void* p = asObjectPtr(v);
+    auto& top = g_ephemeralStack.back();
+    for (auto it = top.begin(); it != top.end(); ++it) {
+        if (*it == p) { top.erase(it); break; }
+    }
+}
+void gcEphemeralFrameLeave() {
+    if (g_ephemeralStack.empty()) return;
+    auto list = std::move(g_ephemeralStack.back());
+    g_ephemeralStack.pop_back();
+    for (void* p : list) {
+        auto ait = g_arrayRegistry.find(p);
+        if (ait != g_arrayRegistry.end()) {
+            auto arr = std::move(ait->second);
+            ait = g_arrayRegistry.erase(ait), void();
+            gcReleaseArrayToPool(std::move(arr));
+            g_objectGeneration.erase(p);
+            continue;
+        }
+        auto mit = g_hashMapRegistry.find(p);
+        if (mit != g_hashMapRegistry.end()) {
+            auto map = std::move(mit->second);
+            mit = g_hashMapRegistry.erase(mit), void();
+            gcReleaseHashMapToPool(std::move(map));
+            g_objectGeneration.erase(p);
+            continue;
+        }
+    }
+}
+
+void gcSetBenchmarkMode(bool enable) { g_benchmarkMode.store(enable, std::memory_order_relaxed); }
 
 } // namespace volt

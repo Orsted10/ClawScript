@@ -14,6 +14,7 @@
 #include "interpreter/natives/native_io.h"
 #include "interpreter/natives/native_time.h"
 #include "interpreter/natives/native_json.h"
+#include "interpreter/gc_alloc.h"
 #include <memory>
 #include <sstream>
 #include <fstream>
@@ -118,8 +119,7 @@ void Interpreter::defineNatives() {
             auto map = asHashMap(args[0]);
             auto keysVec = map->getKeys();
             
-            // Create an array with the keys
-            auto resultArray = std::make_shared<VoltArray>();
+            auto resultArray = gcNewArray();
             for (const auto& key : keysVec) {
                 auto sv = StringPool::intern(key);
                 resultArray->push(stringValue(sv.data()));
@@ -141,8 +141,7 @@ void Interpreter::defineNatives() {
             auto map = asHashMap(args[0]);
             auto valuesVec = map->getValues();
             
-            // Create an array with the values
-            auto resultArray = std::make_shared<VoltArray>();
+            auto resultArray = gcNewArray();
             for (const auto& value : valuesVec) {
                 resultArray->push(value);
             }
@@ -892,7 +891,7 @@ Value Interpreter::visitArrayExpr(ArrayExpr* expr) {
     }
     
     // Create and return array
-    return arrayValue(std::make_shared<VoltArray>(elements));
+    return arrayValue(gcNewArray(elements));
 }
 
 Value Interpreter::visitIndexExpr(IndexExpr* expr) {
@@ -1188,8 +1187,7 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                 [map](const std::vector<Value>&) -> Value {
                     auto keysVec = map->getKeys();
                     
-                    // Create an array with the keys
-                    auto resultArray = std::make_shared<VoltArray>();
+                    auto resultArray = gcNewArray();
                     for (const auto& key : keysVec) {
                         auto sv = StringPool::intern(key);
                         resultArray->push(stringValue(sv.data()));
@@ -1207,8 +1205,7 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                 [map](const std::vector<Value>&) -> Value {
                     auto valuesVec = map->getValues();
                     
-                    // Create an array with the values
-                    auto resultArray = std::make_shared<VoltArray>();
+                    auto resultArray = gcNewArray();
                     for (const auto& value : valuesVec) {
                         resultArray->push(value);
                     }
@@ -1296,7 +1293,7 @@ void Interpreter::visitClassStmt(ClassStmt* stmt) {
 }
 
 Value Interpreter::visitHashMapExpr(HashMapExpr* expr) {
-    auto hashMap = std::make_shared<VoltHashMap>();
+    auto hashMap = gcNewHashMap();
     
     for (const auto& [keyExpr, valueExpr] : expr->keyValuePairs) {
         Value key = evaluate(keyExpr.get());

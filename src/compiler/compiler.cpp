@@ -20,6 +20,7 @@ std::unique_ptr<Chunk> Compiler::compile(const std::vector<StmtPtr>& program) {
     }
     
     emitOp(OpCode::Return);
+    chunk_->setLoopCount(static_cast<int>(chunk_->countOpcode(OpCode::Loop)));
     return std::move(chunk_);
 }
 
@@ -281,29 +282,77 @@ void Compiler::visitForStmt(ForStmt* stmt) {
     if (stmt->initializer) {
         stmt->initializer->accept(*this);
     }
-
-    int loopStart = static_cast<int>(chunk_->size());
-    int exitJump = -1;
-    if (stmt->condition) {
-        stmt->condition->accept(*this);
-        exitJump = emitJump(OpCode::JumpIfFalse);
-        emitOp(OpCode::Pop); // Condition
+    bool unrolled = false;
+    if (stmt->initializer && stmt->condition && stmt->increment) {
+        auto initLet = dynamic_cast<LetStmt*>(stmt->initializer.get());
+        auto condBin = dynamic_cast<BinaryExpr*>(stmt->condition.get());
+        auto incAssign = dynamic_cast<AssignExpr*>(stmt->increment.get());
+        auto incUpdate = dynamic_cast<UpdateExpr*>(stmt->increment.get());
+        if (initLet && initLet->initializer) {
+            auto initLit = dynamic_cast<LiteralExpr*>(initLet->initializer.get());
+            if (initLit && initLit->type == LiteralExpr::Type::Number && condBin) {
+                auto leftVar = dynamic_cast<VariableExpr*>(condBin->left.get());
+                auto rightLit = dynamic_cast<LiteralExpr*>(condBin->right.get());
+                if (leftVar && rightLit && rightLit->type == LiteralExpr::Type::Number) {
+                    double startVal = initLit->numberValue;
+                    double limitVal = rightLit->numberValue;
+                    double stepVal = 0.0;
+                    bool stepOk = false;
+                    if (incAssign) {
+                        auto valBin = dynamic_cast<BinaryExpr*>(incAssign->value.get());
+                        if (valBin && valBin->op.type == TokenType::Plus) {
+                            auto vleft = dynamic_cast<VariableExpr*>(valBin->left.get());
+                            auto vright = dynamic_cast<LiteralExpr*>(valBin->right.get());
+                            if (vleft && vright && vright->type == LiteralExpr::Type::Number &&
+                                vleft->name == leftVar->name) {
+                                stepVal = vright->numberValue;
+                                stepOk = true;
+                            }
+                        }
+                    } else if (incUpdate && incUpdate->op.type == TokenType::PlusPlus &&
+                               incUpdate->name == leftVar->name) {
+                        stepVal = 1.0;
+                        stepOk = true;
+                    }
+                    if (stepOk && stepVal > 0.0 && leftVar->name == initLet->name) {
+                        int iterations = 0;
+                        if (condBin->op.type == TokenType::Less) {
+                            iterations = static_cast<int>(std::max(0.0, std::floor((limitVal - startVal) / stepVal)));
+                        } else if (condBin->op.type == TokenType::LessEqual) {
+                            iterations = static_cast<int>(std::max(0.0, std::floor((limitVal - startVal) / stepVal) + 1.0));
+                        }
+                        if (iterations > 0 && iterations <= 16) {
+                            for (int k = 0; k < iterations; ++k) {
+                                stmt->body->accept(*this);
+                                stmt->increment->accept(*this);
+                                emitOp(OpCode::Pop);
+                            }
+                            unrolled = true;
+                        }
+                    }
+                }
+            }
+        }
     }
-
-    stmt->body->accept(*this);
-
-    if (stmt->increment) {
-        stmt->increment->accept(*this);
-        emitOp(OpCode::Pop);
+    if (!unrolled) {
+        int loopStart = static_cast<int>(chunk_->size());
+        int exitJump = -1;
+        if (stmt->condition) {
+            stmt->condition->accept(*this);
+            exitJump = emitJump(OpCode::JumpIfFalse);
+            emitOp(OpCode::Pop);
+        }
+        stmt->body->accept(*this);
+        if (stmt->increment) {
+            stmt->increment->accept(*this);
+            emitOp(OpCode::Pop);
+        }
+        emitLoop(loopStart);
+        if (exitJump != -1) {
+            patchJump(exitJump);
+            emitOp(OpCode::Pop);
+        }
     }
-
-    emitLoop(loopStart);
-
-    if (exitJump != -1) {
-        patchJump(exitJump);
-        emitOp(OpCode::Pop); // Condition
-    }
-
     endScope();
 }
 void Compiler::visitFnStmt(FnStmt* stmt) {

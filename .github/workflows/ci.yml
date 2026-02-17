@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        build_type: [Release]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1
+
+      - name: Install tools (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcovr clang-tidy
+
+      - name: Install tools (macOS)
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          brew update
+          brew install gcovr llvm || true
+          echo "CC=/usr/bin/clang" >> $GITHUB_ENV
+          echo "CXX=/usr/bin/clang++" >> $GITHUB_ENV
+
+      - name: Configure
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTS=ON \
+            ${{ startsWith(matrix.os, 'ubuntu') && '-DENABLE_COVERAGE=ON' || '' }} \
+            ${{ (startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')) && '-DENABLE_CLANG_TIDY=ON' || '' }}
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.build_type }} -- -j 2
+
+      - name: Run tests (Benchmark gating)
+        run: ctest -C ${{ matrix.build_type }} --output-on-failure --test-dir build -R "BenchmarkAssertions"
+
+      - name: Run full test suite
+        run: ctest -C ${{ matrix.build_type }} --output-on-failure --test-dir build
+
+      - name: Coverage (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          cmake --build build --config ${{ matrix.build_type }} --target coverage || true
+          if [ -f build/coverage.xml ]; then
+            echo "Coverage report generated"
+          else
+            echo "Coverage report missing"
+          fi
+        continue-on-error: true
+
+      - name: Upload coverage artifact
+        if: startsWith(matrix.os, 'ubuntu')
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: build/coverage.xml

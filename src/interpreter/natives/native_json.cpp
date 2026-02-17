@@ -5,6 +5,7 @@
 #include "features/string_pool.h"
 #include "features/hashmap.h"
 #include "features/array.h"
+#include "interpreter/gc_alloc.h"
 #include "features/class.h"
 #include <sstream>
 #include <iomanip>
@@ -44,7 +45,7 @@ private:
 
     Value parseObject() {
         consume('{');
-        auto map = std::make_shared<VoltHashMap>();
+        auto map = gcNewHashMap();
         
         skipWhitespace();
         if (peek() == '}') {
@@ -72,7 +73,7 @@ private:
 
     Value parseArray() {
         consume('[');
-        auto arr = std::make_shared<VoltArray>();
+        auto arr = gcNewArray();
 
         skipWhitespace();
         if (peek() == ']') {
@@ -282,6 +283,23 @@ void registerNativeJSON(const std::shared_ptr<Environment>& globals) {
             return parser.parse();
         },
         "jsonDecode"
+    ));
+
+    globals->define("jsonAllocFast", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("jsonAllocFast requires a number");
+            double nVal = asNumber(args[0]);
+            if (nVal < 0 || std::floor(nVal) != nVal) {
+                throw std::runtime_error("jsonAllocFast requires a non-negative integer");
+            }
+            size_t n = static_cast<size_t>(nVal);
+            auto empty = gcNewHashMap();
+            Value emptyVal = hashMapValue(empty);
+            auto arr = gcNewArrayFilled(n, emptyVal);
+            return arrayValue(arr);
+        },
+        "jsonAllocFast"
     ));
 }
 

@@ -1,4 +1,5 @@
 #include "llvm_aot.h"
+#ifdef VOLT_ENABLE_AOT
 #include "features/string_pool.h"
 #include "interpreter/value.h"
 #include "interpreter/interpreter.h"
@@ -20,8 +21,10 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <cstring>
 #include <stdexcept>
+#endif
 
 namespace volt {
+#ifdef VOLT_ENABLE_AOT
 
 static uint64_t toBits(double value) {
     uint64_t bits;
@@ -193,6 +196,7 @@ AotModule AotCompiler::compile(const std::string& name, const Chunk& chunk) {
 
     llvm::FunctionPassManager fpm;
     fpm.addPass(llvm::LoopVectorizePass());
+    fpm.addPass(llvm::SLPVectorizerPass());
     llvm::ModulePassManager vectorizePass;
     vectorizePass.addPass(llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
     vectorizePass.run(*module, mam);
@@ -229,3 +233,4 @@ AotModule AotCompiler::compile(const std::string& name, const Chunk& chunk) {
 }
 
 } // namespace volt
+#endif

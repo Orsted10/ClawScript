@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include "features/string_pool.h"
+#include <functional>
 
 namespace volt {
 
@@ -47,6 +48,7 @@ public:
 
     Value get(const Token& name);
     void set(const Token& name, Value value);
+    void forEachField(const std::function<void(Value)>& fn) const;
 
     std::string toString() const { return "<" + class_->getName() + " instance>"; }
     std::shared_ptr<VoltClass> getClass() const { return class_; }

@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <functional>
 
 namespace volt {
 
@@ -51,6 +52,8 @@ public:
     };
     
     static void clearGlobalCache();
+    void forEachValue(const std::function<void(Value)>& fn) const;
+    std::shared_ptr<Environment> enclosing() const { return enclosing_; }
 
 private:
     // Using string_view as key for performance (guaranteed interned)
