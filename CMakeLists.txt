@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.9.6 LANGUAGES CXX)  # NaN-boxing, VM, JIT & Runtime Optimizations
+project(VoltScript VERSION 1.0.0 LANGUAGES CXX)  # NaN-boxing, VM, JIT & Runtime Optimizations
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -49,6 +49,10 @@ endif()
 option(BUILD_TESTS "Build tests" ON)
 option(VOLT_ENABLE_AOT "Enable LLVM-based AoT compilation (requires LLVM)" OFF)
 option(VOLT_ENABLE_JIT "Enable adaptive JIT (experimental stubs)" ON)
+option(ENABLE_ASAN "Enable AddressSanitizer for supported compilers" OFF)
+option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer for supported compilers" OFF)
+option(ENABLE_MSAN "Enable MemorySanitizer for supported compilers" OFF)
+option(ENABLE_LIBFUZZER "Enable libFuzzer targets (requires Clang)" OFF)
 
 # Source files
 file(GLOB_RECURSE VOLT_SOURCES
@@ -702,6 +706,118 @@ target_include_directories(volt_fmt PRIVATE
 set_target_properties(volt_fmt PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     OUTPUT_NAME "volt-fmt"
+)
+
+# ========================================
+# HARDENING & FUZZING (Phase 9)
+# ========================================
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    if(ENABLE_ASAN)
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=address)
+        message(STATUS "✅ ASan enabled")
+    endif()
+    if(ENABLE_UBSAN)
+        add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=undefined)
+        message(STATUS "✅ UBSan enabled")
+    endif()
+    if(ENABLE_MSAN AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-fsanitize=memory -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=memory)
+        message(STATUS "✅ MSan enabled")
+    endif()
+endif()
+
+if(ENABLE_LIBFUZZER AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_executable(volt_lexer_fuzz
+        tools/fuzz/lexer_fuzz.cpp
+        src/lexer/token.cpp
+        src/lexer/lexer.cpp
+        src/features/string_pool.cpp
+    )
+    target_include_directories(volt_lexer_fuzz PRIVATE
+        ${CMAKE_BINARY_DIR}/generated
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/lexer
+    )
+    target_link_options(volt_lexer_fuzz PRIVATE -fsanitize=fuzzer)
+    target_compile_options(volt_lexer_fuzz PRIVATE -fsanitize=fuzzer)
+    set_target_properties(volt_lexer_fuzz PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        OUTPUT_NAME "volt_lexer_fuzz"
+    )
+
+    add_executable(volt_parser_fuzz
+        tools/fuzz/parser_fuzz.cpp
+        src/lexer/token.cpp
+        src/lexer/lexer.cpp
+        src/parser/ast.cpp
+        src/parser/parser.cpp
+        src/features/string_pool.cpp
+    )
+    target_include_directories(volt_parser_fuzz PRIVATE
+        ${CMAKE_BINARY_DIR}/generated
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/lexer
+        ${CMAKE_SOURCE_DIR}/src/parser
+    )
+    target_link_options(volt_parser_fuzz PRIVATE -fsanitize=fuzzer)
+    target_compile_options(volt_parser_fuzz PRIVATE -fsanitize=fuzzer)
+    set_target_properties(volt_parser_fuzz PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        OUTPUT_NAME "volt_parser_fuzz"
+    )
+    message(STATUS "✅ libFuzzer targets enabled (lexer, parser)")
+endif()
+
+# ========================================
+# API GENERATOR & PACKAGE MANAGER (Phase 9)
+# ========================================
+add_executable(volt_api_gen
+    tools/docs/gen_api.cpp
+    src/lexer/token.cpp
+    src/lexer/lexer.cpp
+    src/parser/ast.cpp
+    src/parser/parser.cpp
+    src/interpreter/value.cpp
+    src/interpreter/environment.cpp
+    src/interpreter/interpreter.cpp
+    src/interpreter/module.cpp
+    src/interpreter/natives/native_math.cpp
+    src/interpreter/natives/native_string.cpp
+    src/interpreter/natives/native_array.cpp
+    src/interpreter/natives/native_io.cpp
+    src/interpreter/natives/native_time.cpp
+    src/interpreter/natives/native_json.cpp
+    src/interpreter/gc_alloc.cpp
+    src/observability/profiler.cpp
+    src/features/array.cpp
+    src/features/hashmap.cpp
+    src/features/class.cpp
+    src/features/callable.cpp
+    src/features/string_pool.cpp
+    src/vm/vm.cpp
+)
+target_include_directories(volt_api_gen PRIVATE
+    ${CMAKE_BINARY_DIR}/generated
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/lexer
+    ${CMAKE_SOURCE_DIR}/src/parser
+    ${CMAKE_SOURCE_DIR}/src/interpreter
+    ${CMAKE_SOURCE_DIR}/src/features
+)
+set_target_properties(volt_api_gen PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    OUTPUT_NAME "volt_api_gen"
+)
+
+add_executable(volt_pm
+    tools/pm/main.cpp
+)
+set_target_properties(volt_pm PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    OUTPUT_NAME "volt-pm"
 )
 # ========================================
 # SUMMARY

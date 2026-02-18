@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ VoltScript v0.9.6 ⚡
+# ⚡ VoltScript v1.0.0 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
@@ -31,9 +31,9 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - ⚡ Lexical analysis
 - 🌳 Parsing with recursive descent  
 - 🧠 AST construction
-- ⚙️ **Stack-based Bytecode VM** (Optimized in v0.9.6)
-- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v0.9.6)
-- 🧵 **Thread-safe String Interning** (Improved in v0.9.6)
+- ⚙️ **Stack-based Bytecode VM** (Optimized in v1.0.0)
+- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v1.0.0)
+- 🧵 **Thread-safe String Interning** (Improved in v1.0.0)
 - ⚙️ Tree-walk interpretation (Original fallback)
 - 📍 Precise error reporting
 - 🔐 Lexical scoping & environments
@@ -47,7 +47,7 @@ If you've ever wanted to *truly* understand languages like **Python**, **JavaScr
 
 ---
 
-## ✨ Features (v0.9.6)
+## ✨ Features (v1.0.0)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -294,7 +294,7 @@ cmake --build build --config Release
 ./build/bin/Release/volt --aot-output=main.o script.volt
 ```
 
-### Profiling & Observability (New in v0.9.6)
+### Profiling & Observability (New in v1.0.0)
 
 Use the built-in profiler to capture CPU samples and heap allocation growth.
 
@@ -338,7 +338,7 @@ ctest --output-on-failure --test-dir build
 ### Interactive REPL
 
 ```bash
-⚡ VoltScript v0.9.6 REPL
+⚡ VoltScript v1.0.0 REPL
 Type 'exit' to quit
 >> 
 ```
@@ -765,7 +765,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.9.6 ⚡
+### ⚡ VoltScript v1.0.0 ⚡
 
 **VM. NaN-boxing. Classes. Performance. JSON. Power.**  
 *This is where languages get real.*

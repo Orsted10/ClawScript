@@ -2,7 +2,7 @@
 
 <div align="center">
 
-## ⚡ VoltScript v0.9.6 ⚡
+## ⚡ VoltScript v1.0.0 ⚡
 ### *A Modern Programming Language Built from Scratch*
 
 [![Tests](https://img.shields.io/badge/tests-602%2B-brightgreen)]()
@@ -111,7 +111,7 @@ cmake --build build --config Release
 This starts an interactive session where you can type and execute VoltScript code directly:
 
 ```
-⚡ VoltScript v0.9.6 REPL
+⚡ VoltScript v1.0.0 REPL
 Type 'exit' to quit
 >> let x = 42;
 >> print x;
@@ -2113,7 +2113,7 @@ ctest --test-dir build                 # Run all tests (if enabled)
 ./build/bin/volt_benchmarks
 ```
 
-### Profiling & Observability (v0.9.6)
+### Profiling & Observability (v1.0.0)
 
 Use the built-in profiler to analyze CPU and heap behavior.
 
@@ -2195,7 +2195,7 @@ MIT License - Free to use, modify, and distribute.
 
 <div align="center">
 
-### ⚡ VoltScript v0.9.6 ⚡
+### ⚡ VoltScript v1.0.0 ⚡
 
 **Built with passion and C++20**
 
