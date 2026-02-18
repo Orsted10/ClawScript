@@ -1,13 +1,13 @@
 <div align="center">
 
-# ⚡ VoltScript v0.9.5 ⚡
+# ⚡ VoltScript v0.9.6 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
 
 > *From tokens → trees → closures → arrays → classes*  
 
-[![Tests](https://img.shields.io/badge/tests-598+-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-602+-brightgreen)]()
 [![C++](https://img.shields.io/badge/C++-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -31,9 +31,9 @@ So instead of hiding complexity, VoltScript **embraces it**—and builds every l
 - ⚡ Lexical analysis
 - 🌳 Parsing with recursive descent  
 - 🧠 AST construction
-- ⚙️ **Stack-based Bytecode VM** (Optimized in v0.9.5)
-- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v0.9.5)
-- 🧵 **Thread-safe String Interning** (Improved in v0.9.5)
+- ⚙️ **Stack-based Bytecode VM** (Optimized in v0.9.6)
+- 🛠️ **AST-to-Bytecode Compiler** (Optimized in v0.9.6)
+- 🧵 **Thread-safe String Interning** (Improved in v0.9.6)
 - ⚙️ Tree-walk interpretation (Original fallback)
 - 📍 Precise error reporting
 - 🔐 Lexical scoping & environments
@@ -47,7 +47,7 @@ If you've ever wanted to *truly* understand languages like **Python**, **JavaScr
 
 ---
 
-## ✨ Features (v0.9.5)
+## ✨ Features (v0.9.6)
 
 ### 🧩 Lexer — *Characters → Tokens*
 
@@ -294,6 +294,30 @@ cmake --build build --config Release
 ./build/bin/Release/volt --aot-output=main.o script.volt
 ```
 
+### Profiling & Observability (New in v0.9.6)
+
+Use the built-in profiler to capture CPU samples and heap allocation growth.
+
+```bash
+# Enable profiling and write HTML flame graph
+build\bin\Release\volt.exe --profile=profile.html script.volt
+
+# Change sampling frequency (Hz)
+build\bin\Release\volt.exe --profile --profile-hz=200 script.volt
+```
+
+- Outputs:
+  - HTML flame graph: profile.html (or volt_profile.html if no filename is given)
+  - Folded stacks: profile.cpu.folded, profile.heap.folded
+  - Speedscope JSON: profile.speedscope.json
+- Environment toggles:
+  - VOLT_PROFILE=1 — enables profiling without CLI
+  - VOLT_PROFILE_HZ=100 — sets sampling frequency
+  - VOLT_PROFILE_OUT=volt_profile.html — sets output base path
+- In-script controls:
+  - profilePause() — pause sampling
+  - profileResume() — resume sampling
+
 ### Run Tests
 
 ```bash
@@ -305,7 +329,7 @@ cmake --build build --config Release
 ctest --output-on-failure --test-dir build
 ```
 
-**Result:** ✅ **100% tests passed** (598 tests)
+**Result:** ✅ **100% tests passed** (602 tests)
 
 ---
 
@@ -314,7 +338,7 @@ ctest --output-on-failure --test-dir build
 ### Interactive REPL
 
 ```bash
-⚡ VoltScript v0.9.5 REPL
+⚡ VoltScript v0.9.6 REPL
 Type 'exit' to quit
 >> 
 ```
@@ -741,7 +765,7 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v0.9.5 ⚡
+### ⚡ VoltScript v0.9.6 ⚡
 
 **VM. NaN-boxing. Classes. Performance. JSON. Power.**  
 *This is where languages get real.*

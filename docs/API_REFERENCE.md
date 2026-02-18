@@ -1,7 +1,7 @@
-# VoltScript v0.9.5 API Reference
+# VoltScript v0.9.6 API Reference
 
-This reference describes the core standard library available in VoltScript v0.9.5.
-It is based on the v0.8.6 APIs and extended with the features introduced in v0.9.5
+This reference describes the core standard library available in VoltScript v0.9.6.
+It is based on the v0.8.6 APIs and extended with the features introduced in v0.9.6
 such as the class system, JSON engine, and performance tools.
 
 ## Table of Contents
@@ -276,9 +276,25 @@ reverse(array)                 // Reverse array elements
 ```volt
 sleep(milliseconds)            // Pause execution
 benchmark(function, ...args)   // Measure execution time
+profilePause()                 // Pause sampling profiler
+profileResume()                // Resume sampling profiler
 // Returns object with timeMicroseconds property
 ```
 
+### Profiling CLI and Environment
+
+- CLI:
+  - --profile[=file] — enable profiling and write HTML
+  - --profile-hz=NUM — set sampling frequency (Hz)
+- Environment:
+  - VOLT_PROFILE=1 — enables profiling without CLI
+  - VOLT_PROFILE_HZ=100 — sets sampling frequency
+  - VOLT_PROFILE_OUT=volt_profile.html — sets output base path
+
+Outputs:
+- HTML flame graph (profile.html or volt_profile.html)
+- Folded stacks (cpu/heap)
+- Speedscope JSON (.speedscope.json)
 ## Operators
 
 ### Arithmetic

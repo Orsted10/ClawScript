@@ -24,6 +24,7 @@
 #include <chrono>
 #include <thread>
 #include <cstdio>
+#include "observability/profiler.h"
 
 namespace volt {
 
@@ -31,6 +32,22 @@ Interpreter::Interpreter()
     : environment_(std::make_shared<Environment>()),
       globals_(environment_) {
     // Set up all the built-in functions that come with VoltScript
+    const char* benchMode = std::getenv("VOLT_BENCHMARK_MODE");
+    if (benchMode && std::string(benchMode) == "1") {
+        gcSetBenchmarkMode(true);
+    } else {
+        gcSetBenchmarkMode(false);
+    }
+    const char* envProf = std::getenv("VOLT_PROFILE");
+    const char* envHz = std::getenv("VOLT_PROFILE_HZ");
+    if (envProf && *envProf && !profilerEnabled()) {
+        int hz = 100;
+        if (envHz && *envHz) {
+            try { hz = std::stoi(envHz); } catch (...) {}
+        }
+        profilerSetCurrentInterpreter(this);
+        profilerStart(hz);
+    }
     defineNatives();
 }
 
@@ -327,6 +344,16 @@ void Interpreter::defineNatives() {
             return hashMapValue(resultMap);
         },
         "benchmark"
+    ));
+    globals_->define("profilePause", std::make_shared<NativeFunction>(
+        0,
+        [](const std::vector<Value>&) -> Value { profilerPause(); return nilValue(); },
+        "profilePause"
+    ));
+    globals_->define("profileResume", std::make_shared<NativeFunction>(
+        0,
+        [](const std::vector<Value>&) -> Value { profilerResume(); return nilValue(); },
+        "profileResume"
     ));
 }
 

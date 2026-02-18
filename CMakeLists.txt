@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 0.9.5 LANGUAGES CXX)  # NaN-boxing, VM, JIT & Runtime Optimizations
+project(VoltScript VERSION 0.9.6 LANGUAGES CXX)  # NaN-boxing, VM, JIT & Runtime Optimizations
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -366,6 +366,7 @@ if(BUILD_TESTS)
         src/interpreter/natives/native_time.cpp
         src/interpreter/natives/native_json.cpp
         src/interpreter/gc_alloc.cpp
+        src/observability/profiler.cpp
         src/features/array.cpp
         src/features/hashmap.cpp
         src/features/class.cpp
@@ -477,6 +478,7 @@ if(BUILD_TESTS)
         src/interpreter/natives/native_time.cpp
         src/interpreter/natives/native_json.cpp
         src/interpreter/gc_alloc.cpp
+        src/observability/profiler.cpp
         src/features/array.cpp
         src/features/hashmap.cpp
         src/features/class.cpp
@@ -553,6 +555,7 @@ if(BUILD_TESTS)
         src/interpreter/natives/native_time.cpp
         src/interpreter/natives/native_json.cpp
         src/interpreter/gc_alloc.cpp
+        src/observability/profiler.cpp
         src/features/array.cpp
         src/features/hashmap.cpp
         src/features/class.cpp
@@ -641,6 +644,65 @@ if(ENABLE_PGO)
         message(WARNING "PGO flags configured for clang/gcc only. Compiler: ${CMAKE_CXX_COMPILER_ID}")
     endif()
 endif()
+# ========================================
+# DEV TOOLS (Phase 8)
+# ========================================
+add_executable(volt_lsp
+    tools/lsp/json.cpp
+    tools/lsp/lsp_server.cpp
+    tools/fmt/formatter.cpp
+    src/lexer/token.cpp
+    src/lexer/lexer.cpp
+    src/parser/ast.cpp
+    src/parser/parser.cpp
+    src/interpreter/value.cpp
+    src/interpreter/environment.cpp
+    src/interpreter/interpreter.cpp
+    src/interpreter/natives/native_math.cpp
+    src/interpreter/natives/native_string.cpp
+    src/interpreter/natives/native_array.cpp
+    src/interpreter/natives/native_io.cpp
+    src/interpreter/natives/native_time.cpp
+    src/interpreter/natives/native_json.cpp
+    src/interpreter/gc_alloc.cpp
+    src/observability/profiler.cpp
+    src/interpreter/module.cpp
+    src/features/array.cpp
+    src/features/hashmap.cpp
+    src/features/class.cpp
+    src/features/callable.cpp
+    src/features/string_pool.cpp
+    src/vm/vm.cpp
+)
+target_include_directories(volt_lsp PRIVATE
+    ${CMAKE_BINARY_DIR}/generated
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/lexer
+    ${CMAKE_SOURCE_DIR}/src/parser
+    ${CMAKE_SOURCE_DIR}/src/interpreter
+    ${CMAKE_SOURCE_DIR}/src/features
+    ${CMAKE_SOURCE_DIR}/tools/fmt
+)
+set_target_properties(volt_lsp PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    OUTPUT_NAME "volt_lsp"
+)
+add_executable(volt_fmt
+    tools/fmt/formatter.cpp
+    tools/fmt/main.cpp
+    src/lexer/token.cpp
+    src/lexer/lexer.cpp
+    src/features/string_pool.cpp
+)
+target_include_directories(volt_fmt PRIVATE
+    ${CMAKE_BINARY_DIR}/generated
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/lexer
+)
+set_target_properties(volt_fmt PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    OUTPUT_NAME "volt-fmt"
+)
 # ========================================
 # SUMMARY
 # ========================================

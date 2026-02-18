@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <vector>
 #include "features/class.h"
+#include "observability/profiler.h"
 #include "vm/vm.h"
 
 namespace volt {
@@ -186,6 +187,7 @@ Value callableValue(std::shared_ptr<Callable> fn) {
     g_callableRegistry[p] = std::move(fn);
     g_objectGeneration[p] = 0;
     gcMaybeCollect();
+    profilerRecordAlloc(sizeof(Callable), "callable");
     return objectValue(p);
 }
 Value arrayValue(std::shared_ptr<VoltArray> arr) {
@@ -194,6 +196,7 @@ Value arrayValue(std::shared_ptr<VoltArray> arr) {
     g_objectGeneration[p] = 0;
     if (!g_ephemeralStack.empty()) g_ephemeralStack.back().push_back(p);
     gcMaybeCollect();
+    profilerRecordAlloc(sizeof(VoltArray), "array");
     return objectValue(p);
 }
 Value hashMapValue(std::shared_ptr<VoltHashMap> map) {
@@ -202,6 +205,7 @@ Value hashMapValue(std::shared_ptr<VoltHashMap> map) {
     g_objectGeneration[p] = 0;
     if (!g_ephemeralStack.empty()) g_ephemeralStack.back().push_back(p);
     gcMaybeCollect();
+    profilerRecordAlloc(sizeof(VoltHashMap), "hashmap");
     return objectValue(p);
 }
 Value classValue(std::shared_ptr<VoltClass> cls) {
@@ -209,6 +213,7 @@ Value classValue(std::shared_ptr<VoltClass> cls) {
     g_classRegistry[p] = std::move(cls);
     g_objectGeneration[p] = 0;
     gcMaybeCollect();
+    profilerRecordAlloc(sizeof(VoltClass), "class");
     return objectValue(p);
 }
 Value instanceValue(std::shared_ptr<VoltInstance> inst) {
@@ -216,12 +221,14 @@ Value instanceValue(std::shared_ptr<VoltInstance> inst) {
     g_instanceRegistry[p] = std::move(inst);
     g_objectGeneration[p] = 0;
     gcMaybeCollect();
+    profilerRecordAlloc(sizeof(VoltInstance), "instance");
     return objectValue(p);
 }
 Value vmFunctionValue(std::shared_ptr<VMFunction> fn) {
     void* p = fn.get();
     g_vmFunctionRegistry[p] = std::move(fn);
     g_objectGeneration[p] = 1;
+    profilerRecordAlloc(sizeof(VMFunction), "vmfunc");
     return objectValue(p);
 }
 Value vmClosureValue(std::shared_ptr<VMClosure> closure) {

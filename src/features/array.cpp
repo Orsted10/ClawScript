@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <numeric>
 #include <set>
+#include "observability/profiler.h"
 
 namespace volt {
 
@@ -24,11 +25,16 @@ void VoltArray::set(size_t index, Value value) {
         throw std::runtime_error("Array index too large: " + std::to_string(index));
     }
     if (index >= elements_.size()) {
-        // Extend array with nil values if needed
+        size_t oldCap = elements_.capacity();
         if (index >= elements_.size() + 10000) {  // Prevent massive allocations
             throw std::runtime_error("Array extension too large: " + std::to_string(index));
         }
         elements_.resize(index + 1, volt::nilValue());
+        size_t newCap = elements_.capacity();
+        if (newCap > oldCap) {
+            size_t delta = (newCap - oldCap) * sizeof(Value);
+            profilerRecordAlloc(delta, "array.grow");
+        }
     }
     gcBarrierWrite(this, value);
     elements_[index] = value;
@@ -36,7 +42,13 @@ void VoltArray::set(size_t index, Value value) {
 
 void VoltArray::push(Value value) {
     gcBarrierWrite(this, value);
+    size_t oldCap = elements_.capacity();
     elements_.push_back(value);
+    size_t newCap = elements_.capacity();
+    if (newCap > oldCap) {
+        size_t delta = (newCap - oldCap) * sizeof(Value);
+        profilerRecordAlloc(delta, "array.grow");
+    }
 }
 
 Value VoltArray::pop() {
@@ -55,7 +67,13 @@ void VoltArray::reverse() {
 void VoltArray::fill(Value v, size_t n) {
     gcBarrierWrite(this, v);
     elements_.clear();
+    size_t oldCap = elements_.capacity();
     elements_.reserve(n);
+    size_t newCap = elements_.capacity();
+    if (newCap > oldCap) {
+        size_t delta = (newCap - oldCap) * sizeof(Value);
+        profilerRecordAlloc(delta, "array.grow");
+    }
     elements_.insert(elements_.end(), n, v);
 }
 
@@ -107,12 +125,12 @@ std::shared_ptr<VoltArray> VoltArray::slice(int start, int end) const {
     auto result = std::make_shared<VoltArray>();
     
     // Handle negative indices
-    if (start < 0) start = elements_.size() + start;
-    if (end < 0) end = elements_.size() + end;
+    if (start < 0) start = static_cast<int>(elements_.size()) + start;
+    if (end < 0) end = static_cast<int>(elements_.size()) + end;
     
     // Clamp to valid range
     start = std::max(0, std::min(static_cast<int>(elements_.size()), start));
-    if (end == -1) end = elements_.size();
+    if (end == -1) end = static_cast<int>(elements_.size());
     end = std::max(start, std::min(static_cast<int>(elements_.size()), end));
     
     // Copy elements
@@ -223,7 +241,7 @@ std::shared_ptr<VoltArray> VoltArray::splice(int start, int deleteCount, const s
     auto result = std::make_shared<VoltArray>(elements_);
     
     // Handle negative indices
-    if (start < 0) start = elements_.size() + start;
+    if (start < 0) start = static_cast<int>(elements_.size()) + start;
     start = std::max(0, std::min(static_cast<int>(elements_.size()), start));
     
     // Clamp deleteCount

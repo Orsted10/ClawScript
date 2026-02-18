@@ -18,6 +18,7 @@
 #include <vector>
 #include <filesystem>
 #include <cstdlib>
+#include "observability/profiler.h"
 
 /******  FOR UTF-8 In Window Terminal or Powershell. ***********/
 #ifdef _WIN32
@@ -316,6 +317,9 @@ int main(int argc, char** argv) {
     bool jitAggressive = false;
     bool disableCallIC = false;
     bool icDiagnostics = false;
+    bool enableProfile = false;
+    std::string profileOutput;
+    int profileHz = 100;
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -332,6 +336,8 @@ int main(int argc, char** argv) {
             std::cout << "  --jit=aggressive   Enable aggressive adaptive JIT\n";
             std::cout << "  --disable-call-ic   Disable interpreter call inline cache\n";
             std::cout << "  --ic-diagnostics    Enable call IC diagnostics logging\n";
+            std::cout << "  --profile[=file]    Enable sampling + heap profiler and write HTML\n";
+            std::cout << "  --profile-hz=NUM    Sampling frequency in Hz (default 100)\n";
             return 0;
         } else if (arg == "--version") {
             std::cout << "VoltScript " << volt::VOLT_VERSION << "\n";
@@ -350,6 +356,13 @@ int main(int argc, char** argv) {
                 return 64;
             }
             aotOutputPath = argv[++i];
+        } else if (arg.rfind("--profile=", 0) == 0) {
+            enableProfile = true;
+            profileOutput = arg.substr(std::string("--profile=").size());
+        } else if (arg == "--profile") {
+            enableProfile = true;
+        } else if (arg.rfind("--profile-hz=", 0) == 0) {
+            try { profileHz = std::stoi(arg.substr(std::string("--profile-hz=").size())); } catch (...) {}
         } else if (arg[0] == '-') {
             std::cerr << "Unknown option: " << arg << "\n";
             return 64;
@@ -368,8 +381,14 @@ int main(int argc, char** argv) {
     }
     const char* envDisable = std::getenv("VOLT_DISABLE_CALL_IC");
     const char* envDiag = std::getenv("VOLT_IC_DIAGNOSTICS");
+    const char* envProfile = std::getenv("VOLT_PROFILE");
+    const char* envProfileHz = std::getenv("VOLT_PROFILE_HZ");
+    const char* envProfileOut = std::getenv("VOLT_PROFILE_OUT");
     if (envDisable && *envDisable) disableCallIC = true;
     if (envDiag && *envDiag) icDiagnostics = true;
+    if (!enableProfile && envProfile && *envProfile) enableProfile = true;
+    if (envProfileHz && *envProfileHz) { try { profileHz = std::stoi(envProfileHz); } catch (...) {} }
+    if (profileOutput.empty() && envProfileOut && *envProfileOut) profileOutput = envProfileOut;
     volt::gRuntimeFlags.disableCallIC = disableCallIC;
     volt::gRuntimeFlags.icDiagnostics = icDiagnostics;
     
@@ -420,6 +439,10 @@ int main(int argc, char** argv) {
     }
 
     volt::Interpreter interpreter;
+    if (enableProfile) {
+        volt::profilerSetCurrentInterpreter(&interpreter);
+        volt::profilerStart(profileHz);
+    }
     
     if (!scriptPath.empty()) {
         // Run file
@@ -427,6 +450,11 @@ int main(int argc, char** argv) {
     } else {
         // Interactive REPL
         runPrompt();
+    }
+    if (enableProfile || volt::profilerEnabled()) {
+        volt::profilerStop();
+        volt::Profiler::instance().writeHtml(profileOutput);
+        volt::Profiler::instance().writeSpeedscope(profileOutput);
     }
     
     return 0;

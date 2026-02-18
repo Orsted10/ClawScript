@@ -2,10 +2,10 @@
 
 <div align="center">
 
-## ⚡ VoltScript v0.9.5 ⚡
+## ⚡ VoltScript v0.9.6 ⚡
 ### *A Modern Programming Language Built from Scratch*
 
-[![Tests](https://img.shields.io/badge/tests-598%2B-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-602%2B-brightgreen)]()
 [![C++](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -111,7 +111,7 @@ cmake --build build --config Release
 This starts an interactive session where you can type and execute VoltScript code directly:
 
 ```
-⚡ VoltScript v0.9.5 REPL
+⚡ VoltScript v0.9.6 REPL
 Type 'exit' to quit
 >> let x = 42;
 >> print x;
@@ -2113,6 +2113,30 @@ ctest --test-dir build                 # Run all tests (if enabled)
 ./build/bin/volt_benchmarks
 ```
 
+### Profiling & Observability (v0.9.6)
+
+Use the built-in profiler to analyze CPU and heap behavior.
+
+```bash
+# Enable profiling and write HTML flame graph
+build\bin\Release\volt.exe --profile=profile.html script.volt
+
+# Change sampling frequency (Hz)
+build\bin\Release\volt.exe --profile --profile-hz=200 script.volt
+```
+
+- Outputs:
+  - HTML flame graph: profile.html (or volt_profile.html if no filename is given)
+  - Folded stacks: profile.cpu.folded, profile.heap.folded
+  - Speedscope JSON: profile.speedscope.json
+- Environment toggles:
+  - VOLT_PROFILE=1 — enable profiling without CLI
+  - VOLT_PROFILE_HZ=100 — set sampling frequency
+  - VOLT_PROFILE_OUT=volt_profile.html — set output base path
+- In-script controls:
+  - profilePause() — pause sampling
+  - profileResume() — resume sampling
+
 ---
 
 ## ❓ FAQ
@@ -2171,7 +2195,7 @@ MIT License - Free to use, modify, and distribute.
 
 <div align="center">
 
-### ⚡ VoltScript v0.9.5 ⚡
+### ⚡ VoltScript v0.9.6 ⚡
 
 **Built with passion and C++20**
 

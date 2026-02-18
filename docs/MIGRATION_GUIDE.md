@@ -1,5 +1,45 @@
 # VoltScript Migration Guide
 
+## v0.9.6 Migration
+
+### Overview
+VoltScript v0.9.6 introduces built-in profiling and observability:
+- Sampling CPU profiler with configurable frequency
+- Heap allocation growth attribution for arrays and hash maps
+- Flame graph HTML output, folded stacks, and Speedscope JSON
+- Pause/resume controls and environment toggles
+
+### New Features to Adopt
+
+#### 1. Enable Profiling via CLI
+```bash
+build\bin\Release\volt.exe --profile=profile.html script.volt
+build\bin\Release\volt.exe --profile --profile-hz=200 script.volt
+```
+
+#### 2. Control Profiling via Environment
+```
+VOLT_PROFILE=1
+VOLT_PROFILE_HZ=100
+VOLT_PROFILE_OUT=volt_profile.html
+```
+
+#### 3. Pause/Resume from Scripts
+```volt
+profilePause();
+/* do some setup work */
+profileResume();
+/* hot loop */
+```
+
+### Outputs
+- HTML flame graph (profile.html or volt_profile.html)
+- Folded stacks (.cpu.folded and .heap.folded)
+- Speedscope JSON (.speedscope.json)
+
+### Breaking Changes
+None in v0.9.6.
+
 ## v0.9.5 Migration
 
 ### Overview

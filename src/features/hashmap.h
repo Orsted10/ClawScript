@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "value.h"
+#include "observability/profiler.h"
 
 namespace volt {
 
@@ -20,6 +21,7 @@ using HashMapPtr = std::shared_ptr<VoltHashMap>;
  */
 struct VoltHashMap {
     std::unordered_map<std::string, Value> data;
+    size_t lastBuckets = 0;
     
     // Constructor
     VoltHashMap() = default;
@@ -50,7 +52,14 @@ struct VoltHashMap {
     // Set key-value pair
     void set(const std::string& key, const Value& value) {
         gcBarrierWrite(this, value);
+        size_t oldBuckets = data.bucket_count();
         data[key] = value;
+        size_t newBuckets = data.bucket_count();
+        if (newBuckets > oldBuckets) {
+            size_t deltaBuckets = newBuckets - oldBuckets;
+            profilerRecordAlloc(deltaBuckets * sizeof(void*) * 8, "hashmap.bucket.grow");
+            lastBuckets = newBuckets;
+        }
     }
     
     // Remove a key-value pair
