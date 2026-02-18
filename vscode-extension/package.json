@@ -1,0 +1,20 @@
+{
+  "name": "volt-language",
+  "displayName": "VoltScript",
+  "version": "0.1.0",
+  "publisher": "volt",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages"],
+  "activationEvents": [
+    "onLanguage:volt"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      { "id": "volt", "aliases": ["VoltScript", "volt"], "extensions": [".volt"], "configuration": "./language-configuration.json" }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.0.2"
+  }
+}

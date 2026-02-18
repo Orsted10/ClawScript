@@ -1,0 +1,8 @@
+{
+  "$schema": "https://www.speedscope.app/file-format-schema.json",
+  "shared": { "frames": [] },
+  "profiles": [
+    {"type":"sampled","name":"CPU samples","unit":"samples","startValue":0,"endValue":0,"samples":[],"weights":[]},
+    {"type":"sampled","name":"Heap allocations","unit":"bytes","startValue":0,"endValue":0,"samples":[],"weights":[]}
+  ]
+}

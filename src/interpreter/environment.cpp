@@ -90,4 +90,11 @@ void Environment::forEachValue(const std::function<void(Value)>& fn) const {
     if (enclosing_) enclosing_->forEachValue(fn);
 }
 
+void Environment::forEachKey(const std::function<void(std::string_view)>& fn) const {
+    for (const auto& kv : values_) {
+        fn(kv.first);
+    }
+    if (enclosing_) enclosing_->forEachKey(fn);
+}
+
 } // namespace volt

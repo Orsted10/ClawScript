@@ -53,6 +53,7 @@ public:
     
     static void clearGlobalCache();
     void forEachValue(const std::function<void(Value)>& fn) const;
+    void forEachKey(const std::function<void(std::string_view)>& fn) const;
     std::shared_ptr<Environment> enclosing() const { return enclosing_; }
 
 private:
