@@ -1,4 +1,4 @@
-name: Release v1.0.0
+name: ClawScript Release
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ jobs:
       - name: Install NSIS (for Windows installer)
         run: choco install nsis -y
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S "${{ github.workspace }}" -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
       - name: Package (CPack via CMake)
@@ -37,7 +37,7 @@ jobs:
       - name: Install deps
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build g++ clang llvm tar gzip
       - name: Configure
-        run: cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S "${{ github.workspace }}" -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
       - name: Package (CPack via CMake)
@@ -61,7 +61,7 @@ jobs:
           brew update
           brew install cmake ninja || true
       - name: Configure
-        run: cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S "${{ github.workspace }}" -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
       - name: Package (CPack via CMake)
