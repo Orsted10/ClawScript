@@ -16,7 +16,7 @@ jobs:
       - name: Configure
         run: cmake -S "${{ github.workspace }}" -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
-        run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
+        run: cmake --build build --config Release
       - name: Package (CPack via CMake)
         run: |
           cmake --build build --config Release --target package
@@ -39,7 +39,7 @@ jobs:
       - name: Configure
         run: cmake -S "${{ github.workspace }}" -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
       - name: Build
-        run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
+        run: cmake --build build --config Release
       - name: Package (CPack via CMake)
         run: |
           cmake --build build --config Release --target package
@@ -63,7 +63,7 @@ jobs:
       - name: Configure
         run: cmake -S "${{ github.workspace }}" -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
       - name: Build
-        run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
+        run: cmake --build build --config Release
       - name: Package (CPack via CMake)
         run: |
           cmake --build build --config Release --target package

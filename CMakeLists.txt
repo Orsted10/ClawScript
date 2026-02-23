@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(VoltScript VERSION 1.0.0 LANGUAGES CXX)  # NaN-boxing, VM, JIT & Runtime Optimizations
+project(ClawScript VERSION 2.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -47,28 +47,37 @@ endif()
 
 # Options
 option(BUILD_TESTS "Build tests" ON)
-option(VOLT_ENABLE_AOT "Enable LLVM-based AoT compilation (requires LLVM)" OFF)
-option(VOLT_ENABLE_JIT "Enable adaptive JIT (experimental stubs)" ON)
+option(CLAW_ENABLE_AOT "Enable LLVM-based AoT compilation (requires LLVM)" ON)
+option(CLAW_ENABLE_JIT "Enable adaptive JIT (experimental stubs)" ON)
+option(ENABLE_PQC "Enable post-quantum crypto providers (experimental)" OFF)
 option(ENABLE_ASAN "Enable AddressSanitizer for supported compilers" OFF)
 option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer for supported compilers" OFF)
 option(ENABLE_MSAN "Enable MemorySanitizer for supported compilers" OFF)
 option(ENABLE_LIBFUZZER "Enable libFuzzer targets (requires Clang)" OFF)
 
 # Source files
-file(GLOB_RECURSE VOLT_SOURCES
+file(GLOB_RECURSE CLAW_SOURCES
     src/*.cpp
     src/features/*.cpp  # Include feature files
 )
 
-if(NOT VOLT_ENABLE_AOT)
-    file(GLOB VOLT_AOT_SOURCES "${CMAKE_SOURCE_DIR}/src/aot/*.cpp")
-    list(REMOVE_ITEM VOLT_SOURCES ${VOLT_AOT_SOURCES})
+set(_ENABLE_AOT OFF)
+if(CLAW_ENABLE_AOT)
+    set(_ENABLE_AOT ON)
 endif()
-if(NOT VOLT_ENABLE_JIT)
-    list(FILTER VOLT_SOURCES EXCLUDE REGEX ".*/jit/.*")
+set(_ENABLE_JIT OFF)
+if(CLAW_ENABLE_JIT)
+    set(_ENABLE_JIT ON)
+endif()
+if(NOT _ENABLE_AOT)
+    file(GLOB CLAW_AOT_SOURCES "${CMAKE_SOURCE_DIR}/src/aot/*.cpp")
+    list(REMOVE_ITEM CLAW_SOURCES ${CLAW_AOT_SOURCES})
+endif()
+if(NOT _ENABLE_JIT)
+    list(FILTER CLAW_SOURCES EXCLUDE REGEX ".*/jit/.*")
 endif()
 
-if(VOLT_ENABLE_AOT)
+if(_ENABLE_AOT)
     find_package(LLVM CONFIG QUIET)
     if(LLVM_FOUND)
         message(STATUS "✅ LLVM for AoT: ${LLVM_PACKAGE_VERSION}")
@@ -132,11 +141,18 @@ if(VOLT_ENABLE_AOT)
         endif()
         if(NOT LLVM_FOUND AND NOT LLVM_FALLBACK_FOUND)
             message(WARNING "LLVM not found for AoT. Building without AoT support.")
-            set(VOLT_ENABLE_AOT OFF)
+            set(_ENABLE_AOT OFF)
+        endif()
+    endif()
+    # Final guard: require valid headers when using fallback
+    if(NOT LLVM_FOUND AND _ENABLE_AOT)
+        if(NOT LLVM_INCLUDEDIR OR NOT EXISTS "${LLVM_INCLUDEDIR}/llvm/Support/Host.h")
+            message(WARNING "LLVM headers not found (expected llvm/Support/Host.h). Disabling AoT.")
+            set(_ENABLE_AOT OFF)
         endif()
     endif()
 endif()
-if(VOLT_ENABLE_JIT)
+if(_ENABLE_JIT)
     find_package(LLVM CONFIG QUIET)
     if(LLVM_FOUND)
         message(STATUS "✅ LLVM for JIT: ${LLVM_PACKAGE_VERSION}")
@@ -220,7 +236,7 @@ if(VOLT_ENABLE_JIT)
                     endif()
                 endforeach()
                 if(NOT _found_lljit_header)
-                    message(WARNING "ORC LLJIT headers not found. Checked: ${_llvm_candidate_includes}. Disabling JIT ORC integration.")
+                message(WARNING "ORC LLJIT headers not found. Checked: ${_llvm_candidate_includes}. Disabling JIT ORC integration.")
                     unset(LLVM_FALLBACK_FOUND)
                 endif()
             endif()
@@ -232,22 +248,26 @@ if(VOLT_ENABLE_JIT)
 endif()
 
 # Ensure AoT sources excluded after detection
-if(NOT VOLT_ENABLE_AOT)
-    file(GLOB VOLT_AOT_SOURCES "${CMAKE_SOURCE_DIR}/src/aot/*.cpp")
-    list(REMOVE_ITEM VOLT_SOURCES ${VOLT_AOT_SOURCES})
+if(NOT _ENABLE_AOT)
+    file(GLOB CLAW_AOT_SOURCES "${CMAKE_SOURCE_DIR}/src/aot/*.cpp")
+    list(REMOVE_ITEM CLAW_SOURCES ${CLAW_AOT_SOURCES})
 endif()
 
 # Main executable
-add_executable(volt
-    ${VOLT_SOURCES}
+add_executable(claw
+    ${CLAW_SOURCES}
 )
 
 if(MSVC)
-    set_target_properties(volt PROPERTIES LINK_FLAGS "/STACK:33554432")
+set_target_properties(claw PROPERTIES LINK_FLAGS "/STACK:33554432")
+target_compile_options(claw PRIVATE /sdl /GS)
+target_link_options(claw PRIVATE /guard:cf /NXCOMPAT /DYNAMICBASE)
+target_compile_definitions(claw PRIVATE _CRT_SECURE_NO_WARNINGS)
+target_link_libraries(claw PRIVATE bcrypt)
 endif()
-set_target_properties(volt PROPERTIES OUTPUT_NAME "volt")
+set_target_properties(claw PROPERTIES OUTPUT_NAME "claw")
 
-target_include_directories(volt PRIVATE 
+target_include_directories(claw PRIVATE 
     ${CMAKE_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/lexer
@@ -258,41 +278,50 @@ target_include_directories(volt PRIVATE
     ${CMAKE_SOURCE_DIR}/src/compiler
 )
 
-if(VOLT_ENABLE_AOT)
-    target_include_directories(volt PRIVATE ${LLVM_INCLUDE_DIRS})
-    target_link_libraries(volt PRIVATE ${LLVM_LIBS})
-    target_compile_definitions(volt PRIVATE VOLT_ENABLE_AOT)
+if(_ENABLE_AOT)
+    target_include_directories(claw PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(claw PRIVATE ${LLVM_LIBS})
+    target_compile_definitions(claw PRIVATE CLAW_ENABLE_AOT)
 endif()
-if(VOLT_ENABLE_AOT AND NOT LLVM_FOUND AND LLVM_FALLBACK_FOUND)
-    target_include_directories(volt PRIVATE ${LLVM_INCLUDEDIR})
-    if(LLVM_LIBDIR)
-        target_link_directories(volt PRIVATE ${LLVM_LIBDIR})
-    endif()
-    target_link_libraries(volt PRIVATE ${LLVM_LIBS_FALLBACK})
-    target_compile_definitions(volt PRIVATE VOLT_ENABLE_AOT)
+find_package(OpenSSL QUIET)
+if(OPENSSL_FOUND)
+    target_include_directories(claw PRIVATE ${OPENSSL_INCLUDE_DIR})
+    target_link_libraries(claw PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+    target_compile_definitions(claw PRIVATE CLAW_HAS_OPENSSL)
 endif()
-if(VOLT_ENABLE_JIT AND LLVM_FOUND)
-    target_include_directories(volt PRIVATE ${LLVM_INCLUDE_DIRS})
-    target_link_libraries(volt PRIVATE ${LLVM_JIT_LIBS})
-    target_compile_definitions(volt PRIVATE VOLT_ENABLE_JIT)
-elseif(VOLT_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
-    target_include_directories(volt PRIVATE ${LLVM_INCLUDEDIR})
+if(ENABLE_PQC)
+    target_compile_definitions(claw PRIVATE CLAW_HAS_PQC)
+endif()
+if(_ENABLE_AOT AND NOT LLVM_FOUND AND LLVM_FALLBACK_FOUND)
+    target_include_directories(claw PRIVATE ${LLVM_INCLUDEDIR})
     if(LLVM_LIBDIR)
-        target_link_directories(volt PRIVATE ${LLVM_LIBDIR})
+    target_link_directories(claw PRIVATE ${LLVM_LIBDIR})
     endif()
-    target_link_libraries(volt PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
-    target_compile_definitions(volt PRIVATE VOLT_ENABLE_JIT)
+    target_link_libraries(claw PRIVATE ${LLVM_LIBS_FALLBACK})
+    target_compile_definitions(claw PRIVATE CLAW_ENABLE_AOT)
+endif()
+if(_ENABLE_JIT AND LLVM_FOUND)
+    target_include_directories(claw PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(claw PRIVATE ${LLVM_JIT_LIBS})
+    target_compile_definitions(claw PRIVATE CLAW_ENABLE_JIT)
+elseif(_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
+    target_include_directories(claw PRIVATE ${LLVM_INCLUDEDIR})
+    if(LLVM_LIBDIR)
+    target_link_directories(claw PRIVATE ${LLVM_LIBDIR})
+    endif()
+    target_link_libraries(claw PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
+    target_compile_definitions(claw PRIVATE CLAW_ENABLE_JIT)
 endif()
 
 # Set output directory
-set_target_properties(volt PROPERTIES
+set_target_properties(claw PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
-set(VOLT_RUNTIME_SOURCES ${VOLT_SOURCES})
-list(FILTER VOLT_RUNTIME_SOURCES EXCLUDE REGEX ".*/main.cpp$")
-add_library(volt_runtime STATIC ${VOLT_RUNTIME_SOURCES})
-target_include_directories(volt_runtime PRIVATE 
+set(CLAW_RUNTIME_SOURCES ${CLAW_SOURCES})
+list(FILTER CLAW_RUNTIME_SOURCES EXCLUDE REGEX ".*/main.cpp$")
+add_library(claw_runtime STATIC ${CLAW_RUNTIME_SOURCES})
+target_include_directories(claw_runtime PRIVATE 
     ${CMAKE_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/lexer
@@ -302,34 +331,48 @@ target_include_directories(volt_runtime PRIVATE
     ${CMAKE_SOURCE_DIR}/src/vm
     ${CMAKE_SOURCE_DIR}/src/compiler
 )
-if(VOLT_ENABLE_AOT)
-    target_include_directories(volt_runtime PRIVATE ${LLVM_INCLUDE_DIRS})
-    target_link_libraries(volt_runtime PRIVATE ${LLVM_LIBS})
-    target_compile_definitions(volt_runtime PRIVATE VOLT_ENABLE_AOT)
+if(_ENABLE_AOT)
+    target_include_directories(claw_runtime PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(claw_runtime PRIVATE ${LLVM_LIBS})
+    target_compile_definitions(claw_runtime PRIVATE CLAW_ENABLE_AOT)
 endif()
-if(VOLT_ENABLE_AOT AND NOT LLVM_FOUND AND LLVM_FALLBACK_FOUND)
-    target_include_directories(volt_runtime PRIVATE ${LLVM_INCLUDEDIR})
+if(OPENSSL_FOUND)
+    target_include_directories(claw_runtime PRIVATE ${OPENSSL_INCLUDE_DIR})
+    target_link_libraries(claw_runtime PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+    target_compile_definitions(claw_runtime PRIVATE CLAW_HAS_OPENSSL)
+endif()
+if(ENABLE_PQC)
+    target_compile_definitions(claw_runtime PRIVATE CLAW_HAS_PQC)
+endif()
+if(_ENABLE_AOT AND NOT LLVM_FOUND AND LLVM_FALLBACK_FOUND)
+    target_include_directories(claw_runtime PRIVATE ${LLVM_INCLUDEDIR})
     if(LLVM_LIBDIR)
-        target_link_directories(volt_runtime PRIVATE ${LLVM_LIBDIR})
+    target_link_directories(claw_runtime PRIVATE ${LLVM_LIBDIR})
     endif()
-    target_link_libraries(volt_runtime PRIVATE ${LLVM_LIBS_FALLBACK})
-    target_compile_definitions(volt_runtime PRIVATE VOLT_ENABLE_AOT)
+    target_link_libraries(claw_runtime PRIVATE ${LLVM_LIBS_FALLBACK})
+    target_compile_definitions(claw_runtime PRIVATE CLAW_ENABLE_AOT)
 endif()
-if(VOLT_ENABLE_JIT AND LLVM_FOUND)
-    target_include_directories(volt_runtime PRIVATE ${LLVM_INCLUDE_DIRS})
-    target_link_libraries(volt_runtime PRIVATE ${LLVM_JIT_LIBS})
-    target_compile_definitions(volt_runtime PRIVATE VOLT_ENABLE_JIT)
-elseif(VOLT_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
-    target_include_directories(volt_runtime PRIVATE ${LLVM_INCLUDEDIR})
+if(_ENABLE_JIT AND LLVM_FOUND)
+    target_include_directories(claw_runtime PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(claw_runtime PRIVATE ${LLVM_JIT_LIBS})
+    target_compile_definitions(claw_runtime PRIVATE CLAW_ENABLE_JIT)
+elseif(_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
+    target_include_directories(claw_runtime PRIVATE ${LLVM_INCLUDEDIR})
     if(LLVM_LIBDIR)
-        target_link_directories(volt_runtime PRIVATE ${LLVM_LIBDIR})
+    target_link_directories(claw_runtime PRIVATE ${LLVM_LIBDIR})
     endif()
-    target_link_libraries(volt_runtime PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
-    target_compile_definitions(volt_runtime PRIVATE VOLT_ENABLE_JIT)
+    target_link_libraries(claw_runtime PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
+    target_compile_definitions(claw_runtime PRIVATE CLAW_ENABLE_JIT)
 endif()
-set_target_properties(volt_runtime PROPERTIES
+set_target_properties(claw_runtime PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
+if(MSVC)
+    target_compile_options(claw_runtime PRIVATE /sdl /GS)
+    target_link_options(claw_runtime PRIVATE /guard:cf /NXCOMPAT /DYNAMICBASE)
+    target_link_libraries(claw_runtime PRIVATE bcrypt)
+    target_compile_definitions(claw_runtime PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
 
 # ========================================
 # TESTS
@@ -369,6 +412,7 @@ if(BUILD_TESTS)
         src/interpreter/natives/native_io.cpp
         src/interpreter/natives/native_time.cpp
         src/interpreter/natives/native_json.cpp
+        src/interpreter/natives/native_security.cpp
         src/interpreter/gc_alloc.cpp
         src/observability/profiler.cpp
         src/features/array.cpp
@@ -413,16 +457,17 @@ if(BUILD_TESTS)
         tests/test_benchmark_assertions.cpp
         tests/test_property_fuzz.cpp
         tests/test_property_ic_megamorphic.cpp
+        tests/test_tls_logging.cpp
     )
     
     # Test executable
-    add_executable(volt_tests ${TEST_SOURCES})
+    add_executable(claw_tests ${TEST_SOURCES})
 
     if(MSVC)
-        set_target_properties(volt_tests PROPERTIES LINK_FLAGS "/STACK:8388608")
+    set_target_properties(claw_tests PROPERTIES LINK_FLAGS "/STACK:8388608")
     endif()
     
-    target_include_directories(volt_tests PRIVATE 
+    target_include_directories(claw_tests PRIVATE 
         ${CMAKE_BINARY_DIR}/generated
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/lexer
@@ -433,31 +478,44 @@ if(BUILD_TESTS)
         ${CMAKE_SOURCE_DIR}/src/compiler
     )
     
-    target_link_libraries(volt_tests PRIVATE GTest::gtest_main GTest::gmock_main)
-    if(VOLT_ENABLE_JIT AND LLVM_FOUND)
-        target_include_directories(volt_tests PRIVATE ${LLVM_INCLUDE_DIRS})
+    target_link_libraries(claw_tests PRIVATE GTest::gtest_main GTest::gmock_main)
+    if(MSVC)
+        target_compile_definitions(claw_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
+        target_link_libraries(claw_tests PRIVATE bcrypt)
+    endif()
+    if(OPENSSL_FOUND)
+        target_include_directories(claw_tests PRIVATE ${OPENSSL_INCLUDE_DIR})
+        target_link_libraries(claw_tests PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+        target_compile_definitions(claw_tests PRIVATE CLAW_HAS_OPENSSL)
+    endif()
+    if(ENABLE_PQC)
+        target_compile_definitions(claw_tests PRIVATE CLAW_HAS_PQC)
+    endif()
+    if(_ENABLE_JIT AND LLVM_FOUND)
+        target_include_directories(claw_tests PRIVATE ${LLVM_INCLUDE_DIRS})
         if(DEFINED LLVM_LIBRARY_DIRS)
-            target_link_directories(volt_tests PRIVATE ${LLVM_LIBRARY_DIRS})
+            target_link_directories(claw_tests PRIVATE ${LLVM_LIBRARY_DIRS})
         endif()
-        target_link_libraries(volt_tests PRIVATE ${LLVM_JIT_LIBS})
-        target_compile_definitions(volt_tests PRIVATE VOLT_ENABLE_JIT)
-    elseif(VOLT_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
-        target_include_directories(volt_tests PRIVATE ${LLVM_INCLUDEDIR})
+        target_link_libraries(claw_tests PRIVATE ${LLVM_JIT_LIBS})
+        target_compile_definitions(claw_tests PRIVATE CLAW_ENABLE_JIT)
+    elseif(_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
+        target_include_directories(claw_tests PRIVATE ${LLVM_INCLUDEDIR})
         if(LLVM_LIBDIR)
-            target_link_directories(volt_tests PRIVATE ${LLVM_LIBDIR})
+            target_link_directories(claw_tests PRIVATE ${LLVM_LIBDIR})
         endif()
-        target_link_libraries(volt_tests PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
-        target_compile_definitions(volt_tests PRIVATE VOLT_ENABLE_JIT)
+        target_link_libraries(claw_tests PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
+        target_compile_definitions(claw_tests PRIVATE CLAW_ENABLE_JIT)
     endif()
     
     # Set output directory for tests
-    set_target_properties(volt_tests PROPERTIES
+    set_target_properties(claw_tests PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        INTERPROCEDURAL_OPTIMIZATION OFF
     )
     
     # Register tests with CTest
     include(GoogleTest)
-    gtest_discover_tests(volt_tests)
+    gtest_discover_tests(claw_tests)
     
     message(STATUS "✅ Tests enabled (598 tests)")
 
@@ -475,6 +533,7 @@ if(BUILD_TESTS)
         src/interpreter/environment.cpp
         src/features/callable.cpp
         src/interpreter/interpreter.cpp
+        src/interpreter/natives/native_security.cpp
         src/interpreter/natives/native_math.cpp
         src/interpreter/natives/native_string.cpp
         src/interpreter/natives/native_array.cpp
@@ -494,9 +553,9 @@ if(BUILD_TESTS)
         src/jit/llvm_jit.cpp
     )
     
-    add_executable(volt_integration_tests ${INTEGRATION_TEST_SOURCES})
+    add_executable(claw_integration_tests ${INTEGRATION_TEST_SOURCES})
     
-    target_include_directories(volt_integration_tests PRIVATE 
+    target_include_directories(claw_integration_tests PRIVATE 
         ${CMAKE_BINARY_DIR}/generated
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/lexer
@@ -504,29 +563,36 @@ if(BUILD_TESTS)
         ${CMAKE_SOURCE_DIR}/src/interpreter
         ${CMAKE_SOURCE_DIR}/src/features
     )
-    
-    target_link_libraries(volt_integration_tests PRIVATE GTest::gtest_main)
-    if(VOLT_ENABLE_JIT AND LLVM_FOUND)
-        target_include_directories(volt_integration_tests PRIVATE ${LLVM_INCLUDE_DIRS})
-        if(DEFINED LLVM_LIBRARY_DIRS)
-            target_link_directories(volt_integration_tests PRIVATE ${LLVM_LIBRARY_DIRS})
-        endif()
-        target_link_libraries(volt_integration_tests PRIVATE ${LLVM_JIT_LIBS})
-        target_compile_definitions(volt_integration_tests PRIVATE VOLT_ENABLE_JIT)
-    elseif(VOLT_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
-        target_include_directories(volt_integration_tests PRIVATE ${LLVM_INCLUDEDIR})
-        if(LLVM_LIBDIR)
-            target_link_directories(volt_integration_tests PRIVATE ${LLVM_LIBDIR})
-        endif()
-        target_link_libraries(volt_integration_tests PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
-        target_compile_definitions(volt_integration_tests PRIVATE VOLT_ENABLE_JIT)
+    if(MSVC)
+        target_compile_definitions(claw_integration_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
+        target_link_libraries(claw_integration_tests PRIVATE bcrypt)
     endif()
     
-    set_target_properties(volt_integration_tests PROPERTIES
+    target_link_libraries(claw_integration_tests PRIVATE GTest::gtest_main)
+    if(_ENABLE_JIT AND LLVM_FOUND)
+        target_include_directories(claw_integration_tests PRIVATE ${LLVM_INCLUDE_DIRS})
+        if(DEFINED LLVM_LIBRARY_DIRS)
+            target_link_directories(claw_integration_tests PRIVATE ${LLVM_LIBRARY_DIRS})
+        endif()
+        target_link_libraries(claw_integration_tests PRIVATE ${LLVM_JIT_LIBS})
+        target_compile_definitions(claw_integration_tests PRIVATE CLAW_ENABLE_JIT)
+    elseif(_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
+        target_include_directories(claw_integration_tests PRIVATE ${LLVM_INCLUDEDIR})
+        if(LLVM_LIBDIR)
+            target_link_directories(claw_integration_tests PRIVATE ${LLVM_LIBDIR})
+        endif()
+        target_link_libraries(claw_integration_tests PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
+        target_compile_definitions(claw_integration_tests PRIVATE CLAW_ENABLE_JIT)
+    endif()
+    if(ENABLE_PQC)
+        target_compile_definitions(claw_integration_tests PRIVATE CLAW_HAS_PQC)
+    endif()
+    
+    set_target_properties(claw_integration_tests PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
     
-    gtest_discover_tests(volt_integration_tests)
+    gtest_discover_tests(claw_integration_tests)
 
     # ========================================
     # BENCHMARKS (Phase 3.3)
@@ -544,6 +610,7 @@ if(BUILD_TESTS)
         benchmarks/benchmark_main.cpp
         benchmarks/benchmark_vm.cpp
         benchmarks/benchmark_jit.cpp
+        benchmarks/benchmark_policy.cpp
         src/lexer/token.cpp
         src/lexer/lexer.cpp
         src/parser/ast.cpp
@@ -552,6 +619,7 @@ if(BUILD_TESTS)
         src/interpreter/environment.cpp
         src/features/callable.cpp
         src/interpreter/interpreter.cpp
+        src/interpreter/natives/native_security.cpp
         src/interpreter/natives/native_math.cpp
         src/interpreter/natives/native_string.cpp
         src/interpreter/natives/native_array.cpp
@@ -571,9 +639,9 @@ if(BUILD_TESTS)
         src/jit/llvm_jit.cpp
     )
     
-    add_executable(volt_benchmarks ${BENCHMARK_SOURCES})
+    add_executable(claw_benchmarks ${BENCHMARK_SOURCES})
     
-    target_include_directories(volt_benchmarks PRIVATE 
+    target_include_directories(claw_benchmarks PRIVATE 
         ${CMAKE_BINARY_DIR}/generated
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/lexer
@@ -581,25 +649,32 @@ if(BUILD_TESTS)
         ${CMAKE_SOURCE_DIR}/src/interpreter
         ${CMAKE_SOURCE_DIR}/src/features
     )
-    
-    target_link_libraries(volt_benchmarks PRIVATE benchmark::benchmark_main)
-    if(VOLT_ENABLE_JIT AND LLVM_FOUND)
-        target_include_directories(volt_benchmarks PRIVATE ${LLVM_INCLUDE_DIRS})
-        if(DEFINED LLVM_LIBRARY_DIRS)
-            target_link_directories(volt_benchmarks PRIVATE ${LLVM_LIBRARY_DIRS})
-        endif()
-        target_link_libraries(volt_benchmarks PRIVATE ${LLVM_JIT_LIBS})
-        target_compile_definitions(volt_benchmarks PRIVATE VOLT_ENABLE_JIT)
-    elseif(VOLT_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
-        target_include_directories(volt_benchmarks PRIVATE ${LLVM_INCLUDEDIR})
-        if(LLVM_LIBDIR)
-            target_link_directories(volt_benchmarks PRIVATE ${LLVM_LIBDIR})
-        endif()
-        target_link_libraries(volt_benchmarks PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
-        target_compile_definitions(volt_benchmarks PRIVATE VOLT_ENABLE_JIT)
+    if(MSVC)
+        target_compile_definitions(claw_benchmarks PRIVATE _CRT_SECURE_NO_WARNINGS)
+        target_link_libraries(claw_benchmarks PRIVATE bcrypt)
     endif()
     
-    set_target_properties(volt_benchmarks PROPERTIES
+    target_link_libraries(claw_benchmarks PRIVATE benchmark::benchmark_main)
+    if(_ENABLE_JIT AND LLVM_FOUND)
+        target_include_directories(claw_benchmarks PRIVATE ${LLVM_INCLUDE_DIRS})
+        if(DEFINED LLVM_LIBRARY_DIRS)
+            target_link_directories(claw_benchmarks PRIVATE ${LLVM_LIBRARY_DIRS})
+        endif()
+        target_link_libraries(claw_benchmarks PRIVATE ${LLVM_JIT_LIBS})
+        target_compile_definitions(claw_benchmarks PRIVATE CLAW_ENABLE_JIT)
+    elseif(_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
+        target_include_directories(claw_benchmarks PRIVATE ${LLVM_INCLUDEDIR})
+        if(LLVM_LIBDIR)
+            target_link_directories(claw_benchmarks PRIVATE ${LLVM_LIBDIR})
+        endif()
+        target_link_libraries(claw_benchmarks PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
+        target_compile_definitions(claw_benchmarks PRIVATE CLAW_ENABLE_JIT)
+    endif()
+    if(ENABLE_PQC)
+        target_compile_definitions(claw_benchmarks PRIVATE CLAW_HAS_PQC)
+    endif()
+    
+    set_target_properties(claw_benchmarks PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
 endif()
@@ -651,7 +726,7 @@ endif()
 # ========================================
 # DEV TOOLS (Phase 8)
 # ========================================
-add_executable(volt_lsp
+add_executable(claw_lsp
     tools/lsp/json.cpp
     tools/lsp/lsp_server.cpp
     tools/fmt/formatter.cpp
@@ -668,6 +743,7 @@ add_executable(volt_lsp
     src/interpreter/natives/native_io.cpp
     src/interpreter/natives/native_time.cpp
     src/interpreter/natives/native_json.cpp
+    src/interpreter/natives/native_security.cpp
     src/interpreter/gc_alloc.cpp
     src/observability/profiler.cpp
     src/interpreter/module.cpp
@@ -678,7 +754,7 @@ add_executable(volt_lsp
     src/features/string_pool.cpp
     src/vm/vm.cpp
 )
-target_include_directories(volt_lsp PRIVATE
+target_include_directories(claw_lsp PRIVATE
     ${CMAKE_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/lexer
@@ -687,25 +763,28 @@ target_include_directories(volt_lsp PRIVATE
     ${CMAKE_SOURCE_DIR}/src/features
     ${CMAKE_SOURCE_DIR}/tools/fmt
 )
-set_target_properties(volt_lsp PROPERTIES
+set_target_properties(claw_lsp PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    OUTPUT_NAME "volt_lsp"
+    OUTPUT_NAME "claw_lsp"
 )
-add_executable(volt_fmt
+if(MSVC)
+    target_link_libraries(claw_lsp PRIVATE bcrypt)
+endif()
+add_executable(claw_fmt
     tools/fmt/formatter.cpp
     tools/fmt/main.cpp
     src/lexer/token.cpp
     src/lexer/lexer.cpp
     src/features/string_pool.cpp
 )
-target_include_directories(volt_fmt PRIVATE
+target_include_directories(claw_fmt PRIVATE
     ${CMAKE_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/lexer
 )
-set_target_properties(volt_fmt PROPERTIES
+set_target_properties(claw_fmt PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    OUTPUT_NAME "volt-fmt"
+    OUTPUT_NAME "claw-fmt"
 )
 
 # ========================================
@@ -730,25 +809,25 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 
 if(ENABLE_LIBFUZZER AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_executable(volt_lexer_fuzz
+    add_executable(claw_lexer_fuzz
         tools/fuzz/lexer_fuzz.cpp
         src/lexer/token.cpp
         src/lexer/lexer.cpp
         src/features/string_pool.cpp
     )
-    target_include_directories(volt_lexer_fuzz PRIVATE
+    target_include_directories(claw_lexer_fuzz PRIVATE
         ${CMAKE_BINARY_DIR}/generated
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/lexer
     )
-    target_link_options(volt_lexer_fuzz PRIVATE -fsanitize=fuzzer)
-    target_compile_options(volt_lexer_fuzz PRIVATE -fsanitize=fuzzer)
-    set_target_properties(volt_lexer_fuzz PROPERTIES
+    target_link_options(claw_lexer_fuzz PRIVATE -fsanitize=fuzzer)
+    target_compile_options(claw_lexer_fuzz PRIVATE -fsanitize=fuzzer)
+    set_target_properties(claw_lexer_fuzz PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-        OUTPUT_NAME "volt_lexer_fuzz"
+        OUTPUT_NAME "claw_lexer_fuzz"
     )
 
-    add_executable(volt_parser_fuzz
+    add_executable(claw_parser_fuzz
         tools/fuzz/parser_fuzz.cpp
         src/lexer/token.cpp
         src/lexer/lexer.cpp
@@ -756,17 +835,17 @@ if(ENABLE_LIBFUZZER AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         src/parser/parser.cpp
         src/features/string_pool.cpp
     )
-    target_include_directories(volt_parser_fuzz PRIVATE
+    target_include_directories(claw_parser_fuzz PRIVATE
         ${CMAKE_BINARY_DIR}/generated
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/src/lexer
         ${CMAKE_SOURCE_DIR}/src/parser
     )
-    target_link_options(volt_parser_fuzz PRIVATE -fsanitize=fuzzer)
-    target_compile_options(volt_parser_fuzz PRIVATE -fsanitize=fuzzer)
-    set_target_properties(volt_parser_fuzz PROPERTIES
+    target_link_options(claw_parser_fuzz PRIVATE -fsanitize=fuzzer)
+    target_compile_options(claw_parser_fuzz PRIVATE -fsanitize=fuzzer)
+    set_target_properties(claw_parser_fuzz PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-        OUTPUT_NAME "volt_parser_fuzz"
+        OUTPUT_NAME "claw_parser_fuzz"
     )
     message(STATUS "✅ libFuzzer targets enabled (lexer, parser)")
 endif()
@@ -774,7 +853,7 @@ endif()
 # ========================================
 # API GENERATOR & PACKAGE MANAGER (Phase 9)
 # ========================================
-add_executable(volt_api_gen
+add_executable(claw_api_gen
     tools/docs/gen_api.cpp
     src/lexer/token.cpp
     src/lexer/lexer.cpp
@@ -790,6 +869,7 @@ add_executable(volt_api_gen
     src/interpreter/natives/native_io.cpp
     src/interpreter/natives/native_time.cpp
     src/interpreter/natives/native_json.cpp
+    src/interpreter/natives/native_security.cpp
     src/interpreter/gc_alloc.cpp
     src/observability/profiler.cpp
     src/features/array.cpp
@@ -799,7 +879,7 @@ add_executable(volt_api_gen
     src/features/string_pool.cpp
     src/vm/vm.cpp
 )
-target_include_directories(volt_api_gen PRIVATE
+target_include_directories(claw_api_gen PRIVATE
     ${CMAKE_BINARY_DIR}/generated
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/lexer
@@ -807,17 +887,20 @@ target_include_directories(volt_api_gen PRIVATE
     ${CMAKE_SOURCE_DIR}/src/interpreter
     ${CMAKE_SOURCE_DIR}/src/features
 )
-set_target_properties(volt_api_gen PROPERTIES
+set_target_properties(claw_api_gen PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    OUTPUT_NAME "volt_api_gen"
+    OUTPUT_NAME "claw_api_gen"
 )
+if(MSVC)
+    target_link_libraries(claw_api_gen PRIVATE bcrypt)
+endif()
 
-add_executable(volt_pm
+add_executable(claw_pm
     tools/pm/main.cpp
 )
-set_target_properties(volt_pm PROPERTIES
+set_target_properties(claw_pm PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    OUTPUT_NAME "volt-pm"
+    OUTPUT_NAME "claw-pm"
 )
 # ========================================
 # SUMMARY
@@ -825,7 +908,44 @@ set_target_properties(volt_pm PROPERTIES
 
 message(STATUS "")
 message(STATUS "========================================")
-message(STATUS "⚡ VoltScript v${PROJECT_VERSION}")
+message(STATUS "⚡ ClawScript v${PROJECT_VERSION}")
+# ========================================
+# Install & Packaging
+# ========================================
+install(TARGETS
+    claw
+    claw_runtime
+    claw_fmt
+    claw_pm
+    claw_lsp
+    claw_api_gen
+    claw_benchmarks
+    claw_tests
+    claw_integration_tests
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib
+)
+install(FILES ${CMAKE_BINARY_DIR}/generated/version.h DESTINATION include)
+set(CPACK_PACKAGE_NAME "ClawScript")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VENDOR "ClawScript")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ClawScript programming language and tools")
+set(CPACK_PACKAGE_FILE_NAME "ClawScript-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+if(WIN32)
+    set(CPACK_GENERATOR "NSIS;ZIP")
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "ClawScript")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
+    set(CPACK_NSIS_DISPLAY_NAME "ClawScript ${PROJECT_VERSION}")
+    set(CPACK_NSIS_ENABLE_UNINSTALL ON)
+    set(CPACK_NSIS_MENU_LINKS
+        "bin/claw.exe" "ClawScript CLI"
+        "README.md" "Project README"
+    )
+else()
+    set(CPACK_GENERATOR "ZIP;TGZ")
+endif()
+include(CPack)
+message(STATUS "⚡ ClawScript v${PROJECT_VERSION}")
 message(STATUS "========================================")
 message(STATUS "Milestone:      Build System Improvements 🚀")
 message(STATUS "Build type:     ${CMAKE_BUILD_TYPE}")
