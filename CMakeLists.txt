@@ -919,12 +919,20 @@ install(TARGETS
     claw_pm
     claw_lsp
     claw_api_gen
-    claw_benchmarks
-    claw_tests
-    claw_integration_tests
     RUNTIME DESTINATION bin
     ARCHIVE DESTINATION lib
 )
+if(BUILD_TESTS)
+    install(TARGETS
+        claw_tests
+        claw_integration_tests
+        RUNTIME DESTINATION bin
+    )
+    install(TARGETS
+        claw_benchmarks
+        RUNTIME DESTINATION bin
+    )
+endif()
 install(FILES ${CMAKE_BINARY_DIR}/generated/version.h DESTINATION include)
 set(CPACK_PACKAGE_NAME "ClawScript")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
