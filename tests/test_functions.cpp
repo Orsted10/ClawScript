@@ -23,14 +23,14 @@ private:
 std::string runCode(const std::string& source) {
     PrintCapture capture;
     
-    volt::Lexer lexer(source);
+    claw::Lexer lexer(source);
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     if (parser.hadError()) return "PARSE_ERROR";
     
-    volt::Interpreter interpreter;
+    claw::Interpreter interpreter;
     try {
         interpreter.execute(statements);
         return capture.get();

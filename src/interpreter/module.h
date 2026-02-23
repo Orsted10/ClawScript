@@ -9,7 +9,7 @@
 #include <vector>
 #include "../parser/stmt.h"
 
-namespace volt {
+namespace claw {
 
 /**
  * Represents a loaded module
@@ -55,4 +55,4 @@ private:
     std::unordered_map<std::string, std::shared_ptr<Module>> cache_;
 };
 
-} // namespace volt
+} // namespace claw

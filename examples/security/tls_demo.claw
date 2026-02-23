@@ -1,0 +1,8 @@
+let r = "";
+try {
+  r = tlsGet("https://httpbin.org/get");
+} catch (e) {
+  print("tls disabled");
+}
+print("len=" + num(len(r)));
+

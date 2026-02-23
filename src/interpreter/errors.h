@@ -1,10 +1,10 @@
-#ifndef VOLT_ERRORS_H
-#define VOLT_ERRORS_H
+#ifndef CLAW_ERRORS_H
+#define CLAW_ERRORS_H
 
 #include <string>
 #include <stdexcept>
 
-namespace volt {
+namespace claw {
 
 enum class ErrorCode {
     // 1xxx: Syntax/Lexical Errors (Reserved for Parser/Lexer)
@@ -55,14 +55,13 @@ inline std::string errorCodeToString(ErrorCode code) {
     }
 }
 
-// Base class for all VoltScript errors
-class VoltError : public std::runtime_error {
+class ClawError : public std::runtime_error {
 public:
     ErrorCode code;
-    VoltError(ErrorCode code, const std::string& message)
+    ClawError(ErrorCode code, const std::string& message)
         : std::runtime_error(message), code(code) {}
 };
 
-} // namespace volt
+} // namespace claw
 
-#endif // VOLT_ERRORS_H
+#endif // CLAW_ERRORS_H

@@ -1,6 +1,6 @@
 #include "token.h"
 
-namespace volt {
+namespace claw {
 
 const char* tokenName(TokenType type) {
     switch (type) {
@@ -16,6 +16,9 @@ const char* tokenName(TokenType type) {
         case TokenType::Until: return "Until";
         case TokenType::Fn: return "Fn";
         case TokenType::Return: return "Return";
+        case TokenType::Switch: return "Switch";
+        case TokenType::Case: return "Case";
+        case TokenType::Default: return "Default";
         case TokenType::Print: return "Print";
         case TokenType::True: return "True";
         case TokenType::False: return "False";
@@ -43,6 +46,17 @@ const char* tokenName(TokenType type) {
         case TokenType::SlashEqual: return "SlashEqual";
         case TokenType::PlusPlus: return "PlusPlus";
         case TokenType::MinusMinus: return "MinusMinus";
+        case TokenType::BitAnd: return "BitAnd";
+        case TokenType::BitOr: return "BitOr";
+        case TokenType::BitXor: return "BitXor";
+        case TokenType::BitNot: return "BitNot";
+        case TokenType::ShiftLeft: return "ShiftLeft";
+        case TokenType::ShiftRight: return "ShiftRight";
+        case TokenType::BitAndEqual: return "BitAndEqual";
+        case TokenType::BitOrEqual: return "BitOrEqual";
+        case TokenType::BitXorEqual: return "BitXorEqual";
+        case TokenType::ShiftLeftEqual: return "ShiftLeftEqual";
+        case TokenType::ShiftRightEqual: return "ShiftRightEqual";
         case TokenType::Question: return "Question";
         case TokenType::Colon: return "Colon";
         case TokenType::LeftParen: return "LeftParen";
@@ -60,4 +74,4 @@ const char* tokenName(TokenType type) {
     }
 }
 
-} // namespace volt
+} // namespace claw

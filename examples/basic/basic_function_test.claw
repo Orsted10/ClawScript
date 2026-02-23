@@ -1,0 +1,4 @@
+// Test basic function call
+func = fun(x) { return x * 2; };
+result = func(5);
+print result;

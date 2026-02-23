@@ -6,7 +6,7 @@
 #include <thread>
 #include <chrono>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 

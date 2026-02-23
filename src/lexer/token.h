@@ -2,7 +2,7 @@
 #include <string_view>
 #include <string>
 
-namespace volt {
+namespace claw {
 
 enum class TokenType {
     // Literals
@@ -15,6 +15,7 @@ enum class TokenType {
     Try, Catch, Throw, // Exception handling
     Import, From, Export, // Modules
     Class, This, Super, // Classes
+    Switch, Case, Default, // Switch statement
     
     // Operators
     Plus, Minus, Star, Slash, Percent,
@@ -27,6 +28,13 @@ enum class TokenType {
     
     // Increment/Decrement
     PlusPlus, MinusMinus,
+
+    // Bitwise operators
+    BitAnd, BitOr, BitXor, BitNot,
+    ShiftLeft, ShiftRight,
+    
+    // Bitwise compound assignment
+    BitAndEqual, BitOrEqual, BitXorEqual, ShiftLeftEqual, ShiftRightEqual,
     
     // Ternary operator
     Question, Colon,
@@ -59,4 +67,4 @@ struct Token {
 
 const char* tokenName(TokenType type);
 
-} // namespace volt
+} // namespace claw

@@ -1,13 +1,13 @@
 <div align="center">
 
-# ⚡ VoltScript v1.0.0 ⚡
+# ⚡ ClawScript v2.0.0 ⚡
 ### *A programming language built from scratch in C++20*
 
 **Production-Ready • Feature-Rich • Educational**  
 
 > *From tokens → trees → closures → arrays → classes*  
 
-[![Tests](https://img.shields.io/badge/tests-602+-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-703+-brightgreen)]()
 [![C++](https://img.shields.io/badge/C++-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue)]()
 
@@ -15,9 +15,9 @@
 
 ---
 
-## 🧠 What is VoltScript?
+## 🧠 What is ClawScript?
 
-VoltScript is a **fully-functional programming language** written completely from scratch in **C++20**.
+ClawScript is a **fully-functional programming language** written completely from scratch in **C++20**.
 
 Not a transpiler.  
 Not a wrapper.  
@@ -26,7 +26,7 @@ Not a toy.
 This project answers one question honestly:
 > **How do programming languages actually work under the hood?**
 
-So instead of hiding complexity, VoltScript **embraces it**—and builds every layer explicitly:
+So instead of hiding complexity, ClawScript **embraces it**—and builds every layer explicitly:
 
 - ⚡ Lexical analysis
 - 🌳 Parsing with recursive descent  
@@ -91,7 +91,7 @@ Major enhancements in v0.9.5:
 - ✅ **Memory management improvements**: Better resource cleanup
 - ✅ **Compiler Optimizations**: Build configuration optimized for maximum execution speed (LTO, O3).
 
-VoltScript runs **real programs** with:
+ClawScript runs **real programs** with:
 
 - ✅ Arithmetic with correct precedence
 - ✅ Variables with `let` + reassignment
@@ -117,11 +117,11 @@ VoltScript runs **real programs** with:
 - ✅ **Closures** (capture surrounding scope)
 - ✅ **Recursion**
 - ✅ **Higher-order functions**
-- ✅ **Native C++ functions** callable from VoltScript
+- ✅ **Native C++ functions** callable from ClawScript
 
 ### 🏗️ Classes — *Object-Oriented Programming*
 
-```volt
+```claw
 class Animal {
     init(name) {
         this.name = name;
@@ -152,7 +152,7 @@ Class features:
 
 ### 📦 Arrays — *Dynamic Collections*
 
-```volt
+```claw
 let numbers = [1, 2, 3, 4, 5];
 let mixed = [42, "hello", true, nil];
 let nested = [[1, 2], [3, 4]];
@@ -192,7 +192,7 @@ Array features:
 
 ### 🗺️ Hash Maps — *Key-Value Collections*
 
-```volt
+```claw
 let person = {
     "name": "Alice",
     "age": 25,
@@ -275,7 +275,7 @@ Hash Map features:
 ```bash
 cmake -B build
 cmake --build build --config Release
-.\build\bin\Release\volt.exe
+.\build\bin\Release\claw.exe
 ```
 
 ### Linux / macOS
@@ -283,15 +283,15 @@ cmake --build build --config Release
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-./build/bin/volt
+./build/bin/claw
 ```
 
 ### LLVM AoT (Optional)
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DVOLT_ENABLE_AOT=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCLAW_ENABLE_AOT=ON
 cmake --build build --config Release
-./build/bin/Release/volt --aot-output=main.o script.volt
+./build/bin/Release/claw --aot-output=main.o script.claw
 ```
 
 ### Profiling & Observability (New in v1.0.0)
@@ -300,20 +300,20 @@ Use the built-in profiler to capture CPU samples and heap allocation growth.
 
 ```bash
 # Enable profiling and write HTML flame graph
-build\bin\Release\volt.exe --profile=profile.html script.volt
+build\bin\Release\claw.exe --profile=profile.html script.claw
 
 # Change sampling frequency (Hz)
-build\bin\Release\volt.exe --profile --profile-hz=200 script.volt
+build\bin\Release\claw.exe --profile --profile-hz=200 script.claw
 ```
 
 - Outputs:
-  - HTML flame graph: profile.html (or volt_profile.html if no filename is given)
+-  - HTML flame graph: profile.html (or claw_profile.html if no filename is given)
   - Folded stacks: profile.cpu.folded, profile.heap.folded
   - Speedscope JSON: profile.speedscope.json
 - Environment toggles:
-  - VOLT_PROFILE=1 — enables profiling without CLI
-  - VOLT_PROFILE_HZ=100 — sets sampling frequency
-  - VOLT_PROFILE_OUT=volt_profile.html — sets output base path
+- CLAW_PROFILE=1 — enables profiling without CLI
+- CLAW_PROFILE_HZ=100 — sets sampling frequency
+- CLAW_PROFILE_OUT=claw_profile.html — sets output base path
 - In-script controls:
   - profilePause() — pause sampling
   - profileResume() — resume sampling
@@ -323,22 +323,43 @@ build\bin\Release\volt.exe --profile --profile-hz=200 script.volt
 ```bash
 # Build and run all tests
 cmake --build build --config Release
-./build/bin/Release/volt_tests
+./build/bin/Release/claw_tests
 
 # Or use CTest
 ctest --output-on-failure --test-dir build
 ```
 
-**Result:** ✅ **100% tests passed** (602 tests)
+**Result:** ✅ **100% tests passed** (703 tests)
+
+### Security & Logging
+
+- Centralized policy file: .voltsec controls sandboxing and logging
+- Configurable logging path, optional HMAC, and metadata requirements
+- Variadic logWrite(message[, metadata]) supports optional JSON-like metadata
+- On Windows, HMAC uses BCrypt SHA-256 with keyed mode; OpenSSL is used when available elsewhere
+
+Example:
+
+```claw
+// Configure logging and allow console output
+writeFile(".voltsec", "log.path=test_log.txt\nlog.hmac=abc123\nlog.meta.required=true\noutput=allow");
+policyReload();
+
+// Write a log line with metadata; file format: msg|hexdigest|{...}
+logWrite("user-login", {"user":"alice","ok":true,"id":42});
+
+// Inspect
+print readFile("test_log.txt");
+```
 
 ---
 
-## 💻 Using VoltScript
+## 💻 Using ClawScript
 
 ### Interactive REPL
 
 ```bash
-⚡ VoltScript v1.0.0 REPL
+⚡ ClawScript v2.0.0 REPL
 Type 'exit' to quit
 >> 
 ```
@@ -346,7 +367,7 @@ Type 'exit' to quit
 ### Run a File
 
 ```bash
-volt script.volt
+claw script.claw
 ```
 
 ---
@@ -355,7 +376,7 @@ volt script.volt
 
 ### 🎯 Arrays & Loops
 
-```volt
+```claw
 // Build Fibonacci sequence
 let fib = [0, 1];
 for (let i = 0; i < 8; i++) {
@@ -367,7 +388,7 @@ print fib;  // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
 
 ### 🔁 Array Functions
 
-```volt
+```claw
 // Sum array elements
 fn sum(arr) {
     let total = 0;
@@ -394,7 +415,7 @@ print filterEvens([1, 2, 3, 4, 5]);    // [2, 4]
 
 ### 🎲 Nested Arrays (Matrices)
 
-```volt
+```claw
 let matrix = [
     [1, 2, 3],
     [4, 5, 6],
@@ -414,7 +435,7 @@ for (let i = 0; i < matrix.length; i++) {
 
 ### 🚦 Enhanced Control Flow
 
-```volt
+```claw
 // Break and continue
 for (let i = 1; i <= 10; i++) {
     if (i % 2 == 0) continue;  // Skip evens
@@ -444,7 +465,7 @@ print "Liftoff!";
 
 ### 🗺️ Hash Maps
 
-```volt
+```claw
 // Hash Maps - Key-value collections
 let person = {
     "name": "Alice",
@@ -477,7 +498,7 @@ print company["departments"]["engineering"]["head"];  // Alice
 
 ### 🔁 Closures with Arrays
 
-```volt
+```claw
 fn makeStack() {
     let items = [];
     
@@ -509,7 +530,7 @@ print size();  // 1
 
 ### 🎯 Practical Example: Find Maximum
 
-```volt
+```claw
 fn max(arr) {
     if (arr.length == 0) return nil;
     
@@ -527,14 +548,14 @@ print max([3, 7, 2, 9, 1]);  // 9
 
 ### 🎯 File Operations
 
-```volt
+```claw
 // Check if file exists
 if (exists("data.txt")) {
     print "File exists!";
     print "Size: " + str(fileSize("data.txt")) + " bytes";
 } else {
     print "File not found";
-    writeFile("data.txt", "Hello, VoltScript!");
+    writeFile("data.txt", "Hello, ClawScript!");
 }
 
 // Read and process file
@@ -547,7 +568,7 @@ appendFile("data.txt", "\nAppended line!");
 
 ### 🎯 Functional Programming
 
-```volt
+```claw
 // Function composition
 addOne = fun(x) { return x + 1; };
 multiplyByTwo = fun(x) { return x * 2; };
@@ -567,7 +588,7 @@ print "Piped result: " + str(result2);
 
 ### 🎯 Performance Benchmarking
 
-```volt
+```claw
 // Benchmark different algorithms
 slowFunction = fun(n) {
     result = 0;
@@ -598,7 +619,7 @@ if (slowBench.timeMicroseconds > 0) {
 
 ### 🎯 New in v0.8.0: Functional Programming
 
-```volt
+```claw
 // Array method chaining
 let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -623,9 +644,9 @@ print reversed; // [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 ---
 
-## 🧪 Testing (580+ Tests!)
+## 🧪 Testing (700+ Tests!)
 
-VoltScript v0.9.5 has **expanded test coverage** with 602 unit/integration/performance tests:
+ClawScript v2.0.0 has **expanded test coverage** with 602 unit/integration/performance tests:
 
 | Test Suite | Tests | Description |
 |-----------|-------|-------------|
@@ -646,20 +667,20 @@ VoltScript v0.9.5 has **expanded test coverage** with 602 unit/integration/perfo
 
 ```bash
 # Run all tests
-./build/bin/Release/volt_tests
+./build/bin/Release/claw_tests
 
 # Or with CTest
 ctest --test-dir build --output-on-failure
 ```
 
-**Result:** ✅ **100% tests passed** (602 tests)
+**Result:** ✅ **100% tests passed** (703 tests)
 
 ---
 
 ## 🗂️ Project Structure
 
 ```
-VoltScript/
+ClawScript/
 ├── src/                     # Core implementation (lexer, parser, VM, runtime)
 │   ├── lexer/              # Tokens and lexical analysis
 │   ├── parser/             # AST nodes and recursive descent parser
@@ -684,18 +705,18 @@ VoltScript/
 │   ├── intermediate/       # 16 intermediate complexity programs
 │   ├── advanced/           # 3 advanced/debug examples
 │   └── advanced_examples/  # 8 complex real-world examples
-│   ├── calculator.volt      # Basic arithmetic
-│   ├── file_operations.volt # File I/O examples
-│   ├── functional_programming.volt # Function composition
-│   ├── performance_benchmarking.volt # Timing examples
-│   ├── json_handling.volt   # JSON operations
-│   ├── array_manipulation.volt # Array operations
-│   ├── hashmap_operations.volt # Hash map examples
-│   ├── mathematical_functions.volt # Math functions
-│   ├── date_time_operations.volt # Time operations
-│   ├── string_processing.volt # String manipulation
-│   ├── sorting_algorithms.volt # Sorting examples
-│   └── game_simulation.volt # Game simulation
+│   ├── calculator.claw      # Basic arithmetic
+│   ├── file_operations.claw # File I/O examples
+│   ├── functional_programming.claw # Function composition
+│   ├── performance_benchmarking.claw # Timing examples
+│   ├── json_handling.claw   # JSON operations
+│   ├── array_manipulation.claw # Array operations
+│   ├── hashmap_operations.claw # Hash map examples
+│   ├── mathematical_functions.claw # Math functions
+│   ├── date_time_operations.claw # Time operations
+│   ├── string_processing.claw # String manipulation
+│   ├── sorting_algorithms.claw # Sorting examples
+│   └── game_simulation.claw # Game simulation
 ├── benchmarks/             # C++ microbenchmarks for core components
 ├── docs/                   # Language documentation and migration guides
 ├── CMakeLists.txt
@@ -706,7 +727,7 @@ VoltScript/
 
 ## 🧠 What You'll Learn
 
-By studying VoltScript, you'll understand:
+By studying ClawScript, you'll understand:
 
 ✅ How lexers tokenize source code  
 ✅ Recursive descent parsing techniques  
@@ -731,7 +752,7 @@ By studying VoltScript, you'll understand:
 
 ## 🤝 Contributing
 
-VoltScript is **educational** — but very **real**.
+ClawScript is **educational** — but very **real**.
 
 If you're interested in:
 - Language design & implementation
@@ -765,14 +786,14 @@ Inspired by:
 
 <div align="center">
 
-### ⚡ VoltScript v1.0.0 ⚡
+### ⚡ ClawScript v2.0.0 ⚡
 
 **VM. NaN-boxing. Classes. Performance. JSON. Power.**  
 *This is where languages get real.*
 
 ---
 
-**[⭐ Star this project](https://github.com/yourusername/voltscript)** • **[📖 Documentation](#)** • **[🐛 Report Issues](#)**
+**[⭐ Star this project](https://github.com/yourusername/clawscript)** • **[📖 Documentation](#)** • **[🐛 Report Issues](#)**
 
 Made with ⚡ and C++20
 

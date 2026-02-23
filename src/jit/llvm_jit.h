@@ -1,5 +1,5 @@
 #pragma once
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -11,7 +11,7 @@ class LLJIT;
 class LLVMContext;
 class Module;
 }
-namespace volt {
+namespace claw {
 class LlvJitCompiler {
 public:
     LlvJitCompiler();
@@ -21,5 +21,5 @@ public:
 private:
     std::unique_ptr<llvm::orc::LLJIT> lljit_;
 };
-} // namespace volt
+} // namespace claw
 #endif

@@ -17,12 +17,12 @@ static void BM_FibonacciRecursive(benchmark::State& state) {
         "fib(15);"; // Using 15 to keep it reasonable for repeated runs
 
     for (auto _ : state) {
-        volt::Lexer lexer(source);
+        claw::Lexer lexer(source);
         auto tokens = lexer.tokenize();
-        volt::Parser parser(tokens);
+        claw::Parser parser(tokens);
         auto statements = parser.parseProgram();
         
-        volt::Interpreter interpreter;
+        claw::Interpreter interpreter;
         interpreter.execute(statements);
     }
 }
@@ -40,12 +40,12 @@ static void BM_ArrayOperations(benchmark::State& state) {
         "arr.reverse();";
 
     for (auto _ : state) {
-        volt::Lexer lexer(source);
+        claw::Lexer lexer(source);
         auto tokens = lexer.tokenize();
-        volt::Parser parser(tokens);
+        claw::Parser parser(tokens);
         auto statements = parser.parseProgram();
         
-        volt::Interpreter interpreter;
+        claw::Interpreter interpreter;
         interpreter.execute(statements);
     }
 }
@@ -60,12 +60,12 @@ static void BM_LoopPerformance(benchmark::State& state) {
         "}";
 
     for (auto _ : state) {
-        volt::Lexer lexer(source);
+        claw::Lexer lexer(source);
         auto tokens = lexer.tokenize();
-        volt::Parser parser(tokens);
+        claw::Parser parser(tokens);
         auto statements = parser.parseProgram();
         
-        volt::Interpreter interpreter;
+        claw::Interpreter interpreter;
         interpreter.execute(statements);
     }
 }

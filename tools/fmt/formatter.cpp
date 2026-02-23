@@ -4,7 +4,7 @@
 #include <sstream>
 #include <string>
 
-namespace volt::fmt {
+namespace claw::fmt {
 
 static bool isBinaryOp(TokenType t) {
     switch (t) {
@@ -31,7 +31,7 @@ static bool isBinaryOp(TokenType t) {
     }
 }
 
-std::string formatTokens(const std::vector<volt::Token>& tokens, int indentSize) {
+std::string formatTokens(const std::vector<claw::Token>& tokens, int indentSize) {
     std::ostringstream out;
     int indent = 0;
     bool newLine = true;
@@ -116,4 +116,4 @@ std::string formatTokens(const std::vector<volt::Token>& tokens, int indentSize)
     return out.str();
 }
 
-} // namespace volt::fmt
+} // namespace claw::fmt

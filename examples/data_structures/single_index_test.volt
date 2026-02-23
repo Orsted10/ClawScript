@@ -1,3 +1,0 @@
-// Test single array access
-arr = [100];
-print arr[0];

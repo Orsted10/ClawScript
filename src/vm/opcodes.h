@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace volt {
+namespace claw {
 
 enum class OpCode : uint8_t {
     Constant,    // Load constant from chunk
@@ -26,6 +26,11 @@ enum class OpCode : uint8_t {
     Subtract,    // -
     Multiply,    // *
     Divide,      // /
+    BitAnd,      // &
+    BitOr,       // |
+    BitXor,      // ^
+    ShiftLeft,   // <<
+    ShiftRight,  // >>
     Not,         // !
     Negate,      // - (unary)
     
@@ -45,6 +50,10 @@ enum class OpCode : uint8_t {
     SuperInvoke, // Call super method
     GetProperty, // Get instance property
     SetProperty, // Set instance property
+    GetIndex,    // Get array/map element by index/key
+    SetIndex,    // Set array/map element by index/key
+    EnsureIndexDefault, // Ensure hash key exists with default for compound ops
+    EnsurePropertyDefault, // Ensure instance field exists with default for compound ops
 };
 
-} // namespace volt
+} // namespace claw

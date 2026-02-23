@@ -3,13 +3,13 @@
 #include "interpreter/gc_alloc.h"
 #include "errors.h"
 
-namespace volt {
+namespace claw {
 
 // ========================================
-// VoltClass Implementation
+// ClawClass Implementation
 // ========================================
 
-std::shared_ptr<VoltFunction> VoltClass::findMethod(const std::string& name) const {
+std::shared_ptr<ClawFunction> ClawClass::findMethod(const std::string& name) const {
     auto it = methods_.find(name);
     if (it != methods_.end()) {
         return it->second;
@@ -22,7 +22,7 @@ std::shared_ptr<VoltFunction> VoltClass::findMethod(const std::string& name) con
     return nullptr;
 }
 
-Value VoltClass::call(Interpreter& interpreter, const std::vector<Value>& arguments) {
+Value ClawClass::call(Interpreter& interpreter, const std::vector<Value>& arguments) {
     auto instance = gcNewInstance(shared_from_this());
     
     // Look for initializer
@@ -35,7 +35,7 @@ Value VoltClass::call(Interpreter& interpreter, const std::vector<Value>& argume
     return instanceValue(instance);
 }
 
-int VoltClass::arity() const {
+int ClawClass::arity() const {
     auto initializer = findMethod("init");
     if (initializer) {
         return initializer->arity();
@@ -44,10 +44,10 @@ int VoltClass::arity() const {
 }
 
 // ========================================
-// VoltInstance Implementation
+// ClawInstance Implementation
 // ========================================
 
-Value VoltInstance::get(const Token& name) {
+Value ClawInstance::get(const Token& name) {
     std::string_view sv = StringPool::intern(name.lexeme);
     
     // 1. Check fields
@@ -71,14 +71,18 @@ Value VoltInstance::get(const Token& name) {
     throw RuntimeError(name, ErrorCode::RUNTIME_ERROR, "Undefined property '" + std::string(sv) + "'.", {});
 }
 
-void VoltInstance::set(const Token& name, Value value) {
+void ClawInstance::set(const Token& name, Value value) {
     std::string_view sv = StringPool::intern(name.lexeme);
     gcBarrierWrite(this, value);
     fields_[sv] = value;
 }
 
-void VoltInstance::forEachField(const std::function<void(Value)>& fn) const {
+void ClawInstance::forEachField(const std::function<void(Value)>& fn) const {
     for (const auto& kv : fields_) fn(kv.second);
 }
+bool ClawInstance::has(const Token& name) const {
+    std::string_view sv = StringPool::intern(name.lexeme);
+    return fields_.find(sv) != fields_.end();
+}
 
-} // namespace volt
+} // namespace claw

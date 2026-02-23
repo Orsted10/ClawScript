@@ -4,7 +4,7 @@
 #include <string_view>
 #include <shared_mutex>
 
-namespace volt {
+namespace claw {
 
 /**
  * @brief Thread-safe String Pool for string interning
@@ -57,4 +57,4 @@ private:
     mutable std::shared_mutex mutex_;
 };
 
-} // namespace volt
+} // namespace claw

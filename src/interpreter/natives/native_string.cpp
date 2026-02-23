@@ -9,7 +9,7 @@
 #include <sstream>
 #include <cctype>
 
-namespace volt {
+namespace claw {
 
 void registerNativeString(const std::shared_ptr<Environment>& globals) {
     globals->define("len", std::make_shared<NativeFunction>(
@@ -124,7 +124,7 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
             if (!isString(args[1])) throw std::runtime_error("split() requires a delimiter string");
             std::string s = asString(args[0]);
             std::string delimiter = asString(args[1]);
-            auto result = std::make_shared<VoltArray>();
+            auto result = std::make_shared<ClawArray>();
             if (delimiter.empty()) {
                 for (char c : s) {
                     auto sv = StringPool::intern(std::string(1, c));
@@ -220,4 +220,4 @@ void registerNativeString(const std::shared_ptr<Environment>& globals) {
     ));
 }
 
-} // namespace volt
+} // namespace claw

@@ -1,0 +1,85 @@
+// Hash map examples for VoltScript
+
+// Basic hash map creation
+let person = {
+    "name": "Alice",
+    "age": 25,
+    "active": true,
+    "address": "123 Main St"
+};
+
+print person["name"];  // Alice
+print person["age"];   // 25
+
+// Empty hash map
+let empty = {};
+print type(empty);    // hashmap
+
+// Hash map with mixed types
+let mixed = {
+    "string": "hello",
+    "number": 42,
+    "boolean": true,
+    "nil_value": nil,
+    "array": [1, 2, 3]
+};
+
+print mixed["string"];
+print mixed["array"].length;  // 3
+
+// Adding new properties dynamically
+person["email"] = "alice@example.com";
+person["score"] = 95.5;
+print person["email"];
+
+// Using built-in functions
+let keys = keys(person);
+print "Person has " + keys.length + " properties";
+
+let values = values(person);
+print "Values count: " + values.length;
+
+// Hash map member access
+print "Size: " + person.size;
+
+// Nested hash maps
+let company = {
+    "name": "Tech Corp",
+    "employees": {
+        "alice": {"role": "developer", "salary": 75000},
+        "bob": {"role": "manager", "salary": 85000}
+    },
+    "location": {
+        "city": "New York",
+        "country": "USA"
+    }
+};
+
+print company["employees"]["alice"]["role"];  // developer
+print company["location"]["city"];           // New York
+
+// Number keys
+let scores = {1: "first", 2: "second", 3.14: "pi"};
+print scores["1"];      // first
+print scores["3.14"];   // pi
+
+// Boolean and nil keys (converted to strings)
+let boolMap = {true: "yes", false: "no", nil: "nothing"};
+print boolMap["true"];  // yes
+print boolMap["nil"];   // nothing
+
+// Counter pattern
+let counters = {};
+counters["a"] = 0;
+counters["b"] = 0;
+counters["c"] = 0;
+
+counters["a"] = counters["a"] + 1;
+counters["a"] = counters["a"] + 1;
+counters["b"] = counters["b"] + 1;
+
+print "Counter a: " + counters["a"];  // 2
+print "Counter b: " + counters["b"];  // 1
+print "Counter c: " + counters["c"];  // 0
+
+print "All tests completed!";

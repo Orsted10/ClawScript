@@ -1,9 +1,46 @@
-# VoltScript Migration Guide
+# ClawScript Migration Guide
+
+## v2.0.0 Migration
+
+### Overview
+ClawScript v2.0.0 refines security policy handling and logging:
+- `.voltsec` controls output gating and log configuration
+- `logWrite(message[, metadata])` supports optional metadata
+- HMAC-SHA256 is enabled when `log.hmac` is set; Windows uses BCrypt keyed mode
+- Tests expanded (703 passing), packaging configured via CPack ZIP
+
+### New Features to Adopt
+
+#### 1. Configure Logging via Policy
+```claw
+// Set log path, HMAC key, and allow output
+writeFile(".voltsec", "log.path=app.log\nlog.hmac=abc123\nlog.meta.required=true\noutput=allow");
+policyReload();
+```
+
+#### 2. Write Logs (Optional Metadata)
+```claw
+// Required metadata example
+logWrite("user-login", {"user":"alice","ok":true,"id":42});
+
+// Optional metadata (when log.meta.required=false)
+writeFile(".voltsec", "log.path=events.log\nlog.hmac=abc123\nlog.meta.required=false\noutput=allow");
+policyReload();
+logWrite("heartbeat");
+```
+
+### Breaking Changes
+- None. `logWrite` now accepts optional metadata; if policy requires metadata, calls without it raise a runtime error.
+
+### Migration Notes
+- Existing scripts using `print` may need `output=allow` in `.voltsec` if output gating is enabled.
+- To verify logs, use `print readFile("<path>")` in a controlled environment.
+- Windows HMAC requires no action; the runtime configures BCrypt correctly.
 
 ## v0.9.6 Migration
 
 ### Overview
-VoltScript v0.9.6 introduces built-in profiling and observability:
+ClawScript v0.9.6 introduces built-in profiling and observability:
 - Sampling CPU profiler with configurable frequency
 - Heap allocation growth attribution for arrays and hash maps
 - Flame graph HTML output, folded stacks, and Speedscope JSON
@@ -13,19 +50,19 @@ VoltScript v0.9.6 introduces built-in profiling and observability:
 
 #### 1. Enable Profiling via CLI
 ```bash
-build\bin\Release\volt.exe --profile=profile.html script.volt
-build\bin\Release\volt.exe --profile --profile-hz=200 script.volt
+build\bin\Release\claw.exe --profile=profile.html script.claw
+build\bin\Release\claw.exe --profile --profile-hz=200 script.claw
 ```
 
 #### 2. Control Profiling via Environment
 ```
-VOLT_PROFILE=1
-VOLT_PROFILE_HZ=100
-VOLT_PROFILE_OUT=volt_profile.html
+CLAW_PROFILE=1
+CLAW_PROFILE_HZ=100
+CLAW_PROFILE_OUT=claw_profile.html
 ```
 
 #### 3. Pause/Resume from Scripts
-```volt
+```claw
 profilePause();
 /* do some setup work */
 profileResume();
@@ -33,7 +70,7 @@ profileResume();
 ```
 
 ### Outputs
-- HTML flame graph (profile.html or volt_profile.html)
+- HTML flame graph (profile.html or claw_profile.html)
 - Folded stacks (.cpu.folded and .heap.folded)
 - Speedscope JSON (.speedscope.json)
 
@@ -43,7 +80,7 @@ None in v0.9.6.
 ## v0.9.5 Migration
 
 ### Overview
-VoltScript v0.9.5 focuses on production runtime stability and performance. It adds ephemeral arenas for non-escaping aggregations, a benchmark mode to minimize timing jitter, SIMD-native helpers, and improves AoT vectorization while remaining backward compatible with v0.9.0 scripts.
+ClawScript v0.9.5 focuses on production runtime stability and performance. It adds ephemeral arenas for non-escaping aggregations, a benchmark mode to minimize timing jitter, SIMD-native helpers, and improves AoT vectorization while remaining backward compatible with v0.9.0 scripts.
 
 ### New Features to Adopt
 
@@ -51,15 +88,15 @@ VoltScript v0.9.5 focuses on production runtime stability and performance. It ad
 Enable AoT builds to emit native object files and link binaries directly.
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DVOLT_ENABLE_AOT=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCLAW_ENABLE_AOT=ON
 cmake --build build --config Release
-./build/bin/Release/volt --aot-output=main.o script.volt
+./build/bin/Release/claw --aot-output=main.o script.claw
 ```
 
 #### 2. Performance Math Helpers
 Use native helpers for benchmark-focused workloads.
 
-```volt
+```claw
 print fibFast(35);
 print arraySumFast(1000000);
 ```
@@ -81,7 +118,7 @@ None in v0.9.5.
 ### Overview
 
 ### Overview
-VoltScript v0.9.0 focuses on runtime performance and maintainability. It extends the v0.8.6 class and VM work with NaN-boxed values, optimized bytecode execution, and improved profiling, while remaining backward compatible with v0.8.0+.
+ClawScript v0.9.0 focuses on runtime performance and maintainability. It extends the v0.8.6 class and VM work with NaN-boxed values, optimized bytecode execution, and improved profiling, while remaining backward compatible with v0.8.0+.
 
 ### New Features to Adopt
 
@@ -89,7 +126,7 @@ VoltScript v0.9.0 focuses on runtime performance and maintainability. It extends
 You can now transition from hash-map based objects to proper classes.
 
 **Old approach (Hash Map):**
-```volt
+```claw
 fn makePerson(name, age) {
     let self = {
         "name": name,
@@ -109,7 +146,7 @@ alice["speak"]();
 ```
 
 **New approach (v0.8.6 Classes):**
-```volt
+```claw
 class Person {
     init(name, age) {
         this.name = name;
@@ -128,7 +165,7 @@ alice.speak();
 #### 2. Class Inheritance
 Leverage code reuse through class inheritance.
 
-```volt
+```claw
 class Employee extends Person {
     init(name, age, id) {
         super.init(name, age);
@@ -157,7 +194,7 @@ Your existing code will automatically benefit from:
 ### 1. Array Method Chaining
 
 **Old approach:**
-```volt
+```claw
 // Traditional approach with separate operations
 let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -185,7 +222,7 @@ print sum;  // 30
 ```
 
 **New approach (v0.8.0):**
-```volt
+```claw
 // Modern functional approach with method chaining
 let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 let result = numbers
@@ -199,7 +236,7 @@ print result;  // 30
 ### 2. Anonymous Functions
 
 **Old approach:**
-```volt
+```claw
 // Named function for callbacks
 fn double(x) {
     return x * 2;
@@ -210,7 +247,7 @@ let doubled = map(numbers, double);
 ```
 
 **New approach (v0.8.0):**
-```volt
+```claw
 // Anonymous function for cleaner code
 let numbers = [1, 2, 3, 4, 5];
 let doubled = map(numbers, fun(x) { return x * 2; });
@@ -219,7 +256,7 @@ let doubled = map(numbers, fun(x) { return x * 2; });
 ### 3. Built-in Functional Utilities
 
 **Old approach:**
-```volt
+```claw
 // Manual implementation
 fn filterEven(arr) {
     let result = [];
@@ -236,7 +273,7 @@ let evens = filterEven(numbers);
 ```
 
 **New approach (v0.8.0):**
-```volt
+```claw
 // Using built-in filter function
 let numbers = [1, 2, 3, 4, 5];
 let evens = filter(numbers, fun(x) { return x % 2 == 0; });
@@ -245,7 +282,7 @@ let evens = filter(numbers, fun(x) { return x % 2 == 0; });
 ## Performance Optimization Tips
 
 ### 1. Use Method Chaining for Data Processing
-```volt
+```claw
 // Instead of multiple loops, chain operations
 // This is more readable and often more efficient
 let processed = data
@@ -255,7 +292,7 @@ let processed = data
 ```
 
 ### 2. Leverage Anonymous Functions
-```volt
+```claw
 // For simple operations, anonymous functions are cleaner
 let squares = map(numbers, fun(x) { return x * x; });
 
@@ -269,7 +306,7 @@ let results = map(data, complexTransformation);
 ```
 
 ### 3. Use Built-in Functions When Available
-```volt
+```claw
 // Prefer built-in functions over manual implementations
 let reversed = reverse(array);           // ✅ Preferred
 // vs
@@ -284,7 +321,7 @@ for (let i = array.length - 1; i >= 0; i--) {
 ### Example 1: Data Processing Pipeline
 
 **Before (v0.7.9):**
-```volt
+```claw
 // Process student grades
 let students = [
     {"name": "Alice", "grade": 85},
@@ -313,7 +350,7 @@ print "Class average: " + str(average);
 ```
 
 **After (v0.8.0):**
-```volt
+```claw
 // Modern approach with functional methods
 let students = [
     {"name": "Alice", "grade": 85},
@@ -340,7 +377,7 @@ print "Class average: " + str(average);
 ### Example 2: Array Transformations
 
 **Before (v0.7.9):**
-```volt
+```claw
 // Transform and filter data manually
 let rawData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -362,7 +399,7 @@ print sum;  // 220
 ```
 
 **After (v0.8.0):**
-```volt
+```claw
 // Clean functional approach
 let rawData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -377,7 +414,7 @@ print result;  // 220
 ## Best Practices for v0.8.0
 
 ### 1. Function Expression Guidelines
-```volt
+```claw
 // ✅ Good: Simple anonymous functions
 let doubled = map(numbers, fun(x) { return x * 2; });
 
@@ -397,7 +434,7 @@ let badExample = data.map(fun(item) {
 ```
 
 ### 2. Method Chaining Best Practices
-```volt
+```claw
 // ✅ Good: Clear, readable chains
 let result = data
     .filter(isValid)
@@ -414,7 +451,7 @@ let result = data.filter(...).map(...).filter(...).map(...).reduce(...);
 ```
 
 ### 3. Performance Considerations
-```volt
+```claw
 // ✅ Good: Use built-in functions for common operations
 let reversed = reverse(array);
 
@@ -439,11 +476,11 @@ let efficient = data.map(fun(item) {
 ### 1. Verify Existing Functionality
 ```bash
 # Run existing tests to ensure backward compatibility
-./build/bin/Release/volt_tests
+./build/bin/Release/claw_tests
 ```
 
 ### 2. Test New Features
-```volt
+```claw
 // Test array method chaining
 let testArray = [1, 2, 3, 4, 5];
 let result = testArray
@@ -458,7 +495,7 @@ assert(result == 24);
 ```
 
 ### 3. Performance Testing
-```volt
+```claw
 // Compare performance between old and new approaches
 let largeArray = [];
 for (let i = 0; i < 10000; i++) {
@@ -489,7 +526,7 @@ print "New approach: " + str(time2) + "ms";
 ## Troubleshooting Common Issues
 
 ### Issue 1: Function Expression Not Working
-```volt
+```claw
 // ❌ Wrong: Missing return statement
 let doubler = fun(x) { x * 2; };  // Returns nil!
 
@@ -498,7 +535,7 @@ let doubler = fun(x) { return x * 2; };
 ```
 
 ### Issue 2: Method Chaining Errors
-```volt
+```claw
 // ❌ Wrong: Calling method on non-array
 let notArray = "string";
 let result = notArray.map(fun(x) { return x; });  // Error!
@@ -509,7 +546,7 @@ let result = dataArray.map(fun(x) { return x * 2; });
 ```
 
 ### Issue 3: Performance Concerns
-```volt
+```claw
 // ❌ Inefficient: Creating many intermediate arrays
 let result = data
     .map(step1)
@@ -532,4 +569,4 @@ let result = data.map(fun(item) {
 
 ---
 
-**Happy coding with VoltScript v0.9.0! 🚀**
+**Happy coding with ClawScript v2.0.0! 🚀**

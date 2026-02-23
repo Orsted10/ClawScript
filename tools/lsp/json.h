@@ -6,7 +6,7 @@
 #include <optional>
 #include <variant>
 
-namespace volt::lsp {
+namespace claw::lsp {
 
 struct Json;
 using JsonObject = std::unordered_map<std::string, Json>;
@@ -52,5 +52,4 @@ private:
 std::string stringify(const Json& j);
 std::optional<const Json*> getPath(const Json& j, const std::vector<std::string>& path);
 
-} // namespace volt::lsp
-
+} // namespace claw::lsp

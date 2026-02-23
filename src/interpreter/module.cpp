@@ -6,7 +6,7 @@
 #include <filesystem>
 #include <iostream>
 
-namespace volt {
+namespace claw {
 
 std::shared_ptr<Module> ModuleManager::loadModule(const std::string& path, Interpreter& interpreter) {
     // 1. Resolve absolute path
@@ -65,4 +65,4 @@ std::shared_ptr<Module> ModuleManager::loadModule(const std::string& path, Inter
     return module;
 }
 
-} // namespace volt
+} // namespace claw

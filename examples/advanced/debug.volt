@@ -1,4 +1,0 @@
-let nums = {1: "one", 2: "two", 3.5: "three_point_five"};
-print nums["1"];
-print nums["2"];
-print nums["3.5"];

@@ -9,12 +9,12 @@
 using hrclock = std::chrono::high_resolution_clock;
 using ms_t = std::chrono::milliseconds;
 #
-static std::unique_ptr<volt::Chunk> compileSrc(const std::string& src) {
-    volt::Lexer lex(src);
+static std::unique_ptr<claw::Chunk> compileSrc(const std::string& src) {
+    claw::Lexer lex(src);
     auto tokens = lex.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto program = parser.parseProgram();
-    volt::Compiler compiler;
+    claw::Compiler compiler;
     return compiler.compile(program);
 }
 #
@@ -55,7 +55,7 @@ TEST(BenchmarkAssertions, MandelbrotUnder100ms) {
         "  }"
         "}";
     auto chunk = compileSrc(source);
-    volt::VM vm;
+    claw::VM vm;
     // warm-up and best-of runs for stable timing
     auto warmFn = [&]() { vm.interpret(*chunk); };
     warmFn();
@@ -73,12 +73,12 @@ TEST(BenchmarkAssertions, ObjectMethodLoopUnder10ms) {
         "  i = i + 1;"
         "}"
         "print acc;";
-    volt::Lexer lex(source);
+    claw::Lexer lex(source);
     auto tokens = lex.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto program = parser.parseProgram();
     ASSERT_FALSE(parser.hadError());
-    volt::Interpreter interp;
+    claw::Interpreter interp;
     auto run = [&]() { EXPECT_NO_THROW(interp.execute(program)); };
     run();
     auto best = bestOfN(run, 5);
@@ -89,12 +89,12 @@ TEST(BenchmarkAssertions, ObjectMethodLoopVMClassUnder10ms) {
     std::string classDecl =
         "class C { fn add(a,b){ return a+b; } }"
         "let c = C();";
-    volt::Lexer lex1(classDecl);
+    claw::Lexer lex1(classDecl);
     auto tokens1 = lex1.tokenize();
-    volt::Parser parser1(tokens1);
+    claw::Parser parser1(tokens1);
     auto program1 = parser1.parseProgram();
     ASSERT_FALSE(parser1.hadError());
-    volt::Interpreter interp;
+    claw::Interpreter interp;
     interp.execute(program1);
     std::string loopSrc =
         "let i = 0; let acc = 0;"
@@ -104,10 +104,10 @@ TEST(BenchmarkAssertions, ObjectMethodLoopVMClassUnder10ms) {
         "}"
         "print acc;";
     auto chunk = compileSrc(loopSrc);
-    volt::VM vm(interp);
+    claw::VM vm(interp);
     auto run = [&]() {
         auto res = vm.interpret(*chunk);
-        EXPECT_EQ(res, volt::InterpretResult::Ok);
+        EXPECT_EQ(res, claw::InterpretResult::Ok);
     };
     run();
     auto best = bestOfN(run, 5);

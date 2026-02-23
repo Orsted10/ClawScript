@@ -4,7 +4,7 @@
 #include <vector>
 #include <random>
 
-using namespace volt;
+using namespace claw;
 
 static void BM_StringInterning(benchmark::State& state) {
     std::vector<std::string> strings;

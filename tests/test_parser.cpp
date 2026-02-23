@@ -5,11 +5,11 @@
 
 // Helper function for expressions
 std::string parseExpr(const std::string& source) {
-    volt::Lexer lexer(source);
+    claw::Lexer lexer(source);
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto ast = parser.parseExpression();
-    return ast ? volt::printAST(ast.get()) : "";
+    return ast ? claw::printAST(ast.get()) : "";
 }
 
 // ========================================
@@ -86,68 +86,68 @@ TEST(Parser, FunctionCall) {
 // ========================================
 
 TEST(Parser, PrintStatement) {
-    volt::Lexer lexer("print 42;");
+    claw::Lexer lexer("print 42;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
-    EXPECT_TRUE(dynamic_cast<volt::PrintStmt*>(statements[0].get()) != nullptr);
+    EXPECT_TRUE(dynamic_cast<claw::PrintStmt*>(statements[0].get()) != nullptr);
 }
 
 TEST(Parser, LetStatement) {
-    volt::Lexer lexer("let x = 10;");
+    claw::Lexer lexer("let x = 10;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* letStmt = dynamic_cast<volt::LetStmt*>(statements[0].get());
+    auto* letStmt = dynamic_cast<claw::LetStmt*>(statements[0].get());
     EXPECT_TRUE(letStmt != nullptr);
     EXPECT_EQ(letStmt->name, "x");
 }
 
 TEST(Parser, LetWithoutInitializer) {
-    volt::Lexer lexer("let x;");
+    claw::Lexer lexer("let x;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* letStmt = dynamic_cast<volt::LetStmt*>(statements[0].get());
+    auto* letStmt = dynamic_cast<claw::LetStmt*>(statements[0].get());
     EXPECT_TRUE(letStmt != nullptr);
     EXPECT_TRUE(letStmt->initializer == nullptr);
 }
 
 TEST(Parser, BlockStatement) {
-    volt::Lexer lexer("{ print 1; print 2; }");
+    claw::Lexer lexer("{ print 1; print 2; }");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* blockStmt = dynamic_cast<volt::BlockStmt*>(statements[0].get());
+    auto* blockStmt = dynamic_cast<claw::BlockStmt*>(statements[0].get());
     EXPECT_TRUE(blockStmt != nullptr);
     EXPECT_EQ(blockStmt->statements.size(), 2);
 }
 
 TEST(Parser, IfStatement) {
-    volt::Lexer lexer("if (true) print 1;");
+    claw::Lexer lexer("if (true) print 1;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* ifStmt = dynamic_cast<volt::IfStmt*>(statements[0].get());
+    auto* ifStmt = dynamic_cast<claw::IfStmt*>(statements[0].get());
     EXPECT_TRUE(ifStmt != nullptr);
     EXPECT_TRUE(ifStmt->condition != nullptr);
     EXPECT_TRUE(ifStmt->thenBranch != nullptr);
@@ -155,44 +155,44 @@ TEST(Parser, IfStatement) {
 }
 
 TEST(Parser, IfElseStatement) {
-    volt::Lexer lexer("if (false) print 1; else print 2;");
+    claw::Lexer lexer("if (false) print 1; else print 2;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* ifStmt = dynamic_cast<volt::IfStmt*>(statements[0].get());
+    auto* ifStmt = dynamic_cast<claw::IfStmt*>(statements[0].get());
     EXPECT_TRUE(ifStmt != nullptr);
     EXPECT_TRUE(ifStmt->elseBranch != nullptr);
 }
 
 TEST(Parser, WhileStatement) {
-    volt::Lexer lexer("while (x < 10) print x;");
+    claw::Lexer lexer("while (x < 10) print x;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* whileStmt = dynamic_cast<volt::WhileStmt*>(statements[0].get());
+    auto* whileStmt = dynamic_cast<claw::WhileStmt*>(statements[0].get());
     EXPECT_TRUE(whileStmt != nullptr);
     EXPECT_TRUE(whileStmt->condition != nullptr);
     EXPECT_TRUE(whileStmt->body != nullptr);
 }
 
 TEST(Parser, ForStatement) {
-    volt::Lexer lexer("for (let i = 0; i < 10; i = i + 1) print i;");
+    claw::Lexer lexer("for (let i = 0; i < 10; i = i + 1) print i;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* forStmt = dynamic_cast<volt::ForStmt*>(statements[0].get());
+    auto* forStmt = dynamic_cast<claw::ForStmt*>(statements[0].get());
     EXPECT_TRUE(forStmt != nullptr);
     EXPECT_TRUE(forStmt->initializer != nullptr);
     EXPECT_TRUE(forStmt->condition != nullptr);
@@ -201,15 +201,15 @@ TEST(Parser, ForStatement) {
 }
 
 TEST(Parser, ForStatementPartial) {
-    volt::Lexer lexer("for (; i < 10;) print i;");
+    claw::Lexer lexer("for (; i < 10;) print i;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* forStmt = dynamic_cast<volt::ForStmt*>(statements[0].get());
+    auto* forStmt = dynamic_cast<claw::ForStmt*>(statements[0].get());
     EXPECT_TRUE(forStmt != nullptr);
     EXPECT_TRUE(forStmt->initializer == nullptr);
     EXPECT_TRUE(forStmt->condition != nullptr);
@@ -217,9 +217,9 @@ TEST(Parser, ForStatementPartial) {
 }
 
 TEST(Parser, MultipleStatements) {
-    volt::Lexer lexer("let x = 5; print x; x = 10;");
+    claw::Lexer lexer("let x = 5; print x; x = 10;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
@@ -227,32 +227,32 @@ TEST(Parser, MultipleStatements) {
 }
 
 TEST(Parser, NestedBlocks) {
-    volt::Lexer lexer("{ { print 1; } }");
+    claw::Lexer lexer("{ { print 1; } }");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* outer = dynamic_cast<volt::BlockStmt*>(statements[0].get());
+    auto* outer = dynamic_cast<claw::BlockStmt*>(statements[0].get());
     EXPECT_TRUE(outer != nullptr);
     ASSERT_EQ(outer->statements.size(), 1);
     
-    auto* inner = dynamic_cast<volt::BlockStmt*>(outer->statements[0].get());
+    auto* inner = dynamic_cast<claw::BlockStmt*>(outer->statements[0].get());
     EXPECT_TRUE(inner != nullptr);
 }
 
 TEST(Parser, ExpressionStatement) {
-    volt::Lexer lexer("1 + 2;");
+    claw::Lexer lexer("1 + 2;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_FALSE(parser.hadError());
     ASSERT_EQ(statements.size(), 1);
     
-    auto* exprStmt = dynamic_cast<volt::ExprStmt*>(statements[0].get());
+    auto* exprStmt = dynamic_cast<claw::ExprStmt*>(statements[0].get());
     EXPECT_TRUE(exprStmt != nullptr);
 }
 
@@ -261,27 +261,27 @@ TEST(Parser, ExpressionStatement) {
 // ========================================
 
 TEST(Parser, MissingSemicolon) {
-    volt::Lexer lexer("let x = 5");
+    claw::Lexer lexer("let x = 5");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_TRUE(parser.hadError());
 }
 
 TEST(Parser, MissingClosingBrace) {
-    volt::Lexer lexer("{ print 1;");
+    claw::Lexer lexer("{ print 1;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_TRUE(parser.hadError());
 }
 
 TEST(Parser, MissingConditionParen) {
-    volt::Lexer lexer("if true print 1;");
+    claw::Lexer lexer("if true print 1;");
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     EXPECT_TRUE(parser.hadError());

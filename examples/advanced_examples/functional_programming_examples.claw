@@ -1,0 +1,268 @@
+// Functional programming concepts and utilities demonstration
+print "=== Functional Programming Examples ===";
+
+// Higher-order functions
+print "=== Higher-Order Functions ===";
+
+// Map function implementation
+fn map(array, func) {
+    let result = [];
+    for (let i = 0; i < array.length; i = i + 1) {
+        result.push(func(array[i]));
+    }
+    return result;
+}
+
+// Filter function implementation
+fn filter(array, predicate) {
+    let result = [];
+    for (let i = 0; i < array.length; i = i + 1) {
+        if (predicate(array[i])) {
+            result.push(array[i]);
+        }
+    }
+    return result;
+}
+
+// Reduce function implementation
+fn reduce(array, reducer, initialValue) {
+    let result = initialValue;
+    for (let i = 0; i < array.length; i = i + 1) {
+        result = reducer(result, array[i]);
+    }
+    return result;
+}
+
+// Test data
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+print "Original numbers: " + str(numbers);
+
+// Map examples
+print "\n=== Map Examples ===";
+let doubled = map(numbers, fun(x) { return x * 2; });
+print "Doubled: " + str(doubled);
+
+let squared = map(numbers, fun(x) { return x * x; });
+print "Squared: " + str(squared);
+
+let strings = map(numbers, fun(x) { return "Number: " + str(x); });
+print "As strings: " + str(strings);
+
+// Filter examples
+print "\n=== Filter Examples ===";
+let evens = filter(numbers, fun(x) { return x % 2 == 0; });
+print "Even numbers: " + str(evens);
+
+let odds = filter(numbers, fun(x) { return x % 2 == 1; });
+print "Odd numbers: " + str(odds);
+
+let greaterThanFive = filter(numbers, fun(x) { return x > 5; });
+print "Numbers > 5: " + str(greaterThanFive);
+
+// Reduce examples
+print "\n=== Reduce Examples ===";
+let sum = reduce(numbers, fun(acc, x) { return acc + x; }, 0);
+print "Sum: " + str(sum);
+
+let product = reduce(numbers, fun(acc, x) { return acc * x; }, 1);
+print "Product: " + str(product);
+
+let max = reduce(numbers, fun(acc, x) { return x > acc ? x : acc; }, numbers[0]);
+print "Maximum: " + str(max);
+
+let min = reduce(numbers, fun(acc, x) { return x < acc ? x : acc; }, numbers[0]);
+print "Minimum: " + str(min);
+
+// Function composition
+print "\n=== Function Composition ===";
+
+fn compose(f, g) {
+    return fun(x) {
+        return f(g(x));
+    };
+}
+
+fn pipe(value, ...functions) {
+    let result = value;
+    for (let i = 0; i < functions.length; i = i + 1) {
+        result = functions[i](result);
+    }
+    return result;
+}
+
+// Example functions for composition
+let addOne = fun(x) { return x + 1; };
+let multiplyByTwo = fun(x) { return x * 2; };
+let square = fun(x) { return x * x; };
+
+// Compose functions
+let addThenSquare = compose(square, addOne);
+let result1 = addThenSquare(5);
+print "compose(square, addOne)(5) = " + str(result1);  // (5+1)² = 36
+
+let squareThenDouble = compose(multiplyByTwo, square);
+let result2 = squareThenDouble(3);
+print "compose(multiplyByTwo, square)(3) = " + str(result2);  // (3²)×2 = 18
+
+// Pipe operations
+print "\n=== Pipe Operations ===";
+let pipedResult = pipe(5, addOne, square, multiplyByTwo);
+print "pipe(5, addOne, square, multiplyByTwo) = " + str(pipedResult);  // ((5+1)²)×2 = 72
+
+// Currying demonstration
+print "\n=== Currying ===";
+
+fn curryAdd(a) {
+    return fun(b) {
+        return fun(c) {
+            return a + b + c;
+        };
+    };
+}
+
+let add5 = curryAdd(5);
+let add5and10 = add5(10);
+let finalResult = add5and10(15);
+print "Curried addition: 5 + 10 + 15 = " + str(finalResult);
+
+// Partial application
+print "\n=== Partial Application ===";
+
+fn multiply(a, b, c) {
+    return a * b * c;
+}
+
+fn partial(func, ...args) {
+    return fun(...moreArgs) {
+        let allArgs = args.concat(moreArgs);
+        return func(...allArgs);
+    };
+}
+
+let multiplyBy2and3 = partial(multiply, 2, 3);
+let partialResult = multiplyBy2and3(4);
+print "Partial application: multiply(2, 3, 4) = " + str(partialResult);
+
+// Closure examples
+print "\n=== Closure Examples ===";
+
+fn makeCounter() {
+    let count = 0;
+    return fun() {
+        count = count + 1;
+        return count;
+    };
+}
+
+let counter1 = makeCounter();
+let counter2 = makeCounter();
+
+print "Counter 1: " + str(counter1());  // 1
+print "Counter 1: " + str(counter1());  // 2
+print "Counter 2: " + str(counter2());  // 1
+print "Counter 1: " + str(counter1());  // 3
+
+// Memoization
+print "\n=== Memoization ===";
+
+fn memoize(func) {
+    let cache = {};
+    return fun(...args) {
+        let key = args.join(",");
+        if (cache.has(key)) {
+            return cache[key];
+        }
+        let result = func(...args);
+        cache[key] = result;
+        return result;
+    };
+}
+
+// Expensive function to memoize
+fn fibonacci(n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+let memoFib = memoize(fibonacci);
+
+print "Computing fibonacci(20) with memoization...";
+let fibStart = now();
+let fibResult = memoFib(20);
+let fibEnd = now();
+print "Fibonacci(20) = " + str(fibResult) + " (took " + str(fibEnd - fibStart) + " ms)";
+
+// Second call should be much faster
+print "Computing fibonacci(20) again (cached)...";
+let fibStart2 = now();
+let fibResult2 = memoFib(20);
+let fibEnd2 = now();
+print "Fibonacci(20) = " + str(fibResult2) + " (took " + str(fibEnd2 - fibStart2) + " ms)";
+
+// Data transformation pipeline
+print "\n=== Data Transformation Pipeline ===";
+
+let rawData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+
+// Process data through multiple transformations
+let processedData = pipe(
+    rawData,
+    fun(arr) { return filter(arr, fun(x) { return x > 5; }); },           // Filter > 5
+    fun(arr) { return map(arr, fun(x) { return x * 2; }); },             // Double values
+    fun(arr) { return filter(arr, fun(x) { return x % 3 == 0; }); },     // Keep multiples of 3
+    fun(arr) { return map(arr, fun(x) { return x + 10; }); }             // Add 10
+);
+
+print "Raw data: " + str(rawData);
+print "Processed data: " + str(processedData);
+
+// Functional list operations
+print "\n=== Functional List Operations ===";
+
+let dataList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+// Find function
+fn find(array, predicate) {
+    for (let i = 0; i < array.length; i = i + 1) {
+        if (predicate(array[i])) {
+            return array[i];
+        }
+    }
+    return nil;
+}
+
+// Some function (exists)
+fn some(array, predicate) {
+    for (let i = 0; i < array.length; i = i + 1) {
+        if (predicate(array[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Every function (forall)
+fn every(array, predicate) {
+    for (let i = 0; i < array.length; i = i + 1) {
+        if (!predicate(array[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+let firstEven = find(dataList, fun(x) { return x % 2 == 0; });
+print "First even number: " + str(firstEven);
+
+let hasEven = some(dataList, fun(x) { return x % 2 == 0; });
+print "Has even numbers: " + str(hasEven);
+
+let allPositive = every(dataList, fun(x) { return x > 0; });
+print "All numbers positive: " + str(allPositive);
+
+let allEven = every(dataList, fun(x) { return x % 2 == 0; });
+print "All numbers even: " + str(allEven);
+
+print "\n=== Functional Programming Examples Complete ===";

@@ -6,7 +6,7 @@
  #include <string>
  #include <vector>
  #include <memory>
- namespace volt {
+ namespace claw {
  class Interpreter;
  class Profiler {
  public:

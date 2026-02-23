@@ -17,12 +17,12 @@ private:
 };
 static std::string runCodeIC(const std::string& source) {
     PrintCapture capture;
-    volt::Lexer lexer(source);
+    claw::Lexer lexer(source);
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     if (parser.hadError()) return "PARSE_ERROR";
-    volt::Interpreter interpreter;
+    claw::Interpreter interpreter;
     try {
         interpreter.execute(statements);
         return capture.get();
@@ -32,8 +32,8 @@ static std::string runCodeIC(const std::string& source) {
 }
 
 TEST(CallICDiagnostics, CrashReproductionDisabledIC) {
-    volt::gRuntimeFlags.disableCallIC = true;
-    volt::gRuntimeFlags.icDiagnostics = true;
+    claw::gRuntimeFlags.disableCallIC = true;
+    claw::gRuntimeFlags.icDiagnostics = true;
     std::string src =
         "fn add(a, b) { return a + b; }"
         "let i = 0;"
@@ -47,12 +47,12 @@ TEST(CallICDiagnostics, CrashReproductionDisabledIC) {
     EXPECT_NE(out, "RUNTIME_ERROR");
     EXPECT_NE(out, "PARSE_ERROR");
     EXPECT_TRUE(out.find("done") != std::string::npos);
-    volt::gRuntimeFlags.disableCallIC = false;
-    volt::gRuntimeFlags.icDiagnostics = false;
+    claw::gRuntimeFlags.disableCallIC = false;
+    claw::gRuntimeFlags.icDiagnostics = false;
 }
 TEST(CallICDiagnostics, EnabledICNoCrash) {
-    volt::gRuntimeFlags.disableCallIC = false;
-    volt::gRuntimeFlags.icDiagnostics = true;
+    claw::gRuntimeFlags.disableCallIC = false;
+    claw::gRuntimeFlags.icDiagnostics = true;
     std::string src =
         "fn add(a, b) { return a + b; }"
         "let i = 0;"
@@ -66,5 +66,5 @@ TEST(CallICDiagnostics, EnabledICNoCrash) {
     EXPECT_NE(out, "RUNTIME_ERROR");
     EXPECT_NE(out, "PARSE_ERROR");
     EXPECT_TRUE(out.find("done") != std::string::npos);
-    volt::gRuntimeFlags.icDiagnostics = false;
+    claw::gRuntimeFlags.icDiagnostics = false;
 }

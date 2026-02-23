@@ -7,7 +7,7 @@
 #include <sstream>
 #include <string>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 

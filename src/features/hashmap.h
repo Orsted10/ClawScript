@@ -4,30 +4,30 @@
 #include <memory>
 #include <vector>
 #include "value.h"
+#include <mutex>
 #include "observability/profiler.h"
 
-namespace volt {
+namespace claw {
 
-// Forward declaration
-struct VoltHashMap;
+struct ClawHashMap;
 
-// Shared pointer type for hash maps
-using HashMapPtr = std::shared_ptr<VoltHashMap>;
+using HashMapPtr = std::shared_ptr<ClawHashMap>;
 
 /**
  * @brief Hash map/dictionary implementation for VoltScript
  * 
  * Stores key-value pairs where keys are strings and values can be any VoltScript type
  */
-struct VoltHashMap {
+struct ClawHashMap {
     std::unordered_map<std::string, Value> data;
     size_t lastBuckets = 0;
+    mutable std::mutex mu;
     
     // Constructor
-    VoltHashMap() = default;
+    ClawHashMap() = default;
     
     // Copy constructor
-    VoltHashMap(const std::unordered_map<std::string, Value>& initialData) : data(initialData) {}
+    ClawHashMap(const std::unordered_map<std::string, Value>& initialData) : data(initialData) {}
     
     // Get the number of key-value pairs
     size_t size() const { return data.size(); }
@@ -46,7 +46,7 @@ struct VoltHashMap {
         if (it != data.end()) {
             return it->second;
         }
-        return volt::nilValue(); // Return nil if key doesn't exist
+        return claw::nilValue(); // Return nil if key doesn't exist
     }
     
     // Set key-value pair
@@ -59,6 +59,22 @@ struct VoltHashMap {
             size_t deltaBuckets = newBuckets - oldBuckets;
             profilerRecordAlloc(deltaBuckets * sizeof(void*) * 8, "hashmap.bucket.grow");
             lastBuckets = newBuckets;
+        }
+    }
+    
+    // Ensure key exists with a default value (thread-safe)
+    void ensureDefault(const std::string& key, const Value& defaultValue) {
+        std::lock_guard<std::mutex> lock(mu);
+        if (data.find(key) == data.end()) {
+            gcBarrierWrite(this, defaultValue);
+            size_t oldBuckets = data.bucket_count();
+            data[key] = defaultValue;
+            size_t newBuckets = data.bucket_count();
+            if (newBuckets > oldBuckets) {
+                size_t deltaBuckets = newBuckets - oldBuckets;
+                profilerRecordAlloc(deltaBuckets * sizeof(void*) * 8, "hashmap.bucket.grow");
+                lastBuckets = newBuckets;
+            }
         }
     }
     
@@ -95,16 +111,16 @@ struct VoltHashMap {
     void clear() { data.clear(); }
     
     // Equality comparison
-    bool operator==(const VoltHashMap& other) const {
+    bool operator==(const ClawHashMap& other) const {
         return data == other.data;
     }
     
     // Merge another hash map into this one
-    void merge(const VoltHashMap& other) {
+    void merge(const ClawHashMap& other) {
         for (const auto& [key, value] : other.data) {
             data[key] = value;
         }
     }
 };
 
-} // namespace volt
+} // namespace claw

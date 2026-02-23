@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-namespace volt {
+namespace claw {
 
 class Parser {
 public:
@@ -39,6 +39,7 @@ private:
     StmtPtr throwStatement();
     StmtPtr importStatement();
     StmtPtr classStatement();
+    StmtPtr switchStatement();
     StmtPtr expressionStatement();
     
     // Expression parsing (by precedence level)
@@ -47,8 +48,12 @@ private:
     ExprPtr ternary();
     ExprPtr logicalOr();
     ExprPtr logicalAnd();
+    ExprPtr bitwiseOr();
+    ExprPtr bitwiseXor();
+    ExprPtr bitwiseAnd();
     ExprPtr equality();
     ExprPtr comparison();
+    ExprPtr shift();
     ExprPtr term();
     ExprPtr factor();
     ExprPtr unary();
@@ -89,4 +94,4 @@ private:
     std::vector<std::string> errors_;
 };
 
-} // namespace volt
+} // namespace claw

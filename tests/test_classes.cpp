@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace volt {
+namespace claw {
 
 class ClassSystemTest : public ::testing::Test {
 protected:
@@ -129,4 +129,4 @@ TEST_F(ClassSystemTest, Constructor) {
     EXPECT_EQ(output, "10\n20\n");
 }
 
-} // namespace volt
+} // namespace claw

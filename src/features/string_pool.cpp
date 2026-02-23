@@ -1,6 +1,6 @@
 #include "string_pool.h"
 
-namespace volt {
+namespace claw {
 
 std::string_view StringPool::internImpl(const std::string& str) {
     {
@@ -39,4 +39,4 @@ void StringPool::clear() {
     pool_.clear();
 }
 
-} // namespace volt
+} // namespace claw

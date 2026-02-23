@@ -1,59 +1,59 @@
 #include "gc_alloc.h"
 #include "observability/profiler.h"
-namespace volt {
-std::shared_ptr<VoltArray> gcNewArray() {
+namespace claw {
+std::shared_ptr<ClawArray> gcNewArray() {
     auto a = gcAcquireArrayFromPool();
     if (a) return a;
-    auto p = std::make_shared<VoltArray>();
-    profilerRecordAlloc(sizeof(VoltArray), "array");
+    auto p = std::make_shared<ClawArray>();
+    profilerRecordAlloc(sizeof(ClawArray), "array");
     return p;
 }
-std::shared_ptr<VoltArray> gcNewArray(const std::vector<Value>& elements) {
+std::shared_ptr<ClawArray> gcNewArray(const std::vector<Value>& elements) {
     auto a = gcAcquireArrayFromPool();
     if (a) {
         a->fill(nilValue(), 0);
         a->reserve(elements.size());
         for (const auto& e : elements) a->push(e);
-        profilerRecordAlloc(sizeof(VoltArray) + elements.size() * sizeof(Value), "array");
+        profilerRecordAlloc(sizeof(ClawArray) + elements.size() * sizeof(Value), "array");
         return a;
     }
-    auto p = std::make_shared<VoltArray>(elements);
-    profilerRecordAlloc(sizeof(VoltArray) + elements.size() * sizeof(Value), "array");
+    auto p = std::make_shared<ClawArray>(elements);
+    profilerRecordAlloc(sizeof(ClawArray) + elements.size() * sizeof(Value), "array");
     return p;
 }
-std::shared_ptr<VoltArray> gcNewArrayReserved(size_t reserve) {
+std::shared_ptr<ClawArray> gcNewArrayReserved(size_t reserve) {
     auto a = gcAcquireArrayFromPool();
     if (!a) {
-        a = std::make_shared<VoltArray>();
-        profilerRecordAlloc(sizeof(VoltArray) + reserve * sizeof(Value), "array");
+        a = std::make_shared<ClawArray>();
+        profilerRecordAlloc(sizeof(ClawArray) + reserve * sizeof(Value), "array");
     } else {
-        profilerRecordAlloc(sizeof(VoltArray) + reserve * sizeof(Value), "array");
+        profilerRecordAlloc(sizeof(ClawArray) + reserve * sizeof(Value), "array");
     }
     a->fill(nilValue(), 0);
     a->reserve(reserve);
     return a;
 }
-std::shared_ptr<VoltArray> gcNewArrayFilled(size_t n, Value v) {
+std::shared_ptr<ClawArray> gcNewArrayFilled(size_t n, Value v) {
     auto a = gcAcquireArrayFromPool();
     if (!a) {
-        auto p = std::make_shared<VoltArray>(std::vector<Value>(n, v));
-        profilerRecordAlloc(sizeof(VoltArray) + n * sizeof(Value), "array");
+        auto p = std::make_shared<ClawArray>(std::vector<Value>(n, v));
+        profilerRecordAlloc(sizeof(ClawArray) + n * sizeof(Value), "array");
         return p;
     }
     a->fill(v, n);
-    profilerRecordAlloc(sizeof(VoltArray) + n * sizeof(Value), "array");
+    profilerRecordAlloc(sizeof(ClawArray) + n * sizeof(Value), "array");
     return a;
 }
-std::shared_ptr<VoltHashMap> gcNewHashMap() {
+std::shared_ptr<ClawHashMap> gcNewHashMap() {
     auto m = gcAcquireHashMapFromPool();
     if (m) return m;
-    auto p = std::make_shared<VoltHashMap>();
-    profilerRecordAlloc(sizeof(VoltHashMap), "hashmap");
+    auto p = std::make_shared<ClawHashMap>();
+    profilerRecordAlloc(sizeof(ClawHashMap), "hashmap");
     return p;
 }
-std::shared_ptr<VoltInstance> gcNewInstance(std::shared_ptr<VoltClass> cls) {
-    auto p = std::make_shared<VoltInstance>(std::move(cls));
-    profilerRecordAlloc(sizeof(VoltInstance), "instance");
+std::shared_ptr<ClawInstance> gcNewInstance(std::shared_ptr<ClawClass> cls) {
+    auto p = std::make_shared<ClawInstance>(std::move(cls));
+    profilerRecordAlloc(sizeof(ClawInstance), "instance");
     return p;
 }
 }

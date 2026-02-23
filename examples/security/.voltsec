@@ -1,0 +1,14 @@
+sandbox=strict
+file.read=allow
+file.write=deny
+file.delete=deny
+input=deny
+output=allow
+network=deny
+log.path=security.log
+log.hmac=
+log.meta.required=false
+io.encrypt.default=false
+io.pass=
+ids.stack.max=64
+ids.alloc.rate.max=500000

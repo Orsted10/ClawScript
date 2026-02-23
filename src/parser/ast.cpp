@@ -2,7 +2,7 @@
 #include "stmt.h"
 #include <sstream>
 
-namespace volt {
+namespace claw {
 
 std::string printAST(Expr* expr) {
     if (auto* lit = dynamic_cast<LiteralExpr*>(expr)) {
@@ -66,6 +66,18 @@ std::string printAST(Expr* expr) {
         return "(" + std::string(compound->op.lexeme) + " " + compound->name + " " + printAST(compound->value.get()) + ")";
     }
     
+    if (auto* compoundM = dynamic_cast<CompoundMemberAssignExpr*>(expr)) {
+        std::ostringstream oss;
+        oss << "(" << compoundM->op.lexeme << " ." << compoundM->member << " " << printAST(compoundM->value.get()) << ")";
+        return oss.str();
+    }
+    
+    if (auto* compoundI = dynamic_cast<CompoundIndexAssignExpr*>(expr)) {
+        std::ostringstream oss;
+        oss << "(" << compoundI->op.lexeme << " [index] " << printAST(compoundI->value.get()) << ")";
+        return oss.str();
+    }
+    
     if (auto* update = dynamic_cast<UpdateExpr*>(expr)) {
         std::string op = std::string(update->op.lexeme);
         if (update->prefix) {
@@ -73,6 +85,24 @@ std::string printAST(Expr* expr) {
         }
         return "(" + update->name + " " + op + ")";
     }
+    
+    if (auto* updateM = dynamic_cast<UpdateMemberExpr*>(expr)) {
+        std::string op = std::string(updateM->op.lexeme);
+        if (updateM->prefix) {
+            return "(" + op + " ." + updateM->member + ")";
+        }
+        return "(. " + updateM->member + " " + op + ")";
+    }
+    
+    if (auto* updateI = dynamic_cast<UpdateIndexExpr*>(expr)) {
+        std::string op = std::string(updateI->op.lexeme);
+        if (updateI->prefix) {
+            return "(" + op + " [index])";
+        }
+        return "([index] " + op + ")";
+    }
+
+ 
     
     if (auto* ternary = dynamic_cast<TernaryExpr*>(expr)) {
         return "(?: " + printAST(ternary->condition.get()) + " " + 
@@ -136,6 +166,8 @@ Value GroupingExpr::accept(ExprVisitor& visitor) { return visitor.visitGroupingE
 Value CallExpr::accept(ExprVisitor& visitor) { return visitor.visitCallExpr(this); }
 Value AssignExpr::accept(ExprVisitor& visitor) { return visitor.visitAssignExpr(this); }
 Value CompoundAssignExpr::accept(ExprVisitor& visitor) { return visitor.visitCompoundAssignExpr(this); }
+Value CompoundMemberAssignExpr::accept(ExprVisitor& visitor) { return visitor.visitCompoundMemberAssignExpr(this); }
+Value CompoundIndexAssignExpr::accept(ExprVisitor& visitor) { return visitor.visitCompoundIndexAssignExpr(this); }
 Value UpdateExpr::accept(ExprVisitor& visitor) { return visitor.visitUpdateExpr(this); }
 Value TernaryExpr::accept(ExprVisitor& visitor) { return visitor.visitTernaryExpr(this); }
 Value ArrayExpr::accept(ExprVisitor& visitor) { return visitor.visitArrayExpr(this); }
@@ -147,6 +179,8 @@ Value SetExpr::accept(ExprVisitor& visitor) { return visitor.visitSetExpr(this);
 Value ThisExpr::accept(ExprVisitor& visitor) { return visitor.visitThisExpr(this); }
 Value SuperExpr::accept(ExprVisitor& visitor) { return visitor.visitSuperExpr(this); }
 Value FunctionExpr::accept(ExprVisitor& visitor) { return visitor.visitFunctionExpr(this); }
+Value UpdateMemberExpr::accept(ExprVisitor& visitor) { return visitor.visitUpdateMemberExpr(this); }
+Value UpdateIndexExpr::accept(ExprVisitor& visitor) { return visitor.visitUpdateIndexExpr(this); }
 
 void ExprStmt::accept(StmtVisitor& visitor) { visitor.visitExprStmt(this); }
 void PrintStmt::accept(StmtVisitor& visitor) { visitor.visitPrintStmt(this); }
@@ -164,5 +198,6 @@ void TryStmt::accept(StmtVisitor& visitor) { visitor.visitTryStmt(this); }
 void ThrowStmt::accept(StmtVisitor& visitor) { visitor.visitThrowStmt(this); }
 void ImportStmt::accept(StmtVisitor& visitor) { visitor.visitImportStmt(this); }
 void ClassStmt::accept(StmtVisitor& visitor) { visitor.visitClassStmt(this); }
+void SwitchStmt::accept(StmtVisitor& visitor) { visitor.visitSwitchStmt(this); }
 
-} // namespace volt
+} // namespace claw

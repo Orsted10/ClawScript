@@ -3,7 +3,7 @@
 #include "features/string_pool.h"
 #include <stdexcept>
 
-namespace volt {
+namespace claw {
 
 void Environment::define(std::string_view name, Value value) {
     // Intern the name to ensure it has a stable lifetime and fast comparison
@@ -39,13 +39,13 @@ Value Environment::get(std::string_view name) const {
             Value val = enclosing_->get(name);
             lookup_cache_[name] = {enclosing_, val, true};
             return val;
-        } catch (const VoltError&) {
+        } catch (const ClawError&) {
             // Re-throw if not found in parent
             throw;
         }
     }
     
-    throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + std::string(name));
+    throw ClawError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + std::string(name));
 }
 
 void Environment::assign(std::string_view name, Value value) {
@@ -67,7 +67,7 @@ void Environment::assign(std::string_view name, Value value) {
         return;
     }
     
-    throw VoltError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + std::string(name));
+    throw ClawError(ErrorCode::UNDEFINED_VARIABLE, "Undefined variable: " + std::string(name));
 }
 
 bool Environment::exists(std::string_view name) const {
@@ -97,4 +97,34 @@ void Environment::forEachKey(const std::function<void(std::string_view)>& fn) co
     if (enclosing_) enclosing_->forEachKey(fn);
 }
 
-} // namespace volt
+void Environment::setSandbox(SandboxMode mode) {
+    sandboxMode_ = mode;
+    switch (mode) {
+        case SandboxMode::Full:
+            allowFileRead_ = true;
+            allowFileWrite_ = true;
+            allowFileDelete_ = true;
+            allowInput_ = true;
+            allowOutput_ = true;
+            allowNetwork_ = true;
+            break;
+        case SandboxMode::Network:
+            allowFileRead_ = true;
+            allowFileWrite_ = false;
+            allowFileDelete_ = false;
+            allowInput_ = true;
+            allowOutput_ = true;
+            allowNetwork_ = true;
+            break;
+        case SandboxMode::Strict:
+            allowFileRead_ = false;
+            allowFileWrite_ = false;
+            allowFileDelete_ = false;
+            allowInput_ = false;
+            allowOutput_ = true;
+            allowNetwork_ = false;
+            break;
+    }
+}
+
+} // namespace claw

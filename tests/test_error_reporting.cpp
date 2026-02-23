@@ -15,17 +15,17 @@ struct ErrorInfo {
 };
 
 ErrorInfo getRuntimeError(const std::string& source) {
-    volt::Lexer lexer(source);
+    claw::Lexer lexer(source);
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto statements = parser.parseProgram();
     
     if (parser.hadError()) return {false, 0, 0, "PARSE_ERROR"};
     
-    volt::Interpreter interpreter;
+    claw::Interpreter interpreter;
     try {
         interpreter.execute(statements);
-    } catch (const volt::RuntimeError& e) {
+    } catch (const claw::RuntimeError& e) {
         return {true, e.token.line, e.token.column, e.what()};
     } catch (...) {
         return {false, 0, 0, "OTHER_ERROR"};

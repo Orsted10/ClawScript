@@ -5,7 +5,7 @@
 #include "value.h"
 #include <sstream>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 

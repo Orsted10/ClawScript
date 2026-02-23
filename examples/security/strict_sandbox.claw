@@ -1,0 +1,10 @@
+print("Attempting file write under strict sandbox");
+let ok = false;
+try {
+  writeFile("x.txt", "data");
+  ok = true;
+} catch (e) {
+  print("blocked");
+}
+print("file write allowed=" + (ok ? "yes" : "no"));
+

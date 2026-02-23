@@ -8,7 +8,7 @@
 #include <sstream>
 #include <ctime>
 
-namespace volt {
+namespace claw {
 
 void registerNativeTime(const std::shared_ptr<Environment>& globals) {
     globals->define("clock", std::make_shared<NativeFunction>(
@@ -104,4 +104,4 @@ void registerNativeTime(const std::shared_ptr<Environment>& globals) {
     ));
 }
 
-} // namespace volt
+} // namespace claw

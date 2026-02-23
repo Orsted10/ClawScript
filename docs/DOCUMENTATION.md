@@ -1,8 +1,8 @@
-# VoltScript Language Documentation
+# ClawScript Language Documentation
 
 <div align="center">
 
-## ⚡ VoltScript v1.0.0 ⚡
+## ⚡ ClawScript v2.0.0 ⚡
 ### *A Modern Programming Language Built from Scratch*
 
 [![Tests](https://img.shields.io/badge/tests-602%2B-brightgreen)]()
@@ -40,9 +40,9 @@
 
 ## 🧠 Introduction
 
-### What is VoltScript?
+### What is ClawScript?
 
-VoltScript is a dynamically-typed programming language designed to be both powerful and educational. Built entirely from scratch in C++20, it demonstrates how programming languages work under the hood while providing practical features for real-world programming.
+ClawScript is a dynamically-typed programming language designed to be both powerful and educational. Built entirely from scratch in C++20, it demonstrates how programming languages work under the hood while providing practical features for real-world programming.
 
 ### Key Features
 
@@ -56,7 +56,7 @@ VoltScript is a dynamically-typed programming language designed to be both power
 
 ### Design Philosophy
 
-VoltScript follows these principles:
+ClawScript follows these principles:
 
 1. **Clarity over cleverness** - Code should be readable and understandable
 2. **Explicit behavior** - No hidden magic or implicit conversions
@@ -79,8 +79,8 @@ VoltScript follows these principles:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/voltscript.git
-cd voltscript
+git clone https://github.com/yourusername/clawscript.git
+cd clawscript
 
 # Create build directory
 cmake -B build -DCMAKE_BUILD_TYPE=Release
@@ -89,29 +89,29 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 
 # Run the interpreter
-./build/bin/volt
+./build/bin/claw
 ```
 
 #### LLVM AoT Build (Optional)
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DVOLT_ENABLE_AOT=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCLAW_ENABLE_AOT=ON
 cmake --build build --config Release
-./build/bin/Release/volt --aot-output=main.o script.volt
+./build/bin/Release/claw --aot-output=main.o script.claw
 ```
 
-### Running VoltScript
+### Running ClawScript
 
 #### Interactive Mode (REPL)
 
 ```bash
-./build/bin/volt
+./build/bin/claw
 ```
 
-This starts an interactive session where you can type and execute VoltScript code directly:
+This starts an interactive session where you can type and execute ClawScript code directly:
 
 ```
-⚡ VoltScript v1.0.0 REPL
+⚡ ClawScript v2.0.0 REPL
 Type 'exit' to quit
 >> let x = 42;
 >> print x;
@@ -122,20 +122,20 @@ Type 'exit' to quit
 #### Running Script Files
 
 ```bash
-./build/bin/volt script.volt
+./build/bin/claw script.claw
 ```
 
-Create a file called `hello.volt`:
+Create a file called `hello.claw`:
 
-```volt
-print "Hello, VoltScript!";
+```claw
+print "Hello, ClawScript!";
 ```
 
 Then run it:
 
 ```bash
-./build/bin/volt hello.volt
-# Output: Hello, VoltScript!
+./build/bin/claw hello.claw
+# Output: Hello, ClawScript!
 ```
 
 ---
@@ -146,7 +146,7 @@ Then run it:
 
 Variables are declared using the `let` keyword:
 
-```volt
+```claw
 let name = "Alice";
 let age = 25;
 let isActive = true;
@@ -156,7 +156,7 @@ let nothing = nil;
 
 Variables can be reassigned:
 
-```volt
+```claw
 let x = 10;
 x = 20;  // Valid - reassignment
 print x; // 20
@@ -166,14 +166,14 @@ print x; // 20
 
 Single-line comments start with `//`:
 
-```volt
+```claw
 // This is a comment
 let x = 42; // This is also a comment
 ```
 
 ### Basic Operations
 
-```volt
+```claw
 // Arithmetic
 let sum = 10 + 5;        // 15
 let diff = 10 - 3;       // 7
@@ -201,7 +201,7 @@ let notResult = !true;            // false
 
 Represents the absence of a value:
 
-```volt
+```claw
 let empty = nil;
 print empty;  // nil
 ```
@@ -210,7 +210,7 @@ print empty;  // nil
 
 Logical true/false values:
 
-```volt
+```claw
 let isTrue = true;
 let isFalse = false;
 print isTrue;   // true
@@ -221,7 +221,7 @@ print isFalse;  // false
 
 64-bit floating-point numbers:
 
-```volt
+```claw
 let integer = 42;
 let float = 3.14159;
 let negative = -17;
@@ -232,7 +232,7 @@ let scientific = 1.5e-3;  // 0.0015
 
 Immutable sequences of characters:
 
-```volt
+```claw
 let singleQuote = 'Hello';
 let doubleQuote = "World";
 let multiline = "This is a
@@ -246,7 +246,7 @@ let greeting = "Hello" + " " + "World";  // "Hello World"
 
 Ordered collections of values:
 
-```volt
+```claw
 let emptyArray = [];
 let numbers = [1, 2, 3, 4, 5];
 let mixed = [42, "hello", true, nil];
@@ -257,7 +257,7 @@ let nested = [[1, 2], [3, 4]];
 
 Key-value collections:
 
-```volt
+```claw
 let emptyMap = {};
 let person = {
     "name": "Alice",
@@ -280,7 +280,7 @@ let nested = {
 
 Callable objects:
 
-```volt
+```claw
 let add = fun(a, b) {
     return a + b;
 };
@@ -298,7 +298,7 @@ let result = operation(5, 3);  // 8
 
 #### If Statement
 
-```volt
+```claw
 let score = 85;
 
 if (score >= 90) {
@@ -314,7 +314,7 @@ if (score >= 90) {
 
 #### Ternary Operator
 
-```volt
+```claw
 let age = 20;
 let status = (age >= 18) ? "Adult" : "Minor";
 print status;  // "Adult"
@@ -324,7 +324,7 @@ print status;  // "Adult"
 
 #### While Loop
 
-```volt
+```claw
 let i = 0;
 while (i < 5) {
     print i;
@@ -335,7 +335,7 @@ while (i < 5) {
 
 #### For Loop
 
-```volt
+```claw
 // Traditional for loop
 for (let i = 0; i < 5; i = i + 1) {
     print i;
@@ -352,7 +352,7 @@ for (let i in numbers) {
 
 Executes at least once, continues until condition becomes true:
 
-```volt
+```claw
 let count = 5;
 run {
     print count;
@@ -365,7 +365,7 @@ run {
 
 #### Break Statement
 
-```volt
+```claw
 for (let i = 0; i < 10; i = i + 1) {
     if (i == 5) {
         break;  // Exit the loop
@@ -377,7 +377,7 @@ for (let i = 0; i < 10; i = i + 1) {
 
 #### Continue Statement
 
-```volt
+```claw
 for (let i = 0; i < 10; i = i + 1) {
     if (i % 2 == 0) {
         continue;  // Skip even numbers
@@ -393,7 +393,7 @@ for (let i = 0; i < 10; i = i + 1) {
 
 ### Function Declaration
 
-```volt
+```claw
 fn greet(name) {
     return "Hello, " + name + "!";
 }
@@ -403,7 +403,7 @@ print greet("Alice");  // "Hello, Alice!"
 
 ### Parameters and Return Values
 
-```volt
+```claw
 fn add(a, b) {
     return a + b;
 }
@@ -422,7 +422,7 @@ fn printTwice(message) {
 
 ### Early Return
 
-```volt
+```claw
 fn findFirstEven(numbers) {
     for (let i = 0; i < numbers.length; i = i + 1) {
         if (numbers[i] % 2 == 0) {
@@ -439,14 +439,14 @@ print findFirstEven([1, 3, 4, 7, 8]);  // 4
 
 Functions are values that can be assigned and passed around:
 
-```volt
+```claw
 // Assign function to variable
 let operation = fun(x, y) {
     return x * y;
 };
 
 print operation(5, 3);  // 15
-
+```claw
 // Pass function as argument
 fn apply(func, a, b) {
     return func(a, b);
@@ -459,7 +459,7 @@ let result = apply(operation, 4, 7);  // 28
 
 Functions that capture variables from their surrounding scope:
 
-```volt
+```claw
 fn makeCounter() {
     let count = 0;
     
@@ -479,7 +479,7 @@ print counter();  // 3
 
 Functions that take other functions as parameters or return functions:
 
-```volt
+```claw
 // Function that returns a function
 fn makeAdder(x) {
     return fun(y) {
@@ -509,7 +509,7 @@ forEach(numbers, fun(item) {
 
 Functions can call themselves:
 
-```volt
+```claw
 fn factorial(n) {
     if (n <= 1) {
         return 1;
@@ -535,7 +535,7 @@ print fibonacci(8);  // 21
 
 ### Creating Arrays
 
-```volt
+```claw
 // Empty array
 let empty = [];
 
@@ -562,7 +562,7 @@ let items = [
 
 ### Accessing Elements
 
-```volt
+```claw
 let fruits = ["apple", "banana", "cherry"];
 
 // Get element by index
@@ -580,7 +580,7 @@ print fruits.length;  // 3
 
 ### Modifying Arrays
 
-```volt
+```claw
 let numbers = [1, 2, 3, 4, 5];
 
 // Change element
@@ -605,7 +605,7 @@ print numbers[0];  // 5
 
 #### Push
 
-```volt
+```claw
 let arr = [1, 2, 3];
 arr.push(4);
 print arr;  // [1, 2, 3, 4]
@@ -613,7 +613,7 @@ print arr;  // [1, 2, 3, 4]
 
 #### Pop
 
-```volt
+```claw
 let arr = [1, 2, 3];
 let last = arr.pop();
 print last;  // 3
@@ -622,7 +622,7 @@ print arr;   // [1, 2]
 
 #### Reverse
 
-```volt
+```claw
 let arr = [1, 2, 3, 4];
 arr.reverse();
 print arr;  // [4, 3, 2, 1]
@@ -630,7 +630,7 @@ print arr;  // [4, 3, 2, 1]
 
 ### Iterating Over Arrays
 
-```volt
+```claw
 let numbers = [10, 20, 30, 40, 50];
 
 // Traditional for loop
@@ -659,7 +659,7 @@ forEach(numbers, fun(item) {
 
 #### Finding Maximum
 
-```volt
+```claw
 fn max(array) {
     if (array.length == 0) return nil;
     
@@ -677,7 +677,7 @@ print max([3, 7, 2, 9, 1]);  // 9
 
 #### Summing Elements
 
-```volt
+```claw
 fn sum(array) {
     let total = 0;
     for (let i = 0; i < array.length; i = i + 1) {
@@ -691,7 +691,7 @@ print sum([1, 2, 3, 4, 5]);  // 15
 
 #### Filtering Elements
 
-```volt
+```claw
 fn filter(array, predicate) {
     let result = [];
     for (let i = 0; i < array.length; i = i + 1) {
@@ -709,7 +709,7 @@ print evens;  // [2, 4, 6, 8, 10]
 
 #### Mapping Elements
 
-```volt
+```claw
 fn map(array, transformer) {
     let result = [];
     for (let i = 0; i < array.length; i = i + 1) {
@@ -729,7 +729,7 @@ print doubled;  // [2, 4, 6, 8, 10]
 
 ### Creating Hash Maps
 
-```volt
+```claw
 // Empty hash map
 let empty = {};
 
@@ -765,7 +765,7 @@ let company = {
 
 ### Accessing Values
 
-```volt
+```claw
 let person = {
     "name": "Alice",
     "age": 25,
@@ -792,7 +792,7 @@ print person.size;  // 3
 
 ### Modifying Hash Maps
 
-```volt
+```claw
 let person = {
     "name": "Alice",
     "age": 25
@@ -816,7 +816,7 @@ print has(person, "age");  // false
 
 #### Keys
 
-```volt
+```claw
 let person = {
     "name": "Alice",
     "age": 25,
@@ -829,7 +829,7 @@ print keys;  // ["name", "age", "active"]
 
 #### Values
 
-```volt
+```claw
 let person = {
     "name": "Alice",
     "age": 25,
@@ -842,7 +842,7 @@ print values;  // ["Alice", 25, true]
 
 #### Has
 
-```volt
+```claw
 let person = {
     "name": "Alice",
     "age": 25
@@ -855,7 +855,7 @@ print has(person, "age");     // true
 
 #### Remove
 
-```volt
+```claw
 let person = {
     "name": "Alice",
     "age": 25,
@@ -872,7 +872,7 @@ print notFound;  // false
 
 ### Iterating Over Hash Maps
 
-```volt
+```claw
 let person = {
     "name": "Alice",
     "age": 25,
@@ -905,7 +905,7 @@ forEachKeyValue(person, fun(key, value) {
 
 #### Counting Word Frequencies
 
-```volt
+```claw
 fn wordCount(text) {
     let words = split(text, " ");
     let counts = {};
@@ -933,7 +933,7 @@ print frequencies["quick"]; // 1
 
 #### Grouping Data
 
-```volt
+```claw
 fn groupBy(array, keyFunction) {
     let groups = {};
     
@@ -972,7 +972,7 @@ print byDepartment["Sales"].length;        // 1
 
 ### Reading Files
 
-```volt
+```claw
 // Read entire file as string
 let content = readFile("data.txt");
 print content;
@@ -988,7 +988,7 @@ if (fileExists("data.txt")) {
 
 ### Writing Files
 
-```volt
+```claw
 // Write string to file (overwrites existing content)
 let success = writeFile("output.txt", "Hello, World!");
 if (success) {
@@ -1006,7 +1006,7 @@ if (appendSuccess) {
 
 ### File Operations
 
-```volt
+```claw
 // Check if file exists
 if (exists("config.json")) {
     print "Configuration file exists";
@@ -1028,7 +1028,7 @@ if (exists("temp.txt")) {
 
 ### Practical Example: Configuration Management
 
-```volt
+```claw
 // Read configuration
 fn loadConfig(filename) {
     if (!exists(filename)) {
@@ -1066,10 +1066,54 @@ saveConfig("app.config", config);
 ---
 
 ## 🧵 String Operations
+---
+
+## 🔐 Security Policy & Logging
+
+### Policy File: .voltsec
+- Configure sandbox capabilities and logging via a plaintext `.voltsec` file in the working directory.
+- Supported keys:
+  - `output=allow|deny` — enable or block print/output
+  - `log.path=<path>` — set log file path (default `claw.log`)
+  - `log.hmac=<key>` — enable HMAC-SHA256 for log lines
+  - `log.meta.required=true|false` — require metadata for logWrite
+- Apply changes in-script with `policyReload()`.
+
+### Logging API
+- `logWrite(message[, metadata])` — writes a single line to the configured log:
+  - Without HMAC: `message|metadata?`
+  - With HMAC: `message|hex(HMAC)|metadata?`
+  - `metadata` is a map (JSON-like) and is optional unless required by policy.
+
+### Examples
+
+Enable output and configure HMAC with required metadata:
+
+```claw
+writeFile(".voltsec", "log.path=security.log\nlog.hmac=abc123\nlog.meta.required=true\noutput=allow");
+policyReload();
+
+logWrite("user-login", {"user":"alice","ok":true,"id":42});
+print readFile("security.log");
+```
+
+Optional metadata when not required:
+
+```claw
+writeFile(".voltsec", "log.path=events.log\nlog.hmac=abc123\nlog.meta.required=false\noutput=allow");
+policyReload();
+
+logWrite("heartbeat");
+print readFile("events.log");
+```
+
+### Platform Notes
+- Windows uses BCrypt SHA-256 in keyed (HMAC) mode.
+- Other platforms prefer OpenSSL if available; otherwise a built-in fallback is used.
 
 ### Basic String Operations
 
-```volt
+```claw
 let text = "Hello, World!";
 
 // Get length
@@ -1092,7 +1136,7 @@ print indexOf(text, "xyz");    // -1 (not found)
 
 ### String Manipulation
 
-```volt
+```claw
 // Trim whitespace
 let spaced = "   Hello, World!   ";
 print "'" + trim(spaced) + "'";  // "'Hello, World!'"
@@ -1122,7 +1166,7 @@ print replaced;  // "hi hi hi"
 
 ### String Comparison
 
-```volt
+```claw
 let str1 = "Hello";
 let str2 = "World";
 
@@ -1135,7 +1179,7 @@ print endsWith(str2, "abc");      // false
 
 ### Advanced String Functions
 
-```volt
+```claw
 // Padding
 let number = "42";
 print "'" + padStart(number, 5, "0") + "'";  // "'00042'"
@@ -1156,7 +1200,7 @@ print fromCharCode(66);       // "B"
 
 #### CSV Parsing
 
-```volt
+```claw
 fn parseCSV(line) {
     let fields = split(line, ",");
     let result = [];
@@ -1178,7 +1222,7 @@ print "City: " + fields[3];
 
 #### Text Analysis
 
-```volt
+```claw
 fn analyzeText(text) {
     let cleanText = toLower(trim(text));
     let words = split(cleanText, " ");
@@ -1214,7 +1258,7 @@ print "Average word length: " + str(analysis["avgWordLength"]);
 
 ### Basic Math Functions
 
-```volt
+```claw
 // Absolute value
 print abs(-5);    // 5
 print abs(3.14);  // 3.14
@@ -1243,14 +1287,14 @@ print random();     // Random number between 0 and 1
 
 ### Performance Helpers
 
-```volt
+```claw
 print fibFast(35);        // Fast Fibonacci for benchmarks
 print arraySumFast(1000); // Sum 0..999 using a formula
 ```
 
 ### Trigonometric Functions
 
-```volt
+```claw
 // Convert degrees to radians for trig functions
 fn degToRad(degrees) {
     return degrees * 3.14159 / 180;
@@ -1264,7 +1308,7 @@ print tan(angle);  // 0.9999999999999999
 
 ### Logarithmic Functions
 
-```volt
+```claw
 // Natural logarithm
 print log(1);      // 0
 print log(2.71828); // ~1
@@ -1278,7 +1322,7 @@ print exp(1);      // 2.718281828459045
 
 #### Distance Calculation
 
-```volt
+```claw
 fn distance(x1, y1, x2, y2) {
     let dx = x2 - x1;
     let dy = y2 - y1;
@@ -1290,7 +1334,7 @@ print distance(0, 0, 3, 4);  // 5
 
 #### Quadratic Formula
 
-```volt
+```claw
 fn solveQuadratic(a, b, c) {
     let discriminant = b * b - 4 * a * c;
     
@@ -1312,7 +1356,7 @@ print solutions[1];  // 2
 
 #### Compound Interest
 
-```volt
+```claw
 fn compoundInterest(principal, rate, time) {
     return principal * pow(1 + rate, time);
 }
@@ -1327,7 +1371,7 @@ print "Final amount: $" + str(amount);  // $1628.89
 
 ### Function Composition
 
-```volt
+```claw
 // Basic composition
 let add = fun(x, y) { return x + y; };
 let multiply = fun(x, y) { return x * y; };
@@ -1346,7 +1390,7 @@ print result2;
 
 ### Function Piping
 
-```volt
+```claw
 // Pipe functions (left to right)
 let addOne = fun(x) { return x + 1; };
 let double = fun(x) { return x * 2; };
@@ -1371,7 +1415,7 @@ print result;  // 18 (6 + 8 + 10)
 
 ### Higher-Order Functions
 
-```volt
+```claw
 // Map function
 fn map(array, func) {
     let result = [];
@@ -1419,7 +1463,7 @@ print product;  // 120
 
 ### Function Factories
 
-```volt
+```claw
 // Create multiplier functions
 fn createMultiplier(factor) {
     return fun(value) {
@@ -1452,7 +1496,7 @@ print isChild(10);   // true
 
 ### Currying
 
-```volt
+```claw
 // Manual currying
 fn add(a) {
     return fun(b) {
@@ -1493,7 +1537,7 @@ print curriedAdd(1, 2, 3);        // 6
 
 ### Sleep Function
 
-```volt
+```claw
 // Pause execution for specified milliseconds
 print "Starting...";
 sleep(1000);  // Sleep for 1 second
@@ -1509,7 +1553,7 @@ print "Done!";
 
 ### Benchmarking
 
-```volt
+```claw
 // Benchmark a function
 fn slowFunction(n) {
     let result = 0;
@@ -1544,7 +1588,7 @@ if (fastResult.timeMicroseconds > 0) {
 
 ### Performance Comparison
 
-```volt
+```claw
 // Compare different algorithms
 fn bubbleSort(arr) {
     let n = arr.length;
@@ -1604,7 +1648,7 @@ if (quickTime.timeMicroseconds > 0) {
 
 ### Timing Operations
 
-```volt
+```claw
 // Time a block of code
 fn timeOperation(name, operation) {
     print "Starting " + name + "...";
@@ -1637,9 +1681,9 @@ print "Result: " + str(result);
 
 ### Runtime Errors
 
-VoltScript provides precise error reporting with line and column information:
+ClawScript provides precise error reporting with line and column information:
 
-```volt
+```claw
 // Division by zero
 let result = 10 / 0;  // Error: Division by zero
 
@@ -1666,7 +1710,7 @@ Errors include:
 
 ### Best Practices for Error Prevention
 
-```volt
+```claw
 // Check array bounds before access
 fn safeGet(array, index) {
     if (index >= 0 && index < array.length) {
@@ -1713,7 +1757,7 @@ try {
 
 ### Type Conversion Functions
 
-```volt
+```claw
 // Convert to string
 print str(42);        // "42"
 print str(true);      // "true"
@@ -1737,7 +1781,7 @@ print type(fun(x){}); // "function"
 
 ### Input/Output Functions
 
-```volt
+```claw
 // Print to console
 print "Hello, World!";
 print 42;
@@ -1754,7 +1798,7 @@ print "Next year you'll be " + str(ageNum + 1);
 
 ### Utility Functions
 
-```volt
+```claw
 // Get current time
 let timestamp = now();
 print "Current timestamp: " + str(timestamp);
@@ -1783,7 +1827,7 @@ print parsed["name"];  // "Alice"
 
 ### Naming Conventions
 
-```volt
+```claw
 // Use descriptive names
 let userAge = 25;           // Good
 let ua = 25;                // Avoid
@@ -1799,7 +1843,7 @@ let calc = fun(p) {         // Avoid
 
 ### Code Organization
 
-```volt
+```claw
 // Group related functionality
 fn mathUtils = {
     "add": fun(a, b) { return a + b; },
@@ -1818,7 +1862,7 @@ if (condition) {
 
 ### Error Prevention
 
-```volt
+```claw
 // Validate inputs
 fn divide(a, b) {
     if (type(a) != "number" || type(b) != "number") {
@@ -1841,7 +1885,7 @@ fn getLast(array) {
 
 ### Performance Considerations
 
-```volt
+```claw
 // Avoid unnecessary operations in loops
 // Bad:
 for (let i = 0; i < array.length; i = i + 1) {
@@ -1876,7 +1920,7 @@ let ordered = [1, 2, 3, 4, 5];
 
 #### Calculator
 
-```volt
+```claw
 fn calculator() {
     print "=== Simple Calculator ===";
     
@@ -1912,7 +1956,7 @@ calculator();
 
 #### Todo List Manager
 
-```volt
+```claw
 fn todoManager() {
     let todos = [];
     
@@ -1964,7 +2008,7 @@ todoManager();
 
 #### File Processor
 
-```volt
+```claw
 fn processFile(filename) {
     if (!exists(filename)) {
         print "File not found: " + filename;
@@ -2003,10 +2047,10 @@ processFile("document.txt");
 
 ## 🏗️ Project Structure
 
-This section describes how the VoltScript repository is organized for v0.9.2.
+This section describes how the ClawScript repository is organized for v0.9.2.
 
 ```text
-VoltScript/
+ClawScript/
 ├── src/                     # Core implementation (lexer, parser, VM, runtime)
 │   ├── lexer/              # Tokens and lexical analysis
 │   ├── parser/             # AST nodes and recursive descent parser
@@ -2074,7 +2118,7 @@ you are more interested in the tree-walk or VM pipeline.
 
 ## ⚙️ Development Workflow
 
-This is the recommended workflow for building, testing, and running VoltScript.
+This is the recommended workflow for building, testing, and running ClawScript.
 
 ### Build
 
@@ -2087,52 +2131,52 @@ cmake --build build
 ### AoT Build (Optional)
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DVOLT_ENABLE_AOT=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCLAW_ENABLE_AOT=ON
 cmake --build build --config Release
-./build/bin/Release/volt --aot-output=main.o script.volt
+./build/bin/Release/claw --aot-output=main.o script.claw
 ```
 
 ### Run the REPL or a Script
 
 ```bash
-./build/bin/volt               # Start interactive REPL
-./build/bin/volt script.volt   # Run a script file
+./build/bin/claw               # Start interactive REPL
+./build/bin/claw script.claw   # Run a script file
 ```
 
 ### Run Tests
 
 ```bash
 ctest --test-dir build                 # Run all tests (if enabled)
-./build/bin/volt_tests                # Run unit and feature tests
-./build/bin/volt_integration_tests    # Run integration tests
+./build/bin/claw_tests                # Run unit and feature tests
+./build/bin/claw_integration_tests    # Run integration tests
 ```
 
 ### Run Benchmarks
 
 ```bash
-./build/bin/volt_benchmarks
+./build/bin/claw_benchmarks
 ```
 
-### Profiling & Observability (v1.0.0)
+### Profiling & Observability (v2.0.0)
 
 Use the built-in profiler to analyze CPU and heap behavior.
 
 ```bash
 # Enable profiling and write HTML flame graph
-build\bin\Release\volt.exe --profile=profile.html script.volt
+build\bin\Release\claw.exe --profile=profile.html script.claw
 
 # Change sampling frequency (Hz)
-build\bin\Release\volt.exe --profile --profile-hz=200 script.volt
+build\bin\Release\claw.exe --profile --profile-hz=200 script.claw
 ```
 
 - Outputs:
-  - HTML flame graph: profile.html (or volt_profile.html if no filename is given)
+  - HTML flame graph: profile.html (or claw_profile.html if no filename is given)
   - Folded stacks: profile.cpu.folded, profile.heap.folded
   - Speedscope JSON: profile.speedscope.json
 - Environment toggles:
-  - VOLT_PROFILE=1 — enable profiling without CLI
-  - VOLT_PROFILE_HZ=100 — set sampling frequency
-  - VOLT_PROFILE_OUT=volt_profile.html — set output base path
+- CLAW_PROFILE=1 — enable profiling without CLI
+- CLAW_PROFILE_HZ=100 — set sampling frequency
+- CLAW_PROFILE_OUT=claw_profile.html — set output base path
 - In-script controls:
   - profilePause() — pause sampling
   - profileResume() — resume sampling
@@ -2143,13 +2187,13 @@ build\bin\Release\volt.exe --profile --profile-hz=200 script.volt
 
 ### General Questions
 
-**Q: What is VoltScript?**
-A: VoltScript is a dynamically-typed programming language built from scratch in C++20. It's designed to be both educational and practical.
+**Q: What is ClawScript?**
+A: ClawScript is a dynamically-typed programming language built from scratch in C++20. It's designed to be both educational and practical.
 
 **Q: Why build a language from scratch?**
 A: To understand how programming languages work internally - lexers, parsers, interpreters, and runtime systems.
 
-**Q: Is VoltScript production-ready?**
+**Q: Is ClawScript production-ready?**
 A: While functional and well-tested, it's primarily educational. For production use, consider established languages.
 
 ### Technical Questions
@@ -2157,7 +2201,7 @@ A: While functional and well-tested, it's primarily educational. For production 
 **Q: What C++ standard is required?**
 A: C++20 or higher is required for modern features and standard library support.
 
-**Q: How fast is VoltScript?**
+**Q: How fast is ClawScript?**
 A: v0.9.2 includes a bytecode VM, NaN-boxed values, inline caches, and optional LLVM AoT, making it significantly faster than the original tree-walk-only versions while remaining educational and portable.
 
 **Q: Does it have garbage collection?**
@@ -2166,7 +2210,7 @@ A: It uses C++ smart pointers (shared_ptr) for automatic memory management.
 ### Language Features
 
 **Q: Does it support object-oriented programming?**
-A: Yes. VoltScript supports classes with inheritance, methods, constructors, `this`, and `super`.
+A: Yes. ClawScript supports classes with inheritance, methods, constructors, `this`, and `super`.
 
 **Q: Are there modules or imports?**
 A: Not yet. All code must be in a single file or manually concatenated.
@@ -2195,7 +2239,7 @@ MIT License - Free to use, modify, and distribute.
 
 <div align="center">
 
-### ⚡ VoltScript v1.0.0 ⚡
+### ⚡ ClawScript v2.0.0 ⚡
 
 **Built with passion and C++20**
 

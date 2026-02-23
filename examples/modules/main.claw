@@ -1,0 +1,8 @@
+import { square, PI, circleArea } from "modules/math_utils.claw";
+
+print "square(5) = " + square(5);
+print "PI = " + PI;
+print "circleArea(2) = " + circleArea(2);
+
+import { cube } from "modules/math_utils.claw";
+print "cube(3) = " + cube(3);

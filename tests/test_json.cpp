@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace volt {
+namespace claw {
 
 class JSONTest : public ::testing::Test {
 protected:
@@ -90,4 +90,4 @@ TEST_F(JSONTest, JSONEncode) {
     EXPECT_TRUE(output.find("\"scores\":[10,20]") != std::string::npos);
 }
 
-} // namespace volt
+} // namespace claw

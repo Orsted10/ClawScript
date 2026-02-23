@@ -1,6 +1,6 @@
-# VoltScript v1.0.0 API Reference
+# ClawScript v2.0.0 API Reference
 
-This reference describes the core standard library available in VoltScript v1.0.0.
+This reference describes the core standard library available in ClawScript v2.0.0.
 It is based on the v0.8.6 APIs and extended with the features introduced up to v1.0.0
 such as the class system, JSON engine, and performance tools.
 
@@ -20,20 +20,20 @@ such as the class system, JSON engine, and performance tools.
 ## Global Functions
 
 ### Control Flow
-```volt
+```claw
 print(value)                    // Print value to console
 exit()                          // Exit program
 type(value)                     // Get type of value as string
 ```
 
 ### Variable Operations
-```volt
+```claw
 let name = value               // Declare variable
 name = newValue                // Reassign variable
 ```
 
 ### Control Structures
-```volt
+```claw
 if (condition) { ... }         // Conditional execution
 if (condition) { ... } else { ... }
 while (condition) { ... }      // Loop while condition is true
@@ -47,19 +47,19 @@ return value                   // Return from function
 ## Array Methods
 
 ### Properties
-```volt
+```claw
 array.length                   // Number of elements in array
 ```
 
 ### Mutation Methods
-```volt
+```claw
 array.push(value)              // Add element to end, returns nil
 array.pop()                    // Remove and return last element
 array.reverse()                // Reverse array in-place, returns nil
 ```
 
 ### Functional Methods
-```volt
+```claw
 array.map(function)            // Transform each element
 // Example: [1,2,3].map(fun(x) { return x * 2; }) → [2,4,6]
 
@@ -88,12 +88,12 @@ array.flatMap(function)        // Map then flatten results
 ## Hash Map Methods
 
 ### Properties
-```volt
+```claw
 hashMap.size                   // Number of key-value pairs
 ```
 
 ### Access Methods
-```volt
+```claw
 hashMap.keys()                 // Get array of all keys
 hashMap.values()               // Get array of all values
 hashMap.has(key)               // Check if key exists
@@ -101,7 +101,7 @@ hashMap.remove(key)            // Remove key-value pair
 ```
 
 ### Global Functions for Hash Maps
-```volt
+```claw
 keys(hashMap)                  // Get array of keys
 values(hashMap)                // Get array of values
 has(hashMap, key)              // Check if key exists
@@ -111,7 +111,7 @@ remove(hashMap, key)           // Remove key-value pair and return value
 ## String Functions
 
 ### Basic Operations
-```volt
+```claw
 len(string)                    // Get string length
 str(value)                     // Convert value to string
 toUpper(string)                // Convert to uppercase
@@ -121,13 +121,13 @@ lower(string)                  // Alias for toLower
 ```
 
 ### Substring Operations
-```volt
+```claw
 substr(string, start, length)  // Extract substring
 indexOf(string, substring)     // Find substring position
 ```
 
 ### Formatting
-```volt
+```claw
 trim(string)                   // Remove whitespace from ends
 padStart(string, length, pad)  // Pad string at start
 padEnd(string, length, pad)    // Pad string at end
@@ -135,19 +135,19 @@ repeat(string, count)          // Repeat string
 ```
 
 ### Splitting and Joining
-```volt
+```claw
 split(string, delimiter)       // Split string into array
 replace(string, search, replacement)  // Replace substring
 ```
 
 ### Pattern Matching
-```volt
+```claw
 startsWith(string, prefix)     // Check if string starts with prefix
 endsWith(string, suffix)       // Check if string ends with suffix
 ```
 
 ### Character Operations
-```volt
+```claw
 charCodeAt(string, index)      // Get character code at index
 fromCharCode(code)             // Create string from character code
 ```
@@ -155,7 +155,7 @@ fromCharCode(code)             // Create string from character code
 ## Math Functions
 
 ### Basic Operations
-```volt
+```claw
 abs(x)                         // Absolute value
 sqrt(x)                        // Square root
 pow(base, exponent)            // Power function
@@ -164,40 +164,40 @@ max(a, b)                      // Maximum of two values
 ```
 
 ### Rounding
-```volt
+```claw
 round(x)                       // Round to nearest integer
 floor(x)                       // Round down
 ceil(x)                        // Round up
 ```
 
 ### Trigonometry
-```volt
+```claw
 sin(x)                         // Sine (radians)
 cos(x)                         // Cosine (radians)
 tan(x)                         // Tangent (radians)
 ```
 
 ### Logarithms and Exponents
-```volt
+```claw
 log(x)                         // Natural logarithm
 exp(x)                         // Exponential (e^x)
 ```
 
 ### Performance Helpers
-```volt
+```claw
 fibFast(n)                     // Fast Fibonacci
 arraySumFast(n)                // Sum 0..n-1
 ```
 
 ### Random Numbers
-```volt
+```claw
 random()                       // Random float between 0 and 1
 ```
 
 ## File I/O Functions
 
 ### File Operations
-```volt
+```claw
 readFile(path)                 // Read entire file as string
 writeFile(path, content)       // Write content to file
 appendFile(path, content)      // Append content to file
@@ -207,16 +207,38 @@ deleteFile(path)               // Delete file
 fileSize(path)                 // Get file size in bytes
 ```
 
+## Security & Logging
+
+### Policy
+```claw
+policyReload()                 // Reload sandbox/logging policy from .voltsec
+```
+
+Supported `.voltsec` keys:
+- output=allow|deny            // Allow or block console output
+- log.path=<path>              // Log file path (default: claw.log)
+- log.hmac=<key>               // Enable HMAC-SHA256 for log lines
+- log.meta.required=true|false // Require metadata for logWrite
+
+### Logging
+```claw
+logWrite(message[, metadata])  // Append a log line with optional metadata
+// When HMAC key is set:
+//   Writes: message|hex(HMAC)|metadata?
+// When no HMAC:
+//   Writes: message|metadata?
+```
+
 ## Date/Time Functions
 
-```volt
+```claw
 now()                          // Current timestamp in milliseconds
 formatDate(timestamp, format)  // Format timestamp (placeholder)
 ```
 
 ## JSON Functions
 
-```volt
+```claw
 jsonEncode(value)              // Convert value to JSON string
 jsonDecode(jsonString)         // Parse JSON string to value
 ```
@@ -224,7 +246,7 @@ jsonDecode(jsonString)         // Parse JSON string to value
 ## Class System
 
 ### Class Declaration
-```volt
+```claw
 class Name {
     init(args) { ... }         // Constructor
     method() { ... }           // Instance method
@@ -232,7 +254,7 @@ class Name {
 ```
 
 ### Inheritance
-```volt
+```claw
 class Child extends Parent {
     method() {
         super.method();        // Call parent method
@@ -241,7 +263,7 @@ class Child extends Parent {
 ```
 
 ### Instance Operations
-```volt
+```claw
 let instance = ClassName(args) // Create instance
 instance.property = value      // Set property
 print instance.property        // Get property
@@ -251,7 +273,7 @@ instance.method()              // Call method
 ## Functional Utilities
 
 ### Function Composition
-```volt
+```claw
 compose(f1, f2, ...)           // Compose functions (right to left)
 // Example: compose(f, g)(x) = f(g(x))
 
@@ -260,7 +282,7 @@ pipe(f1, f2, ...)              // Pipe value through functions (left to right)
 ```
 
 ### Array Transformation
-```volt
+```claw
 map(array, function)           // Apply function to each element
 // Example: map([1,2,3], fun(x) { return x * 2; }) → [2,4,6]
 
@@ -273,7 +295,7 @@ reverse(array)                 // Reverse array elements
 
 ## Performance Tools
 
-```volt
+```claw
 sleep(milliseconds)            // Pause execution
 benchmark(function, ...args)   // Measure execution time
 profilePause()                 // Pause sampling profiler
@@ -287,36 +309,36 @@ profileResume()                // Resume sampling profiler
   - --profile[=file] — enable profiling and write HTML
   - --profile-hz=NUM — set sampling frequency (Hz)
 - Environment:
-  - VOLT_PROFILE=1 — enables profiling without CLI
-  - VOLT_PROFILE_HZ=100 — sets sampling frequency
-  - VOLT_PROFILE_OUT=volt_profile.html — sets output base path
+- CLAW_PROFILE=1 — enables profiling without CLI
+- CLAW_PROFILE_HZ=100 — sets sampling frequency
+- CLAW_PROFILE_OUT=claw_profile.html — sets output base path
 
 Outputs:
-- HTML flame graph (profile.html or volt_profile.html)
+- HTML flame graph (profile.html or claw_profile.html)
 - Folded stacks (cpu/heap)
 - Speedscope JSON (.speedscope.json)
 ## Operators
 
 ### Arithmetic
-```volt
+```claw
 + - * / %                      // Basic arithmetic
 += -= *= /= %=                 // Compound assignment
 ++ --                          // Increment/decrement
 ```
 
 ### Comparison
-```volt
+```claw
 == != < > <= >=                // Comparison operators
 ```
 
 ### Logical
-```volt
+```claw
 && || !                        // Logical operators
 ? :                            // Ternary operator
 ```
 
 ### Data Access
-```volt
+```claw
 array[index]                   // Array indexing
 hashMap[key]                   // Hash map access
 object.property                // Property access
@@ -325,7 +347,7 @@ object.property                // Property access
 ## Data Types
 
 ### Primitive Types
-```volt
+```claw
 nil                            // Null value
 true/false                     // Boolean values
 42, 3.14                       // Number literals
@@ -333,13 +355,13 @@ true/false                     // Boolean values
 ```
 
 ### Collection Types
-```volt
+```claw
 [1, 2, 3]                      // Array literal
 {"key": "value"}               // Hash map literal
 ```
 
 ### Function Types
-```volt
+```claw
 fn name(params) { body }       // Function declaration
 fun(params) { body }           // Anonymous function expression
 ```
@@ -369,7 +391,7 @@ Errors include:
 - Use descriptive names that indicate purpose
 
 ### Function Design
-```volt
+```claw
 // ✅ Good: Pure functions with clear parameters
 fn calculateArea(width, height) {
     return width * height;
@@ -382,7 +404,7 @@ fn isValidEmail(email) {
 ```
 
 ### Array Operations
-```volt
+```claw
 // ✅ Good: Use functional methods for data transformation
 let doubled = numbers.map(fun(x) { return x * 2; });
 
@@ -394,7 +416,7 @@ let result = data
 ```
 
 ### Error Prevention
-```volt
+```claw
 // ✅ Good: Check preconditions
 fn divide(a, b) {
     if (b == 0) {
@@ -417,7 +439,7 @@ fn processArray(arr) {
 ## Examples
 
 ### Complete Program Structure
-```volt
+```claw
 // Import statements (future feature)
 // Main function
 fn main() {
@@ -430,7 +452,7 @@ main();
 ```
 
 ### Data Processing Pipeline
-```volt
+```claw
 // Process sales data
 let sales = [
     {"product": "A", "amount": 100},
@@ -453,7 +475,7 @@ print totals;  // {"B": 150, "A": 200}
 ```
 
 ### File Processing
-```volt
+```claw
 // Read and process file
 if (exists("data.txt")) {
     let content = readFile("data.txt");

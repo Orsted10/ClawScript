@@ -1,0 +1,4 @@
+let pass = "p@ssw0rd";
+writeFileEncAlgo("secret.venc", "top secret", pass, "CHACHA20_POLY1305");
+let content = readFileEncAlgo("secret.venc", pass, "CHACHA20_POLY1305");
+print("dec=" + content);

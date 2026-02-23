@@ -4,7 +4,7 @@
 #include "interpreter.h"
 #include <sstream>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 

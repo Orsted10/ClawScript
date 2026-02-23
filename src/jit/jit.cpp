@@ -2,12 +2,12 @@
 #include "vm/vm.h"
 #include <algorithm>
 #include <cstring>
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
 #include "llvm_jit.h"
 #endif
-namespace volt {
+namespace claw {
 JitEngine::JitEngine() : config_()
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     , compiler_(std::make_unique<LlvJitCompiler>())
 #endif
 {}
@@ -29,7 +29,7 @@ void JitEngine::registerBaseline(const void* key, const std::vector<JitEntry>& e
     std::vector<JitEntry> out;
     out.reserve(entries.size());
     for (auto e : entries) {
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
         if (!e.fn && compiler_) {
             const VMFunction* fnKey = reinterpret_cast<const VMFunction*>(key);
             if (fnKey && fnKey->chunk && e.ip == fnKey->chunk->code().data()) {
@@ -46,7 +46,7 @@ void JitEngine::registerBaseline(const void* key, const std::vector<JitEntry>& e
 bool JitEngine::enterOSR(void* vm, const void* key, const uint8_t* ip) {
     auto fn = getBaselineEntry(key, ip);
     auto vmp = reinterpret_cast<VM*>(vm);
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     if (fn) {
         using EntryFn = bool(*)(void*);
         return reinterpret_cast<EntryFn>(fn)(vm);
@@ -59,4 +59,4 @@ void JitEngine::invalidateAll() {
     baseline_.clear();
 }
 JitConfig gJitConfig;
-} // namespace volt
+} // namespace claw

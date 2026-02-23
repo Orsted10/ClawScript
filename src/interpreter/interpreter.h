@@ -13,19 +13,19 @@
 #include <stdexcept>
 #include <sstream>
 
-namespace volt {
+namespace claw {
 
 // Runtime error with location info
-class RuntimeError : public VoltError {
+class RuntimeError : public ClawError {
 public:
     Token token;
     std::vector<StackFrame> stack_trace;
     
     RuntimeError(Token tok, ErrorCode code, const std::string& message)
-        : VoltError(code, message), token(tok) {}
+        : ClawError(code, message), token(tok) {}
 
     RuntimeError(Token tok, ErrorCode code, const std::string& message, std::vector<StackFrame> trace)
-        : VoltError(code, message), token(tok), stack_trace(std::move(trace)) {}
+        : ClawError(code, message), token(tok), stack_trace(std::move(trace)) {}
 };
 
 // When a function hits 'return', we use this exception to jump
@@ -86,7 +86,11 @@ public:
     Value visitCallExpr(CallExpr* expr) override;
     Value visitAssignExpr(AssignExpr* expr) override;
     Value visitCompoundAssignExpr(CompoundAssignExpr* expr) override;
+    Value visitCompoundMemberAssignExpr(CompoundMemberAssignExpr* expr) override;
+    Value visitCompoundIndexAssignExpr(CompoundIndexAssignExpr* expr) override;
     Value visitUpdateExpr(UpdateExpr* expr) override;
+    Value visitUpdateMemberExpr(UpdateMemberExpr* expr) override;
+    Value visitUpdateIndexExpr(UpdateIndexExpr* expr) override;
     Value visitTernaryExpr(TernaryExpr* expr) override;
     Value visitArrayExpr(ArrayExpr* expr) override;
     Value visitIndexExpr(IndexExpr* expr) override;
@@ -115,6 +119,7 @@ public:
     void visitThrowStmt(ThrowStmt* stmt) override;
     void visitImportStmt(ImportStmt* stmt) override;
     void visitClassStmt(ClassStmt* stmt) override;
+    void visitSwitchStmt(SwitchStmt* stmt) override;
     
     // Get global environment
     std::shared_ptr<Environment> getGlobals() const { return globals_; }
@@ -145,4 +150,4 @@ private:
     ModuleManager module_manager_;
 };
 
-} // namespace volt
+} // namespace claw

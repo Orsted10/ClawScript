@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-namespace volt {
+namespace claw {
 
 // Forward declaration
 struct Stmt;
@@ -27,6 +27,7 @@ struct TryStmt;
 struct ThrowStmt;
 struct ImportStmt;
 struct ClassStmt;
+struct SwitchStmt;
 
 class StmtVisitor {
 public:
@@ -47,6 +48,7 @@ public:
     virtual void visitThrowStmt(ThrowStmt* stmt) = 0;
     virtual void visitImportStmt(ImportStmt* stmt) = 0;
     virtual void visitClassStmt(ClassStmt* stmt) = 0;
+    virtual void visitSwitchStmt(SwitchStmt* stmt) = 0;
 };
 
 // Base statement node
@@ -232,4 +234,18 @@ struct ClassStmt : Stmt {
     void accept(StmtVisitor& visitor) override;
 };
 
-} // namespace volt
+// Switch statement: switch (expr) { case v: ...; default: ...; }
+struct SwitchStmt : Stmt {
+    struct Case {
+        bool isDefault;
+        ExprPtr match; // null for default
+        std::vector<StmtPtr> body;
+    };
+    ExprPtr expression;
+    std::vector<Case> cases;
+    SwitchStmt(Token switchTok, ExprPtr expr, std::vector<Case> cs)
+        : Stmt(switchTok), expression(std::move(expr)), cases(std::move(cs)) {}
+    void accept(StmtVisitor& visitor) override;
+};
+
+} // namespace claw

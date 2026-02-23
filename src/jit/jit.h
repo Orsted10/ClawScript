@@ -6,10 +6,10 @@
 #include <unordered_map>
 #include <atomic>
 #include "interpreter/value.h"
-#ifdef VOLT_ENABLE_JIT
-namespace volt { class LlvJitCompiler; }
+#ifdef CLAW_ENABLE_JIT
+namespace claw { class LlvJitCompiler; }
 #endif
-namespace volt {
+namespace claw {
 enum class JitTier {
     Interpreter,
     Baseline,
@@ -38,9 +38,9 @@ public:
 private:
     JitConfig config_;
     std::unordered_map<const void*, std::vector<JitEntry>> baseline_;
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     std::unique_ptr<LlvJitCompiler> compiler_;
 #endif
 };
 extern JitConfig gJitConfig;
-} // namespace volt
+} // namespace claw

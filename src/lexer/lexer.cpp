@@ -2,7 +2,7 @@
 #include "features/string_pool.h"
 #include <iostream>
 
-namespace volt {
+namespace claw {
 
 const std::unordered_map<std::string_view, TokenType> Lexer::keywords_ = {
     {"let", TokenType::Let},
@@ -30,6 +30,9 @@ const std::unordered_map<std::string_view, TokenType> Lexer::keywords_ = {
     {"this", TokenType::This},
     {"super", TokenType::Super},
     {"fun", TokenType::Fn},  // Alias for fn
+    {"switch", TokenType::Switch},
+    {"case", TokenType::Case},
+    {"default", TokenType::Default},
 };
 
 Lexer::Lexer(std::string_view source) : source_(source) {}
@@ -105,12 +108,20 @@ Token Lexer::scanToken() {
             return Token(TokenType::Bang, "!", line_, startColumn_);
         
         case '<':
+            if (match('<')) {
+                if (match('=')) return Token(TokenType::ShiftLeftEqual, "<<=", line_, startColumn_);
+                return Token(TokenType::ShiftLeft, "<<", line_, startColumn_);
+            }
             if (match('=')) {
                 return Token(TokenType::LessEqual, "<=", line_, startColumn_);
             }
             return Token(TokenType::Less, "<", line_, startColumn_);
         
         case '>':
+            if (match('>')) {
+                if (match('=')) return Token(TokenType::ShiftRightEqual, ">>=", line_, startColumn_);
+                return Token(TokenType::ShiftRight, ">>", line_, startColumn_);
+            }
             if (match('=')) {
                 return Token(TokenType::GreaterEqual, ">=", line_, startColumn_);
             }
@@ -120,13 +131,22 @@ Token Lexer::scanToken() {
             if (match('&')) {
                 return Token(TokenType::And, "&&", line_, startColumn_);
             }
-            break;
+            if (match('=')) return Token(TokenType::BitAndEqual, "&=", line_, startColumn_);
+            return Token(TokenType::BitAnd, "&", line_, startColumn_);
         
         case '|':
             if (match('|')) {
                 return Token(TokenType::Or, "||", line_, startColumn_);
             }
-            break;
+            if (match('=')) return Token(TokenType::BitOrEqual, "|=", line_, startColumn_);
+            return Token(TokenType::BitOr, "|", line_, startColumn_);
+        
+        case '^':
+            if (match('=')) return Token(TokenType::BitXorEqual, "^=", line_, startColumn_);
+            return Token(TokenType::BitXor, "^", line_, startColumn_);
+        
+        case '~':
+            return Token(TokenType::BitNot, "~", line_, startColumn_);
     }
     
     return Token(TokenType::Error, source_.substr(start_, 1), line_, startColumn_);
@@ -261,4 +281,4 @@ bool Lexer::isAlphaNumeric(char c) const {
     return isAlpha(c) || isDigit(c);
 }
 
-} // namespace volt
+} // namespace claw

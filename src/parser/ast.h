@@ -5,7 +5,7 @@
 #include "token.h"
 #include "value.h"
 
-namespace volt {
+namespace claw {
 
 // Forward declarations
 struct Expr;
@@ -24,7 +24,11 @@ struct GroupingExpr;
 struct CallExpr;
 struct AssignExpr;
 struct CompoundAssignExpr;
+struct CompoundMemberAssignExpr;
+struct CompoundIndexAssignExpr;
 struct UpdateExpr;
+struct UpdateMemberExpr;
+struct UpdateIndexExpr;
 struct TernaryExpr;
 struct ArrayExpr;
 struct IndexExpr;
@@ -48,7 +52,11 @@ public:
     virtual Value visitCallExpr(CallExpr* expr) = 0;
     virtual Value visitAssignExpr(AssignExpr* expr) = 0;
     virtual Value visitCompoundAssignExpr(CompoundAssignExpr* expr) = 0;
+    virtual Value visitCompoundMemberAssignExpr(CompoundMemberAssignExpr* expr) = 0;
+    virtual Value visitCompoundIndexAssignExpr(CompoundIndexAssignExpr* expr) = 0;
     virtual Value visitUpdateExpr(UpdateExpr* expr) = 0;
+    virtual Value visitUpdateMemberExpr(UpdateMemberExpr* expr) = 0;
+    virtual Value visitUpdateIndexExpr(UpdateIndexExpr* expr) = 0;
     virtual Value visitTernaryExpr(TernaryExpr* expr) = 0;
     virtual Value visitArrayExpr(ArrayExpr* expr) = 0;
     virtual Value visitIndexExpr(IndexExpr* expr) = 0;
@@ -167,6 +175,29 @@ struct CompoundAssignExpr : Expr {
     Value accept(ExprVisitor& visitor) override;
 };
 
+// Compound Assignment on Member: obj.prop += 1, obj.prop &= 2, etc.
+struct CompoundMemberAssignExpr : Expr {
+    ExprPtr object;
+    std::string member;
+    Token nameTok;
+    Token op;
+    ExprPtr value;
+    CompoundMemberAssignExpr(Token nameTok_, ExprPtr obj, std::string mem, Token o, ExprPtr v)
+        : Expr(o), object(std::move(obj)), member(std::move(mem)), nameTok(nameTok_), op(o), value(std::move(v)) {}
+    Value accept(ExprVisitor& visitor) override;
+};
+
+// Compound Assignment on Index: arr[i] += 1, map[key] |= 3, etc.
+struct CompoundIndexAssignExpr : Expr {
+    ExprPtr object;
+    ExprPtr index;
+    Token op;
+    ExprPtr value;
+    CompoundIndexAssignExpr(Token bracketTok, ExprPtr obj, ExprPtr idx, Token o, ExprPtr v)
+        : Expr(o), object(std::move(obj)), index(std::move(idx)), op(o), value(std::move(v)) {}
+    Value accept(ExprVisitor& visitor) override;
+};
+
 // Update Expression: ++x, x++, --x, x--
 struct UpdateExpr : Expr {
     std::string name;
@@ -174,6 +205,29 @@ struct UpdateExpr : Expr {
     bool prefix; // true for ++x, false for x++
     UpdateExpr(Token nameTok, Token o, bool pre)
         : Expr(o), name(std::string(nameTok.lexeme)), op(o), prefix(pre) {}
+    Value accept(ExprVisitor& visitor) override;
+};
+
+// Update Member: ++obj.prop, obj.prop++, --obj.prop, obj.prop--
+struct UpdateMemberExpr : Expr {
+    ExprPtr object;
+    std::string member;
+    Token nameTok;
+    Token op;
+    bool prefix;
+    UpdateMemberExpr(Token nameTok_, ExprPtr obj, std::string mem, Token o, bool pre)
+        : Expr(o), object(std::move(obj)), member(std::move(mem)), nameTok(nameTok_), op(o), prefix(pre) {}
+    Value accept(ExprVisitor& visitor) override;
+};
+
+// Update Index: ++arr[i], arr[i]++, --arr[i], arr[i]--
+struct UpdateIndexExpr : Expr {
+    ExprPtr object;
+    ExprPtr index;
+    Token op;
+    bool prefix;
+    UpdateIndexExpr(Token bracketTok, ExprPtr obj, ExprPtr idx, Token o, bool pre)
+        : Expr(o), object(std::move(obj)), index(std::move(idx)), op(o), prefix(pre) {}
     Value accept(ExprVisitor& visitor) override;
 };
 
@@ -274,4 +328,4 @@ struct SuperExpr : Expr {
 // AST Pretty Printer
 std::string printAST(Expr* expr);
 
-} // namespace volt
+} // namespace claw

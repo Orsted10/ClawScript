@@ -4,7 +4,7 @@
 #include "opcodes.h"
 #include "interpreter/value.h"
 
-namespace volt {
+namespace claw {
 
 /**
  * @brief A sequence of bytecode instructions and constants
@@ -52,4 +52,4 @@ private:
     int loopCount_ = 0;
 };
 
-} // namespace volt
+} // namespace claw

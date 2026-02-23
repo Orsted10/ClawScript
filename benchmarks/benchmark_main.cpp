@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-using namespace volt;
+using namespace claw;
 
 // ========================================
 // INTERPRETER BENCHMARKS
@@ -142,7 +142,7 @@ BENCHMARK(BM_StringComparison_Interned);
 // JIT Benchmarks (Adaptive OSR)
 // ========================================
 static void BM_MandelbrotJIT(benchmark::State& state) {
-    using namespace volt;
+    using namespace claw;
     std::string source =
         "let w=80; let h=40;"
         "for (let i = 0; i < h; i = i + 1) {"

@@ -5,7 +5,7 @@
 #include "value.h"
 #include <sstream>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 
@@ -541,7 +541,7 @@ TEST(PerformanceLimits, ComplexBenchmarking) {
         
         // Benchmark the operation
         startTime = clock();
-        result = complexOperation(100);
+        result = complexOperation(fastCount(100));
         endTime = clock();
         duration = endTime - startTime;
         

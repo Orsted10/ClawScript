@@ -19,7 +19,7 @@
 #include "features/callable.h"
 #include "formatter.h"
 
-namespace volt::lsp {
+namespace claw::lsp {
 
 struct Position { int line = 0; int character = 0; };
 struct Range { Position start; Position end; };
@@ -48,7 +48,7 @@ struct Document {
 };
 
 static std::unordered_map<std::string, Document> g_docs;
-static std::shared_ptr<volt::Interpreter> g_interp;
+static std::shared_ptr<claw::Interpreter> g_interp;
 static std::unordered_map<std::string, Document> g_wsdocs;
 static std::string g_workspaceRoot;
 
@@ -378,16 +378,22 @@ static void handleInitialize(const Json& req) {
     caps["documentSymbolProvider"] = Json::boolean(true);
     caps["workspaceSymbolProvider"] = Json::boolean(true);
     caps["renameProvider"] = Json::boolean(true);
-    caps["documentRangeFormattingProvider"] = Json::boolean(true);
-    JsonObject onType;
-    onType["firstTriggerCharacter"] = Json::string(";");
+    JsonObject onTypeDoc;
+    onTypeDoc["firstTriggerCharacter"] = Json::string(";");
     JsonArray more; more.push_back(Json::string("}")); more.push_back(Json::string(",")); more.push_back(Json::string(":"));
-    onType["moreTriggerCharacter"] = Json::array(std::move(more));
-    caps["documentOnTypeFormattingProvider"] = Json::object(std::move(onType));
+    onTypeDoc["moreTriggerCharacter"] = Json::array(std::move(more));
+    caps["documentOnTypeFormattingProvider"] = Json::object(std::move(onTypeDoc));
     JsonObject completion;
     completion["resolveProvider"] = Json::boolean(false);
     JsonArray triggers; triggers.push_back(Json::string(".")); triggers.push_back(Json::string("(")); completion["triggerCharacters"] = Json::array(std::move(triggers));
     caps["completionProvider"] = Json::object(std::move(completion));
+    caps["documentFormattingProvider"] = Json::boolean(true);
+    caps["documentRangeFormattingProvider"] = Json::boolean(true);
+    JsonObject onType;
+    JsonArray onTypeTriggers; onTypeTriggers.push_back(Json::string("}")); onTypeTriggers.push_back(Json::string("\n"));
+    onType["firstTriggerCharacter"] = Json::string("}");
+    onType["moreTriggerCharacter"] = Json::array(std::move(onTypeTriggers));
+    caps["onTypeFormattingProvider"] = Json::object(std::move(onType));
     JsonObject sigHelp;
     JsonArray sigTriggers; sigTriggers.push_back(Json::string("(")); sigTriggers.push_back(Json::string(","));
     sigHelp["triggerCharacters"] = Json::array(std::move(sigTriggers));
@@ -395,7 +401,7 @@ static void handleInitialize(const Json& req) {
     caps["textDocumentSync"] = Json::number(2);
     result["capabilities"] = Json::object(std::move(caps));
     if (!g_interp) {
-        g_interp = std::make_shared<volt::Interpreter>();
+        g_interp = std::make_shared<claw::Interpreter>();
     }
     auto pRootUri = getPath(req, {"params", "rootUri"});
     auto pRootPath = getPath(req, {"params", "rootPath"});
@@ -409,7 +415,7 @@ static void handleInitialize(const Json& req) {
             for (auto& p : std::filesystem::recursive_directory_iterator(g_workspaceRoot)) {
                 if (p.is_regular_file()) {
                     auto ext = p.path().extension().string();
-                    if (ext == ".volt") {
+                    if (ext == ".claw" || ext == ".volt") {
                         std::ifstream ifs(p.path().string(), std::ios::binary);
                         if (!ifs) continue;
                         std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
@@ -482,6 +488,31 @@ static void handleWorkspaceSymbol(const Json& req) {
     auto idOpt = getPath(req, {"id"});
     if (idOpt) resp["id"] = *(idOpt.value());
     resp["result"] = Json::array(std::move(result));
+    writeMessage(Json::object(std::move(resp)));
+}
+
+static void handleFormatting(const Json& req) {
+    auto pDoc = getPath(req, {"params", "textDocument"});
+    std::string uri = pDoc ? (**pDoc).o.at("uri").s : "";
+    JsonArray edits;
+    auto it = g_docs.find(uri);
+    if (it != g_docs.end()) {
+        Lexer lex(it->second.text);
+        auto toks = lex.tokenize();
+        std::string formatted = claw::fmt::formatTokens(toks, 2);
+        JsonObject te;
+        Range rr; rr.start.line = 0; rr.start.character = 0;
+        rr.end.line = static_cast<int>(std::count(it->second.text.begin(), it->second.text.end(), '\n'));
+        rr.end.character = 0;
+        te["range"] = makeRange(rr);
+        te["newText"] = Json::string(formatted);
+        edits.push_back(Json::object(std::move(te)));
+    }
+    JsonObject resp;
+    resp["jsonrpc"] = Json::string("2.0");
+    auto idOpt = getPath(req, {"id"});
+    if (idOpt) resp["id"] = *(idOpt.value());
+    resp["result"] = Json::array(std::move(edits));
     writeMessage(Json::object(std::move(resp)));
 }
 
@@ -896,10 +927,66 @@ static void handleReferences(const Json& req) {
 
 static void handleCompletion(const Json& req) {
     auto pDoc = getPath(req, {"params", "textDocument"});
+    auto pPos = getPath(req, {"params", "position"});
     std::string uri = pDoc ? (**pDoc).o.at("uri").s : "";
     JsonArray items;
     auto it = g_docs.find(uri);
     if (it != g_docs.end()) {
+        int line = pPos ? static_cast<int>((**pPos).o.at("line").n) : 0;
+        int ch = pPos ? static_cast<int>((**pPos).o.at("character").n) : 0;
+        std::istringstream iss(it->second.text);
+        std::string curLine;
+        int cur = 0;
+        while (std::getline(iss, curLine)) {
+            if (!curLine.empty() && curLine.back() == '\r') curLine.pop_back();
+            if (cur == line) break;
+            cur++;
+        }
+        bool afterDot = false;
+        if (ch > 0 && ch <= static_cast<int>(curLine.size())) {
+            for (int i = ch - 1; i >= 0; --i) {
+                char c = curLine[i];
+                if (c == '.') { afterDot = true; break; }
+                if (!(std::isalnum(static_cast<unsigned char>(c)) || c == '_')) break;
+            }
+        }
+        if (afterDot) {
+            const char* arrayMethods[] = {"push","pop","reverse","map","filter","reduce","join","concat","slice","flat","flatMap","length"};
+            for (const char* m : arrayMethods) {
+                JsonObject item;
+                item["label"] = Json::string(m);
+                item["kind"] = Json::number(2);
+                items.push_back(Json::object(std::move(item)));
+            }
+            const char* hashmapMethods[] = {"keys","values","has","remove","size"};
+            for (const char* m : hashmapMethods) {
+                JsonObject item;
+                item["label"] = Json::string(m);
+                item["kind"] = Json::number(2);
+                items.push_back(Json::object(std::move(item)));
+            }
+        }
+        const char* keywords[] = {"let","fn","class","init","return","if","else","while","for","run","until","break","continue","try","catch","throw"};
+        for (const char* kw : keywords) {
+            JsonObject item;
+            item["label"] = Json::string(kw);
+            item["kind"] = Json::number(14);
+            items.push_back(Json::object(std::move(item)));
+        }
+        const char* builtins[] = {
+            "len","str","substr","toUpper","toLower","split","trim","indexOf",
+            "pow","sqrt","sin","cos","tan","abs","min","max","round","floor","ceil","random",
+            "readFile","writeFile","appendFile","exists","fileSize",
+            "keys","values","has","remove",
+            "compose","pipe","benchmark","sleep","now","formatDate",
+            "jsonEncode","jsonDecode","type"
+        };
+        for (const char* bn : builtins) {
+            JsonObject item;
+            item["label"] = Json::string(bn);
+            item["kind"] = Json::number(3);
+            items.push_back(Json::object(std::move(item)));
+        }
         for (const auto& [name, sym] : it->second.symbols) {
             JsonObject item;
             item["label"] = Json::string(name);
@@ -1003,7 +1090,7 @@ static void handleRangeFormatting(const Json& req) {
         }
         Lexer lex(sub.str());
         auto toks = lex.tokenize();
-        std::string formatted = volt::fmt::formatTokens(toks, 2);
+        std::string formatted = claw::fmt::formatTokens(toks, 2);
         JsonObject te;
         Range rr; rr.start.line = sLine; rr.start.character = sChar; rr.end.line = eLine; rr.end.character = eChar;
         te["range"] = makeRange(rr);
@@ -1079,7 +1166,7 @@ static void handleOnTypeFormatting(const Json& req) {
         }
         Lexer lex(textLine);
         auto toks = lex.tokenize();
-        std::string formatted = volt::fmt::formatTokens(toks, 2);
+        std::string formatted = claw::fmt::formatTokens(toks, 2);
         Range rr; rr.start.line = line; rr.start.character = 0; rr.end.line = line; rr.end.character = static_cast<int>(textLine.size());
         JsonObject te;
         te["range"] = makeRange(rr);
@@ -1114,6 +1201,7 @@ int run() {
                 if (method == "textDocument/signatureHelp") { handleSignatureHelp(req); continue; }
                 if (method == "workspace/symbol") { handleWorkspaceSymbol(req); continue; }
                 if (method == "textDocument/rename") { handleRename(req); continue; }
+                if (method == "textDocument/formatting") { handleFormatting(req); continue; }
                 if (method == "textDocument/rangeFormatting") { handleRangeFormatting(req); continue; }
                 if (method == "textDocument/onTypeFormatting") { handleOnTypeFormatting(req); continue; }
                 if (method == "textDocument/codeAction") { handleCodeAction(req); continue; }
@@ -1133,8 +1221,6 @@ int run() {
     return 0;
 }
 
-} // namespace volt::lsp
+} // namespace claw::lsp
 
-int main() {
-    return volt::lsp::run();
-}
+int main() { return claw::lsp::run(); }

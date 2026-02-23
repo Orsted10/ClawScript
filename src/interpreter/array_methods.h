@@ -4,12 +4,12 @@
 #include "interpreter.h"
 #include <functional>
 
-namespace volt {
+namespace claw {
 
 // Helper class to wrap interpreter calls for array methods
 class ArrayMethodHelper {
 public:
-    ArrayMethodHelper(Interpreter& interp, std::shared_ptr<VoltArray> arr)
+    ArrayMethodHelper(Interpreter& interp, std::shared_ptr<ClawArray> arr)
         : interpreter_(interp), array_(arr) {}
     
     Value callFunction(const std::shared_ptr<Callable>& func, const std::vector<Value>& args) {
@@ -17,11 +17,11 @@ public:
     }
     
     Interpreter& getInterpreter() { return interpreter_; }
-    std::shared_ptr<VoltArray> getArray() { return array_; }
+    std::shared_ptr<ClawArray> getArray() { return array_; }
     
 private:
     Interpreter& interpreter_;
-    std::shared_ptr<VoltArray> array_;
+    std::shared_ptr<ClawArray> array_;
 };
 
-} // namespace volt
+} // namespace claw

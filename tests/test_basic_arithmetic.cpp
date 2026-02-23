@@ -5,7 +5,7 @@
 #include "value.h"
 #include <sstream>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 
@@ -403,6 +403,169 @@ TEST(BasicArithmetic, FloatOperations9) {
 
 TEST(BasicArithmetic, FloatOperations10) {
     std::string code = "print 16.0 / 4.0;";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "4\n");
+}
+
+// Bitwise operator tests
+TEST(BasicArithmetic, BitwiseAnd) {
+    std::string code = "print 5 & 3;";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "1\n");
+}
+
+TEST(BasicArithmetic, BitwiseOr) {
+    std::string code = "print 5 | 2;";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "7\n");
+}
+
+TEST(BasicArithmetic, BitwiseXor) {
+    std::string code = "print 5 ^ 1;";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "4\n");
+}
+
+TEST(BasicArithmetic, BitwiseNot) {
+    std::string code = "print ~0;";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "-1\n");
+}
+
+TEST(BasicArithmetic, ShiftLeft) {
+    std::string code = "print 1 << 3;";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "8\n");
+}
+
+TEST(BasicArithmetic, ShiftRight) {
+    std::string code = "print 8 >> 2;";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "2\n");
+}
+
+TEST(BasicArithmetic, BitwisePrecedence) {
+    std::string code = "print 1 | 2 & 4;";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "1\n");
+}
+
+TEST(BasicArithmetic, CompoundBitwiseAnd) {
+    std::string code = R"(
+        let x = 7;
+        x &= 3;
+        print x;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "3\n");
+}
+
+TEST(BasicArithmetic, CompoundShiftLeft) {
+    std::string code = R"(
+        let x = 1;
+        x <<= 4;
+        print x;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "16\n");
+}
+
+TEST(BasicArithmetic, ArrayIndexIncrement) {
+    std::string code = R"(
+        let a = [1];
+        a[0]++;
+        print a[0];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "2\n");
+}
+
+TEST(BasicArithmetic, HashMapMemberDecrement) {
+    std::string code = R"(
+        let m = {"x": 5};
+        m.x--;
+        print m.x;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "4\n");
+}
+
+TEST(BasicArithmetic, CompoundArrayIndexPlus) {
+    std::string code = R"(
+        let a = [5, 3];
+        a[0] += 2;
+        print a[0];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "7\n");
+}
+
+TEST(BasicArithmetic, CompoundArrayIndexBitAnd) {
+    std::string code = R"(
+        let a = [5, 3];
+        a[1] &= 1;
+        print a[1];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "1\n");
+}
+
+TEST(BasicArithmetic, CompoundArrayIndexMinus) {
+    std::string code = R"(
+        let a = [10];
+        a[0] -= 4;
+        print a[0];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "6\n");
+}
+
+TEST(BasicArithmetic, CompoundArrayIndexMultiply) {
+    std::string code = R"(
+        let a = [7];
+        a[0] *= 3;
+        print a[0];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "21\n");
+}
+
+TEST(BasicArithmetic, CompoundArrayIndexDivide) {
+    std::string code = R"(
+        let a = [18];
+        a[0] /= 6;
+        print a[0];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "3\n");
+}
+
+TEST(BasicArithmetic, CompoundArrayIndexXor) {
+    std::string code = R"(
+        let a = [5];
+        a[0] ^= 3;
+        print a[0];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "6\n");
+}
+
+TEST(BasicArithmetic, CompoundArrayIndexShiftLeft) {
+    std::string code = R"(
+        let a = [2];
+        a[0] <<= 3;
+        print a[0];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "16\n");
+}
+
+TEST(BasicArithmetic, CompoundArrayIndexShiftRight) {
+    std::string code = R"(
+        let a = [16];
+        a[0] >>= 2;
+        print a[0];
+    )";
     std::string output = runCode(code);
     EXPECT_EQ(output, "4\n");
 }

@@ -1,5 +1,0 @@
-// Test function with captured shared_ptr
-obj = {"value": 42};
-func = fun() { return obj.value; };
-result = func();
-print result;

@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <stdexcept>
 
-namespace volt::lsp {
+namespace claw::lsp {
 
 JsonParser::JsonParser(std::string_view input) : src_(input) {}
 
@@ -187,5 +187,4 @@ std::optional<const Json*> getPath(const Json& j, const std::vector<std::string>
     return cur;
 }
 
-} // namespace volt::lsp
-
+} // namespace claw::lsp

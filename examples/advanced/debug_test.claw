@@ -1,0 +1,3 @@
+numbers = [1, 2, 3]; 
+result = numbers.map(fun(x) { return x * 2; }); 
+print result;

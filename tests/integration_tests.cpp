@@ -45,9 +45,9 @@ protected:
         std::cout.rdbuf(capturedOutput.rdbuf());
 
         try {
-            volt::Lexer lexer(source);
+            claw::Lexer lexer(source);
             auto tokens = lexer.tokenize();
-            volt::Parser parser(tokens);
+            claw::Parser parser(tokens);
             auto statements = parser.parseProgram();
 
             if (parser.hadError()) {
@@ -57,9 +57,9 @@ protected:
                 return "Parser Error: " + errs;
             }
 
-            volt::Interpreter interpreter;
+            claw::Interpreter interpreter;
             interpreter.execute(statements);
-        } catch (const volt::RuntimeError& e) {
+        } catch (const claw::RuntimeError& e) {
             std::cout.rdbuf(oldCout);
             return std::string("Runtime Error: ") + e.what();
         } catch (const std::exception& e) {
@@ -75,24 +75,24 @@ protected:
 };
 
 TEST_F(IntegrationTest, FibonacciRecursive) {
-    std::string output = runScript("examples/math/fibonacci.volt");
+    std::string output = runScript("examples/math/fibonacci.claw");
     // The script prints the first 10 Fibonacci numbers: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34
     EXPECT_TRUE(output.find("34") != std::string::npos) << "Output was: " << output;
 }
 
 TEST_F(IntegrationTest, FactorialRecursion) {
-    std::string output = runScript("examples/math/factorial_recursion.volt");
+    std::string output = runScript("examples/math/factorial_recursion.claw");
     // fact(5) = 120
     EXPECT_TRUE(output.find("120") != std::string::npos) << "Output was: " << output;
 }
 
 TEST_F(IntegrationTest, Closures) {
-    std::string output = runScript("examples/functional/closure_test.volt");
+    std::string output = runScript("examples/functional/closure_test.claw");
     // The closure test should produce predictable output
     EXPECT_FALSE(output.empty());
 }
 
 TEST_F(IntegrationTest, NestedArrays) {
-    std::string output = runScript("examples/data_structures/advanced_arrays.volt");
+    std::string output = runScript("examples/data_structures/advanced_arrays.claw");
     EXPECT_FALSE(output.empty());
 }

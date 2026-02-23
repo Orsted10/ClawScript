@@ -4,7 +4,7 @@
 #include <vector>
 #include <unordered_map>
 
-namespace volt {
+namespace claw {
 
 class Lexer {
 public:
@@ -39,4 +39,4 @@ private:
     static const std::unordered_map<std::string_view, TokenType> keywords_;
 };
 
-} // namespace volt
+} // namespace claw

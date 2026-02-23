@@ -6,7 +6,7 @@
 #include "interpreter/interpreter.h"
 #include <string>
 
-using namespace volt;
+using namespace claw;
 
 static void BM_VM_Fibonacci(benchmark::State& state) {
     std::string source =

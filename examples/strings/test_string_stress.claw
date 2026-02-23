@@ -1,0 +1,13 @@
+// Test string processing stress functionality
+text = "The quick brown fox jumps over the lazy dog";
+
+// Chain multiple string operations
+result = text
+    .toLowerCase()
+    .replace(" ", "_")
+    .replace("_the_", "_THE_")
+    .padStart(100, "-")
+    .padEnd(120, "=");
+
+print len(result);
+print substr(result, 0, 20);  // Show first 20 chars to debug

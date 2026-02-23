@@ -4,9 +4,11 @@
 #include "features/callable.h"
 #include "features/array.h"
 #include "interpreter/value.h"
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 #include <immintrin.h>
+#endif
 
-namespace volt {
+namespace claw {
 
 void registerNativeArray(const std::shared_ptr<Environment>& globals, Interpreter& interpreter) {
     globals->define("reverse", std::make_shared<NativeFunction>(
@@ -16,7 +18,7 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
                 throw std::runtime_error("reverse() requires an array argument");
             }
             auto original = asArray(args[0]);
-            auto reversed = std::make_shared<VoltArray>();
+            auto reversed = std::make_shared<ClawArray>();
             for (int i = original->length() - 1; i >= 0; i--) {
                 reversed->push(original->get(i));
             }
@@ -36,7 +38,7 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
             }
             auto array = asArray(args[0]);
             auto func = asCallable(args[1]);
-            auto result = std::make_shared<VoltArray>();
+            auto result = std::make_shared<ClawArray>();
             for (size_t i = 0; i < array->size(); i++) {
                 Value element = array->get(i);
                 Value predicateResult = func->call(interpreter, {element});
@@ -60,7 +62,7 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
             }
             auto array = asArray(args[0]);
             auto func = asCallable(args[1]);
-            auto result = std::make_shared<VoltArray>();
+            auto result = std::make_shared<ClawArray>();
             for (size_t i = 0; i < array->size(); i++) {
                 Value element = array->get(i);
                 Value mappedValue = func->call(interpreter, {element});
@@ -82,7 +84,7 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
             }
             auto array = asArray(args[0]);
             double add = asNumber(args[1]);
-            auto result = std::make_shared<VoltArray>();
+            auto result = std::make_shared<ClawArray>();
             size_t n = array->size();
             size_t i = 0;
 #if defined(__AVX__) || defined(__AVX2__)
@@ -149,4 +151,4 @@ void registerNativeArray(const std::shared_ptr<Environment>& globals, Interprete
     ));
 }
 
-} // namespace volt
+} // namespace claw

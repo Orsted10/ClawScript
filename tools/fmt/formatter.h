@@ -3,8 +3,8 @@
 #include <vector>
 #include "lexer/token.h"
 
-namespace volt::fmt {
+namespace claw::fmt {
 
-std::string formatTokens(const std::vector<volt::Token>& tokens, int indentSize = 2);
+std::string formatTokens(const std::vector<claw::Token>& tokens, int indentSize = 2);
 
-} // namespace volt::fmt
+} // namespace claw::fmt

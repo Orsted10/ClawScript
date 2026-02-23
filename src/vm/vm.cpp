@@ -1,16 +1,19 @@
 #include "vm.h"
 #include <iostream>
 #include <cstdio>
+#include <chrono>
 #include <vector>
 #include <algorithm>
 #include "interpreter/errors.h"
 #include "features/string_pool.h"
 #include "features/callable.h"
 #include "features/class.h"
+#include "features/array.h"
+#include "features/hashmap.h"
 #include "lexer/token.h"
 #include "interpreter/interpreter.h"
 
-namespace volt {
+namespace claw {
 
 RuntimeFlags gRuntimeFlags;
 
@@ -21,10 +24,10 @@ VM::VM()
       frames_(),
       frameCount_(0),
       openUpvalues_(),
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
       jit_(),
 #endif
-      globals_(std::make_shared<Environment>()),
+      globals_(nullptr),
       interpreter_(nullptr),
       globalVersion_(0),
       globalInlineCache_(),
@@ -33,14 +36,17 @@ VM::VM()
       callInlineCache_(),
       functionHotness_(),
       loopHotness_()
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
       , jitConfig_()
 #endif
 {
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     jit_.setConfig(gJitConfig);
     jitConfig_ = gJitConfig;
 #endif
+    ownedInterpreter_ = std::make_unique<Interpreter>();
+    interpreter_ = ownedInterpreter_.get();
+    globals_ = interpreter_->getGlobals();
     gcRegisterVM(this);
 }
 
@@ -51,7 +57,7 @@ VM::VM(Interpreter& interpreter)
       frames_(),
       frameCount_(0),
       openUpvalues_(),
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
       jit_(),
 #endif
       globals_(interpreter.getGlobals()),
@@ -63,11 +69,11 @@ VM::VM(Interpreter& interpreter)
       callInlineCache_(),
       functionHotness_(),
       loopHotness_()
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
       , jitConfig_()
 #endif
 {
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     jit_.setConfig(gJitConfig);
     jitConfig_ = gJitConfig;
 #endif
@@ -105,9 +111,11 @@ InterpretResult VM::interpret(const Chunk& chunk) {
 InterpretResult VM::run() {
     CallFrame* frame = &frames_[frameCount_ - 1];
     Value* stackTop = stackTop_;
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     (void)jit_;
 #endif
+    static std::chrono::steady_clock::time_point lastCheck = std::chrono::steady_clock::now();
+    static uint64_t lastAlloc = 0;
 
 #define READ_BYTE() (*frame->ip++)
 #define READ_SHORT() \
@@ -138,6 +146,27 @@ InterpretResult VM::run() {
     } while (false)
 
     for (;;) {
+        if (gRuntimeFlags.idsEnabled) {
+            if (frameCount_ > gRuntimeFlags.idsStackMax) {
+                stackTop_ = stackTop;
+                std::cerr << "Stack depth anomaly detected." << std::endl;
+                return InterpretResult::RuntimeError;
+            }
+            auto now = std::chrono::steady_clock::now();
+            auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastCheck).count();
+            if (dt >= 200) {
+                uint64_t cur = gcGetYoungAllocations();
+                uint64_t diff = cur >= lastAlloc ? (cur - lastAlloc) : 0;
+                uint64_t rate = (uint64_t)((double)diff * 1000.0 / (double)dt);
+                lastAlloc = cur;
+                lastCheck = now;
+                if (gRuntimeFlags.idsAllocRateMax && rate > gRuntimeFlags.idsAllocRateMax) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Allocation rate anomaly detected." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+            }
+        }
         OpCode instruction = static_cast<OpCode>(READ_BYTE());
         switch (instruction) {
             case OpCode::Constant: {
@@ -191,11 +220,17 @@ InterpretResult VM::run() {
             case OpCode::GetLocal: {
                 uint8_t slot = READ_BYTE();
                 *stackTop++ = frame->slots[slot];
+                if (gRuntimeFlags.icDiagnostics) {
+                    std::cerr << "[GetLocal] slot=" << (int)slot << " val=" << valueToString(frame->slots[slot]) << std::endl;
+                }
                 break;
             }
             case OpCode::SetLocal: {
                 uint8_t slot = READ_BYTE();
                 frame->slots[slot] = stackTop[-1];
+                if (gRuntimeFlags.icDiagnostics) {
+                    std::cerr << "[SetLocal] slot=" << (int)slot << " val=" << valueToString(stackTop[-1]) << std::endl;
+                }
                 break;
             }
             case OpCode::GetUpvalue: {
@@ -226,7 +261,7 @@ InterpretResult VM::run() {
             }
             case OpCode::Loop: {
                 uint16_t offset = READ_SHORT();
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
                 auto& c = loopHotness_[frame->ip];
                 c++;
                 if (c.load() >= (jitConfig_.aggressive ? std::max(1u, jitConfig_.loopThreshold / 4) : jitConfig_.loopThreshold)) {
@@ -246,25 +281,132 @@ InterpretResult VM::run() {
             }
 
             case OpCode::Add: {
-                if (isString(stackTop[-1]) && isString(stackTop[-2])) {
-                    std::string b = asString(*(--stackTop));
-                    std::string a = asString(*(--stackTop));
-                    auto sv = StringPool::intern(a + b);
+                Value vb = *(--stackTop);
+                Value va = *(--stackTop);
+                if (isString(va) && isString(vb)) {
+                    auto sv = StringPool::intern(asString(va) + asString(vb));
                     *stackTop++ = stringValue(sv.data());
-                } else if (isNumber(stackTop[-1]) && isNumber(stackTop[-2])) {
-                    double b = asNumber(*(--stackTop));
-                    double a = asNumber(*(--stackTop));
-                    *stackTop++ = numberToValue(a + b);
+                } else if (isNumber(va) && isNumber(vb)) {
+                    *stackTop++ = numberToValue(asNumber(va) + asNumber(vb));
+                } else if (isString(va) && isNumber(vb)) {
+                    auto sv = StringPool::intern(asString(va) + valueToString(vb));
+                    *stackTop++ = stringValue(sv.data());
+                } else if (isNumber(va) && isString(vb)) {
+                    auto sv = StringPool::intern(valueToString(va) + asString(vb));
+                    *stackTop++ = stringValue(sv.data());
                 } else {
                     stackTop_ = stackTop;
-                    std::cerr << "Operands must be two numbers or two strings." << std::endl;
+                    std::cerr << "Operands must be numbers or strings (supported: string+string, number+number, string+number, number+string)." << std::endl;
                     return InterpretResult::RuntimeError;
                 }
                 break;
             }
             case OpCode::Subtract: BINARY_OP(-); break;
             case OpCode::Multiply: BINARY_OP(*); break;
-            case OpCode::Divide:   BINARY_OP(/); break;
+            // Override Divide to handle divide-by-zero with a clear error
+            case OpCode::Divide: {
+                if (!isNumber(stackTop[-1]) || !isNumber(stackTop[-2])) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Operands must be numbers." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                double b = asNumber(*(--stackTop));
+                double a = asNumber(*(--stackTop));
+                if (b == 0.0) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Division by zero." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                *stackTop++ = numberToValue(a / b);
+                break;
+            }
+            case OpCode::BitAnd: {
+                if (!isNumber(stackTop[-1]) || !isNumber(stackTop[-2])) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Operands must be numbers for bitwise AND." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                uint64_t b = static_cast<uint64_t>(asNumber(*(--stackTop)));
+                uint64_t a = static_cast<uint64_t>(asNumber(*(--stackTop)));
+                *stackTop++ = numberToValue(static_cast<double>(a & b));
+                break;
+            }
+            case OpCode::BitOr: {
+                if (!isNumber(stackTop[-1]) || !isNumber(stackTop[-2])) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Operands must be numbers for bitwise OR." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                uint64_t b = static_cast<uint64_t>(asNumber(*(--stackTop)));
+                uint64_t a = static_cast<uint64_t>(asNumber(*(--stackTop)));
+                *stackTop++ = numberToValue(static_cast<double>(a | b));
+                break;
+            }
+            case OpCode::BitXor: {
+                if (!isNumber(stackTop[-1]) || !isNumber(stackTop[-2])) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Operands must be numbers for bitwise XOR." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                uint64_t b = static_cast<uint64_t>(asNumber(*(--stackTop)));
+                uint64_t a = static_cast<uint64_t>(asNumber(*(--stackTop)));
+                *stackTop++ = numberToValue(static_cast<double>(a ^ b));
+                break;
+            }
+            case OpCode::ShiftLeft: {
+                if (!isNumber(stackTop[-1]) || !isNumber(stackTop[-2])) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Operands must be numbers for shift left." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                double bDouble = asNumber(*(--stackTop));
+                if (gRuntimeFlags.icDiagnostics) {
+                    std::fprintf(stderr, "[ShiftLeft] count=%f\n", bDouble);
+                }
+                uint64_t a = static_cast<uint64_t>(asNumber(*(--stackTop)));
+                int64_t bSigned = static_cast<int64_t>(bDouble);
+                if (bDouble < 0.0 || bSigned < 0) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Shift count must be non-negative." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                uint64_t b = static_cast<uint64_t>(bDouble);
+                if (b > 0x7FFFFFFFFFFFFFFFULL) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Shift count must be non-negative." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                int sh = static_cast<int>(b) & 63;
+                *stackTop++ = numberToValue(static_cast<double>(static_cast<uint64_t>(a) << sh));
+                break;
+            }
+            case OpCode::ShiftRight: {
+                if (!isNumber(stackTop[-1]) || !isNumber(stackTop[-2])) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Operands must be numbers for shift right." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                double bDouble = asNumber(*(--stackTop));
+                if (gRuntimeFlags.icDiagnostics) {
+                    std::fprintf(stderr, "[ShiftRight] count=%f\n", bDouble);
+                }
+                uint64_t a = static_cast<uint64_t>(asNumber(*(--stackTop)));
+                int64_t bSigned = static_cast<int64_t>(bDouble);
+                if (bDouble < 0.0 || bSigned < 0) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Shift count must be non-negative." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                uint64_t b = static_cast<uint64_t>(bDouble);
+                if (b > 0x7FFFFFFFFFFFFFFFULL) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Shift count must be non-negative." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                int sh = static_cast<int>(b) & 63;
+                *stackTop++ = numberToValue(static_cast<double>(static_cast<uint64_t>(a) >> sh));
+                break;
+            }
             
             case OpCode::Equal: {
                 Value b = *(--stackTop);
@@ -293,10 +435,7 @@ InterpretResult VM::run() {
 
             case OpCode::Print: {
                 Value val = *(--stackTop);
-                if (isNil(val)) std::cout << "nil" << std::endl;
-                else if (isBool(val)) std::cout << (asBool(val) ? "true" : "false") << std::endl;
-                else if (isNumber(val)) std::cout << asNumber(val) << std::endl;
-                else if (isString(val)) std::cout << asString(val) << std::endl;
+                std::cout << valueToString(val) << std::endl;
                 break;
             }
 
@@ -438,9 +577,17 @@ InterpretResult VM::run() {
                 const auto* instancePtr = instance.get();
                 auto versionIt = instanceVersions_.find(instancePtr);
                 uint64_t version = versionIt == instanceVersions_.end() ? 0 : versionIt->second;
-#ifndef VOLT_DISABLE_IC_DIAGNOSTICS
+#ifndef CLAW_DISABLE_IC_DIAGNOSTICS
                 if (propertyICMegamorphic_.count(cacheKey)) {
                     Token nameToken(TokenType::Identifier, namePtr, 0);
+                    if (!instance->has(nameToken)) {
+                        auto method = instance->getClass()->findMethod(std::string(namePtr));
+                        if (!method) {
+                            stackTop_ = stackTop;
+                            std::cerr << "Undefined property '" << namePtr << "'." << std::endl;
+                            return InterpretResult::RuntimeError;
+                        }
+                    }
                     stackTop[-1] = instance->get(nameToken);
                     if (gRuntimeFlags.icDiagnostics) {
                         std::fprintf(stderr, "[IC] megamorphic GetProperty key=%p name=%p inst=%p\n",
@@ -460,12 +607,20 @@ InterpretResult VM::run() {
                 }
                 if (hit) break;
                 Token nameToken(TokenType::Identifier, namePtr, 0);
+                if (!instance->has(nameToken)) {
+                    auto method = instance->getClass()->findMethod(std::string(namePtr));
+                    if (!method) {
+                        stackTop_ = stackTop;
+                        std::cerr << "Undefined property '" << namePtr << "'." << std::endl;
+                        return InterpretResult::RuntimeError;
+                    }
+                }
                 Value value = instance->get(nameToken);
                 if (entries.size() >= 8) {
                     entries.erase(entries.begin());
                 }
                 entries.push_back({instancePtr, namePtr, version, value});
-#ifndef VOLT_DISABLE_IC_DIAGNOSTICS
+#ifndef CLAW_DISABLE_IC_DIAGNOSTICS
                 auto& miss = propertyICMissCount_[cacheKey];
                 miss++;
                 if (miss > 16) {
@@ -499,6 +654,214 @@ InterpretResult VM::run() {
                 stackTop--;
                 break;
             }
+            case OpCode::GetIndex: {
+                Value index = *(--stackTop);
+                Value object = *(--stackTop);
+                if (gRuntimeFlags.icDiagnostics) {
+                    std::cerr << "[StackBeforeGetIndex] obj=" << valueToString(object)
+                              << " idx=" << valueToString(index) << std::endl;
+                }
+                if (isArray(object)) {
+                    if (!isNumber(index)) {
+                        stackTop_ = stackTop;
+                        std::cerr << "Array index must be a number." << std::endl;
+                        return InterpretResult::RuntimeError;
+                    }
+                    auto array = asArray(object);
+                    int idx = static_cast<int>(asNumber(index));
+                    if (idx < 0 || idx >= array->length()) {
+                        stackTop_ = stackTop;
+                        std::cerr << "Index " << idx << " out of bounds [0, " << (array->length() - 1) << "]." << std::endl;
+                        return InterpretResult::RuntimeError;
+                    }
+                    Value v = array->get(static_cast<size_t>(idx));
+                    gcEphemeralEscape(v);
+                    *stackTop++ = v;
+                    if (gRuntimeFlags.icDiagnostics) {
+                        std::cerr << "[GetIndexResult] " << valueToString(v) << std::endl;
+                    }
+                    break;
+                }
+                if (isHashMap(object)) {
+                    auto map = asHashMap(object);
+                    std::string key;
+                    if (isString(index)) {
+                        key = asString(index);
+                    } else if (isNumber(index)) {
+                        double num = asNumber(index);
+                        if (num == static_cast<long long>(num)) {
+                            key = std::to_string(static_cast<long long>(num));
+                        } else {
+                            key = std::to_string(num);
+                            key.erase(key.find_last_not_of('0') + 1, std::string::npos);
+                            key.erase(key.find_last_not_of('.') + 1, std::string::npos);
+                        }
+                    } else if (isNil(index)) {
+                        key = "nil";
+                    } else if (isBool(index)) {
+                        key = asBool(index) ? "true" : "false";
+                    } else {
+                        stackTop_ = stackTop;
+                        std::cerr << "Hash map index must be string, number, boolean, or nil." << std::endl;
+                        return InterpretResult::RuntimeError;
+                    }
+                    {
+                        Value v = map->get(key);
+                        gcEphemeralEscape(v);
+                        *stackTop++ = v;
+                    }
+                    break;
+                }
+                stackTop_ = stackTop;
+                std::cerr << "Can only index arrays and hash maps." << std::endl;
+                if (gRuntimeFlags.icDiagnostics) {
+                    std::cerr << "[IndexDebug] objectTag=" << std::hex << tagBits(object)
+                              << " isObj=" << (isObject(object) ? 1 : 0)
+                              << " isArr=" << (isArray(object) ? 1 : 0)
+                              << " isMap=" << (isHashMap(object) ? 1 : 0)
+                              << " objStr=" << valueToString(object) << std::endl;
+                }
+                return InterpretResult::RuntimeError;
+            }
+            case OpCode::SetIndex: {
+                Value value = *(--stackTop);
+                Value index = *(--stackTop);
+                Value object = *(--stackTop);
+                if (gRuntimeFlags.icDiagnostics) {
+                    std::cerr << "[BeforeSetIndex] obj=" << valueToString(object)
+                              << " idx=" << valueToString(index)
+                              << " val=" << valueToString(value) << std::endl;
+                }
+                if (isArray(object)) {
+                    if (!isNumber(index)) {
+                        stackTop_ = stackTop;
+                        std::cerr << "Array index must be a number." << std::endl;
+                        return InterpretResult::RuntimeError;
+                    }
+                    auto array = asArray(object);
+                    int idx = static_cast<int>(asNumber(index));
+                    if (idx < 0 || idx >= array->length()) {
+                        stackTop_ = stackTop;
+                        std::cerr << "Index " << idx << " out of bounds [0, " << (array->length() - 1) << "]." << std::endl;
+                        return InterpretResult::RuntimeError;
+                    }
+                    array->set(static_cast<size_t>(idx), value);
+                    gcEphemeralEscape(value);
+                    *stackTop++ = value;
+                    break;
+                }
+                if (isHashMap(object)) {
+                    auto map = asHashMap(object);
+                    std::string key;
+                    if (isString(index)) {
+                        key = asString(index);
+                    } else if (isNumber(index)) {
+                        double num = asNumber(index);
+                        if (num == static_cast<long long>(num)) {
+                            key = std::to_string(static_cast<long long>(num));
+                        } else {
+                            key = std::to_string(num);
+                            key.erase(key.find_last_not_of('0') + 1, std::string::npos);
+                            key.erase(key.find_last_not_of('.') + 1, std::string::npos);
+                        }
+                    } else if (isNil(index)) {
+                        key = "nil";
+                    } else if (isBool(index)) {
+                        key = asBool(index) ? "true" : "false";
+                    } else {
+                        stackTop_ = stackTop;
+                        std::cerr << "Hash map index must be string, number, boolean, or nil." << std::endl;
+                        return InterpretResult::RuntimeError;
+                    }
+                    map->set(key, value);
+                    gcEphemeralEscape(value);
+                    *stackTop++ = value;
+                    break;
+                }
+                stackTop_ = stackTop;
+                std::cerr << "Can only index arrays and hash maps." << std::endl;
+                if (gRuntimeFlags.icDiagnostics) {
+                    std::cerr << "[IndexDebug] objectTag=" << std::hex << tagBits(object)
+                              << " isObj=" << (isObject(object) ? 1 : 0)
+                              << " isArr=" << (isArray(object) ? 1 : 0)
+                              << " isMap=" << (isHashMap(object) ? 1 : 0)
+                              << " objStr=" << valueToString(object) << std::endl;
+                }
+                return InterpretResult::RuntimeError;
+            }
+            case OpCode::EnsureIndexDefault: {
+                uint8_t opTag = READ_BYTE(); // 0:Add,1:Sub,2:Mul,3:Div,4:And,5:Or,6:Xor,7:Shl,8:Shr
+                Value rhs = stackTop[-1];
+                Value index = stackTop[-2];
+                Value object = stackTop[-3];
+                if (isHashMap(object)) {
+                    auto map = asHashMap(object);
+                    std::string key;
+                    if (isString(index)) {
+                        key = asString(index);
+                    } else if (isNumber(index)) {
+                        double num = asNumber(index);
+                        if (num == static_cast<long long>(num)) {
+                            key = std::to_string(static_cast<long long>(num));
+                        } else {
+                            key = std::to_string(num);
+                            key.erase(key.find_last_not_of('0') + 1, std::string::npos);
+                            key.erase(key.find_last_not_of('.') + 1, std::string::npos);
+                        }
+                    } else if (isNil(index)) {
+                        key = "nil";
+                    } else if (isBool(index)) {
+                        key = asBool(index) ? "true" : "false";
+                    } else {
+                        stackTop_ = stackTop;
+                        std::cerr << "Hash map index must be string, number, boolean, or nil." << std::endl;
+                        return InterpretResult::RuntimeError;
+                    }
+                    Value defaultVal = numberToValue(0.0);
+                    if (opTag == 0) { // Add
+                        if (isString(rhs)) {
+                            auto sv = StringPool::intern(std::string());
+                            defaultVal = stringValue(sv.data());
+                        } else {
+                            defaultVal = numberToValue(0.0);
+                        }
+                    } else {
+                        defaultVal = numberToValue(0.0);
+                    }
+                    map->ensureDefault(key, defaultVal);
+                }
+                // Arrays: do nothing; regular semantics apply
+                break;
+            }
+            case OpCode::EnsurePropertyDefault: {
+                const char* namePtr = READ_STRING_PTR();
+                uint8_t opTag = READ_BYTE();
+                Value rhs = stackTop[-1];
+                Value object = stackTop[-2];
+                if (!isInstance(object)) {
+                    stackTop_ = stackTop;
+                    std::cerr << "Only instances have fields." << std::endl;
+                    return InterpretResult::RuntimeError;
+                }
+                auto instance = asInstance(object);
+                Token nameToken(TokenType::Identifier, namePtr, 0);
+                if (!instance->has(nameToken)) {
+                    Value defaultVal = numberToValue(0.0);
+                    if (opTag == 0) {
+                        if (isString(rhs)) {
+                            auto sv = StringPool::intern(std::string());
+                            defaultVal = stringValue(sv.data());
+                        } else {
+                            defaultVal = numberToValue(0.0);
+                        }
+                    } else {
+                        defaultVal = numberToValue(0.0);
+                    }
+                    instance->set(nameToken, defaultVal);
+                    gcEphemeralEscapeDeep(defaultVal);
+                }
+                break;
+            }
 
             default:
                 stackTop_ = stackTop;
@@ -524,7 +887,7 @@ bool VM::osrEnter(const uint8_t* ip) {
 bool VM::call(VMClosure* closure, int argCount) {
     auto& fc = functionHotness_[closure->function.get()];
     fc++;
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     if (fc.load() >= (jitConfig_.aggressive ? std::max(1u, jitConfig_.functionThreshold / 4) : jitConfig_.functionThreshold)) {
         if (!jit_.hasBaseline(closure->function.get())) {
             std::vector<JitEntry> entries;
@@ -593,6 +956,7 @@ bool VM::callValue(Value callee, int argCount) {
         arguments.push_back(stackTop_[-argCount + i]);
     }
     Value result = function->call(*interpreter_, arguments);
+    gcEphemeralEscapeDeep(result);
     gcEphemeralFrameLeave();
     stackTop_ -= (argCount + 1);
     *stackTop_++ = result;
@@ -628,8 +992,8 @@ void VM::closeUpvalues(Value* last) {
         openUpvalues_.end());
 }
 
-} // namespace volt
-namespace volt {
+} // namespace claw
+namespace claw {
 uint8_t VM::apiReadByte() { return *frames_[frameCount_ - 1].ip++; }
 uint16_t VM::apiReadShort() {
     auto& ip = frames_[frameCount_ - 1].ip;
@@ -660,7 +1024,7 @@ bool VM::apiReturn() {
     Value result = pop();
     Value* frameSlots = frame.slots;
     closeUpvalues(frame.slots);
-    gcEphemeralEscape(result);
+    gcEphemeralEscapeDeep(result);
     gcEphemeralFrameLeave();
     frameCount_--;
     if (frameCount_ == 0) {
@@ -737,14 +1101,14 @@ uint32_t VM::apiGetLoopHotness(const uint8_t* ip) {
     if (it == loopHotness_.end()) return 0;
     return it->second.load();
 }
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
 bool VM::apiHasBaseline(const VMFunction* fn) {
     return jit_.hasBaseline(fn);
 }
 #endif
-} // namespace volt
+} // namespace claw
 
-namespace volt {
+namespace claw {
 void VM::forEachRoot(const std::function<void(Value)>& fn) const {
     for (const Value* p = stack_; p < stackTop_; ++p) fn(*p);
     for (int i = 0; i < frameCount_; ++i) {
@@ -764,87 +1128,87 @@ void VM::forEachRoot(const std::function<void(Value)>& fn) const {
         globals_->forEachValue(fn);
     }
 }
-} // namespace volt
+} // namespace claw
 
-extern "C" uint8_t volt_vm_read_byte(volt::VM* vm) { return vm->apiReadByte(); }
-extern "C" uint16_t volt_vm_read_short(volt::VM* vm) { return vm->apiReadShort(); }
-extern "C" uint64_t volt_vm_read_constant(volt::VM* vm) { return vm->apiReadConstant(); }
-extern "C" const char* volt_vm_read_string_ptr(volt::VM* vm) { return vm->apiReadStringPtr(); }
-extern "C" void volt_vm_set_ip(volt::VM* vm, const uint8_t* ip) { vm->apiSetIp(ip); }
-extern "C" const uint8_t* volt_vm_get_ip(volt::VM* vm) { return vm->apiGetIp(); }
-extern "C" void volt_vm_push(volt::VM* vm, uint64_t v) { vm->apiPush(v); }
-extern "C" uint64_t volt_vm_pop(volt::VM* vm) { return vm->apiPop(); }
-extern "C" uint64_t volt_vm_peek(volt::VM* vm, int distance) { return vm->apiPeek(distance); }
-extern "C" void volt_vm_set_local(volt::VM* vm, int slot, uint64_t v) { vm->apiSetLocal(slot, v); }
-extern "C" uint64_t volt_vm_get_local(volt::VM* vm, int slot) { return vm->apiGetLocal(slot); }
-extern "C" void volt_vm_jump(volt::VM* vm, uint16_t offset) { vm->apiJump(offset); }
-extern "C" void volt_vm_jump_if_false(volt::VM* vm, uint16_t offset) { vm->apiJumpIfFalse(offset); }
-extern "C" void volt_vm_loop(volt::VM* vm, uint16_t offset) { vm->apiLoop(offset); }
-extern "C" void volt_vm_binary_add(volt::VM* vm) {
-    auto b = volt::asNumber(vm->apiPop());
-    auto a = volt::asNumber(vm->apiPop());
-    vm->apiPush(volt::numberToValue(a + b));
+extern "C" uint8_t claw_vm_read_byte(claw::VM* vm) { return vm->apiReadByte(); }
+extern "C" uint16_t claw_vm_read_short(claw::VM* vm) { return vm->apiReadShort(); }
+extern "C" uint64_t claw_vm_read_constant(claw::VM* vm) { return vm->apiReadConstant(); }
+extern "C" const char* claw_vm_read_string_ptr(claw::VM* vm) { return vm->apiReadStringPtr(); }
+extern "C" void claw_vm_set_ip(claw::VM* vm, const uint8_t* ip) { vm->apiSetIp(ip); }
+extern "C" const uint8_t* claw_vm_get_ip(claw::VM* vm) { return vm->apiGetIp(); }
+extern "C" void claw_vm_push(claw::VM* vm, uint64_t v) { vm->apiPush(v); }
+extern "C" uint64_t claw_vm_pop(claw::VM* vm) { return vm->apiPop(); }
+extern "C" uint64_t claw_vm_peek(claw::VM* vm, int distance) { return vm->apiPeek(distance); }
+extern "C" void claw_vm_set_local(claw::VM* vm, int slot, uint64_t v) { vm->apiSetLocal(slot, v); }
+extern "C" uint64_t claw_vm_get_local(claw::VM* vm, int slot) { return vm->apiGetLocal(slot); }
+extern "C" void claw_vm_jump(claw::VM* vm, uint16_t offset) { vm->apiJump(offset); }
+extern "C" void claw_vm_jump_if_false(claw::VM* vm, uint16_t offset) { vm->apiJumpIfFalse(offset); }
+extern "C" void claw_vm_loop(claw::VM* vm, uint16_t offset) { vm->apiLoop(offset); }
+extern "C" void claw_vm_binary_add(claw::VM* vm) {
+    auto b = claw::asNumber(vm->apiPop());
+    auto a = claw::asNumber(vm->apiPop());
+    vm->apiPush(claw::numberToValue(a + b));
 }
-extern "C" void volt_vm_binary_sub(volt::VM* vm) {
-    auto b = volt::asNumber(vm->apiPop());
-    auto a = volt::asNumber(vm->apiPop());
-    vm->apiPush(volt::numberToValue(a - b));
+extern "C" void claw_vm_binary_sub(claw::VM* vm) {
+    auto b = claw::asNumber(vm->apiPop());
+    auto a = claw::asNumber(vm->apiPop());
+    vm->apiPush(claw::numberToValue(a - b));
 }
-extern "C" void volt_vm_binary_mul(volt::VM* vm) {
-    auto b = volt::asNumber(vm->apiPop());
-    auto a = volt::asNumber(vm->apiPop());
-    vm->apiPush(volt::numberToValue(a * b));
+extern "C" void claw_vm_binary_mul(claw::VM* vm) {
+    auto b = claw::asNumber(vm->apiPop());
+    auto a = claw::asNumber(vm->apiPop());
+    vm->apiPush(claw::numberToValue(a * b));
 }
-extern "C" void volt_vm_binary_div(volt::VM* vm) {
-    auto b = volt::asNumber(vm->apiPop());
-    auto a = volt::asNumber(vm->apiPop());
-    vm->apiPush(volt::numberToValue(a / b));
+extern "C" void claw_vm_binary_div(claw::VM* vm) {
+    auto b = claw::asNumber(vm->apiPop());
+    auto a = claw::asNumber(vm->apiPop());
+    vm->apiPush(claw::numberToValue(a / b));
 }
-extern "C" void volt_vm_compare_eq(volt::VM* vm) {
+extern "C" void claw_vm_compare_eq(claw::VM* vm) {
     auto b = vm->apiPop();
     auto a = vm->apiPop();
-    vm->apiPush(volt::boolValue(volt::isEqual(a, b)));
+    vm->apiPush(claw::boolValue(claw::isEqual(a, b)));
 }
-extern "C" void volt_vm_compare_gt(volt::VM* vm) {
-    auto b = volt::asNumber(vm->apiPop());
-    auto a = volt::asNumber(vm->apiPop());
-    vm->apiPush(volt::boolValue(a > b));
+extern "C" void claw_vm_compare_gt(claw::VM* vm) {
+    auto b = claw::asNumber(vm->apiPop());
+    auto a = claw::asNumber(vm->apiPop());
+    vm->apiPush(claw::boolValue(a > b));
 }
-extern "C" void volt_vm_compare_lt(volt::VM* vm) {
-    auto b = volt::asNumber(vm->apiPop());
-    auto a = volt::asNumber(vm->apiPop());
-    vm->apiPush(volt::boolValue(a < b));
+extern "C" void claw_vm_compare_lt(claw::VM* vm) {
+    auto b = claw::asNumber(vm->apiPop());
+    auto a = claw::asNumber(vm->apiPop());
+    vm->apiPush(claw::boolValue(a < b));
 }
-extern "C" void volt_vm_unary_not(volt::VM* vm) {
-    vm->apiPush(volt::boolValue(vm->apiIsFalsey(vm->apiPop())));
+extern "C" void claw_vm_unary_not(claw::VM* vm) {
+    vm->apiPush(claw::boolValue(vm->apiIsFalsey(vm->apiPop())));
 }
-extern "C" void volt_vm_unary_negate(volt::VM* vm) {
-    vm->apiPush(volt::numberToValue(-volt::asNumber(vm->apiPop())));
+extern "C" void claw_vm_unary_negate(claw::VM* vm) {
+    vm->apiPush(claw::numberToValue(-claw::asNumber(vm->apiPop())));
 }
-extern "C" void volt_vm_print(volt::VM* vm) {
+extern "C" void claw_vm_print(claw::VM* vm) {
     auto v = vm->apiPop();
-    if (volt::isNil(v)) std::cout << "nil" << std::endl;
-    else if (volt::isBool(v)) std::cout << (volt::asBool(v) ? "true" : "false") << std::endl;
-    else if (volt::isNumber(v)) std::cout << volt::asNumber(v) << std::endl;
-    else if (volt::isString(v)) std::cout << volt::asString(v) << std::endl;
-    else std::cout << volt::valueToString(v) << std::endl;
+    if (claw::isNil(v)) std::cout << "nil" << std::endl;
+    else if (claw::isBool(v)) std::cout << (claw::asBool(v) ? "true" : "false") << std::endl;
+    else if (claw::isNumber(v)) std::cout << claw::asNumber(v) << std::endl;
+    else if (claw::isString(v)) std::cout << claw::asString(v) << std::endl;
+    else std::cout << claw::valueToString(v) << std::endl;
 }
-extern "C" void volt_vm_get_global(volt::VM* vm) {
+extern "C" void claw_vm_get_global(claw::VM* vm) {
     const char* namePtr = vm->apiReadStringPtr();
     if (!vm->apiGlobalExists(namePtr)) {
         std::cerr << "Undefined variable '" << namePtr << "'." << std::endl;
-        vm->apiPush(volt::nilValue());
+        vm->apiPush(claw::nilValue());
         return;
     }
-    volt::Value value = vm->apiGlobalGet(namePtr);
+    claw::Value value = vm->apiGlobalGet(namePtr);
     vm->apiPush(value);
 }
-extern "C" void volt_vm_define_global(volt::VM* vm) {
+extern "C" void claw_vm_define_global(claw::VM* vm) {
     const char* namePtr = vm->apiReadStringPtr();
     auto value = vm->apiPop();
     vm->apiDefineGlobal(namePtr, value);
 }
-extern "C" void volt_vm_set_global(volt::VM* vm) {
+extern "C" void claw_vm_set_global(claw::VM* vm) {
     const char* namePtr = vm->apiReadStringPtr();
     if (!vm->apiGlobalExists(namePtr)) {
         std::cerr << "Undefined variable '" << namePtr << "'." << std::endl;
@@ -852,25 +1216,25 @@ extern "C" void volt_vm_set_global(volt::VM* vm) {
     }
     vm->apiGlobalAssign(namePtr, vm->apiPeek(0));
 }
-extern "C" int volt_vm_try_get_global_cached(volt::VM* vm, const char* namePtr, const uint8_t* siteIp, uint64_t* out) {
-    volt::Value v;
+extern "C" int claw_vm_try_get_global_cached(claw::VM* vm, const char* namePtr, const uint8_t* siteIp, uint64_t* out) {
+    claw::Value v;
     int hit = vm->apiTryGetGlobalCached(namePtr, siteIp, &v);
     if (hit && out) *out = v;
     return hit;
 }
-extern "C" void volt_vm_call(volt::VM* vm) {
+extern "C" void claw_vm_call(claw::VM* vm) {
     uint8_t argCount = vm->apiReadByte();
-    volt::Value callee = vm->apiPeek(argCount);
+    claw::Value callee = vm->apiPeek(argCount);
     vm->apiCallValue(callee, argCount);
 }
-extern "C" void volt_vm_closure(volt::VM* vm) {
-    volt::Value functionVal = vm->apiReadConstant();
-    auto function = volt::asVMFunction(functionVal);
+extern "C" void claw_vm_closure(claw::VM* vm) {
+    claw::Value functionVal = vm->apiReadConstant();
+    auto function = claw::asVMFunction(functionVal);
     if (!function) {
         std::cerr << "Expected function constant." << std::endl;
         return;
     }
-    auto closure = std::make_shared<volt::VMClosure>();
+    auto closure = std::make_shared<claw::VMClosure>();
     closure->function = function;
     closure->upvalues.resize(function->upvalueCount);
     for (int i = 0; i < function->upvalueCount; i++) {
@@ -882,55 +1246,55 @@ extern "C" void volt_vm_closure(volt::VM* vm) {
             closure->upvalues[i] = vm->apiCurrentClosure()->upvalues[index];
         }
     }
-    vm->apiPush(volt::vmClosureValue(closure));
+    vm->apiPush(claw::vmClosureValue(closure));
 }
-extern "C" void volt_vm_get_upvalue(volt::VM* vm) {
+extern "C" void claw_vm_get_upvalue(claw::VM* vm) {
     uint8_t slot = vm->apiReadByte();
     vm->apiPush(*vm->apiCurrentClosure()->upvalues[slot]->location);
 }
-extern "C" void volt_vm_set_upvalue(volt::VM* vm) {
+extern "C" void claw_vm_set_upvalue(claw::VM* vm) {
     uint8_t slot = vm->apiReadByte();
     *vm->apiCurrentClosure()->upvalues[slot]->location = vm->apiPeek(0);
 }
-extern "C" void volt_vm_close_upvalue(volt::VM* vm) {
+extern "C" void claw_vm_close_upvalue(claw::VM* vm) {
     vm->apiCloseTopUpvalue();
 }
-extern "C" int volt_vm_osr_enter(volt::VM* vm, const uint8_t* ip) {
+extern "C" int claw_vm_osr_enter(claw::VM* vm, const uint8_t* ip) {
     return vm->osrEnter(ip) ? 1 : 0;
 }
-extern "C" bool volt_vm_return(volt::VM* vm) { return vm->apiReturn(); }
-extern "C" void volt_vm_get_property(volt::VM* vm) {
+extern "C" bool claw_vm_return(claw::VM* vm) { return vm->apiReturn(); }
+extern "C" void claw_vm_get_property(claw::VM* vm) {
     const char* namePtr = vm->apiReadStringPtr();
-    volt::Value instanceVal = vm->apiPeek();
-    if (!volt::isInstance(instanceVal)) {
+    claw::Value instanceVal = vm->apiPeek();
+    if (!claw::isInstance(instanceVal)) {
         std::cerr << "Only instances have properties." << std::endl;
         return;
     }
-    auto instance = volt::asInstance(instanceVal);
-    volt::Token nameToken(volt::TokenType::Identifier, namePtr, 0);
-    volt::Value value = instance->get(nameToken);
+    auto instance = claw::asInstance(instanceVal);
+    claw::Token nameToken(claw::TokenType::Identifier, namePtr, 0);
+    claw::Value value = instance->get(nameToken);
     vm->apiPop();
     vm->apiPush(value);
 }
-extern "C" int volt_vm_try_get_property_cached(volt::VM* vm, uint64_t instanceVal, const char* namePtr, const uint8_t* siteIp, uint64_t* out) {
-    volt::Value v;
+extern "C" int claw_vm_try_get_property_cached(claw::VM* vm, uint64_t instanceVal, const char* namePtr, const uint8_t* siteIp, uint64_t* out) {
+    claw::Value v;
     int hit = vm->apiTryGetPropertyCached(instanceVal, namePtr, siteIp, &v);
     if (hit && out) *out = v;
     return hit;
 }
-extern "C" int volt_vm_try_call_cached(volt::VM* vm, const uint8_t* siteIp, uint8_t argCount) {
+extern "C" int claw_vm_try_call_cached(claw::VM* vm, const uint8_t* siteIp, uint8_t argCount) {
     return vm->apiTryCallCached(siteIp, argCount);
 }
-extern "C" void volt_vm_set_property(volt::VM* vm) {
+extern "C" void claw_vm_set_property(claw::VM* vm) {
     const char* namePtr = vm->apiReadStringPtr();
-    volt::Value value = vm->apiPeek(0);
-    volt::Value instanceVal = vm->apiPeek(1);
-    if (!volt::isInstance(instanceVal)) {
+    claw::Value value = vm->apiPeek(0);
+    claw::Value instanceVal = vm->apiPeek(1);
+    if (!claw::isInstance(instanceVal)) {
         std::cerr << "Only instances have fields." << std::endl;
         return;
     }
-    auto instance = volt::asInstance(instanceVal);
-    volt::Token nameToken(volt::TokenType::Identifier, namePtr, 0);
+    auto instance = claw::asInstance(instanceVal);
+    claw::Token nameToken(claw::TokenType::Identifier, namePtr, 0);
     instance->set(nameToken, value);
     vm->apiPop();
     vm->apiPop();

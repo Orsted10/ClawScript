@@ -1,0 +1,13 @@
+try {
+    result = 10 / 0;
+    print "division_by_zero_handled";
+} catch (error) {
+    print "division_by_zero_caught: " + error;
+}
+
+try {
+    result = 5.5 / 0.0;
+    print "float_division_by_zero";
+} catch (error) {
+    print "float_division_caught: " + error;
+}

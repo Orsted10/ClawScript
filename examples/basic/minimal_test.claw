@@ -1,0 +1,12 @@
+// Minimal method chaining test
+let numbers = [1, 2, 3, 4, 5];
+
+// Test map method
+let doubled = numbers.map(fun(x) { return x * 2; });
+print doubled;
+
+// Test filter method
+let evens = numbers.filter(fun(x) { return x % 2 == 0; });
+print evens;
+
+print "Tests completed!";

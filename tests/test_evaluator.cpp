@@ -6,17 +6,17 @@
 
 // Helper function
 std::string evalExpr(const std::string& source) {
-    volt::Lexer lexer(source);
+    claw::Lexer lexer(source);
     auto tokens = lexer.tokenize();
-    volt::Parser parser(tokens);
+    claw::Parser parser(tokens);
     auto ast = parser.parseExpression();
     
     if (!ast || parser.hadError()) return "ERROR";
     
-    volt::Interpreter interpreter;
+    claw::Interpreter interpreter;
     try {
-        volt::Value result = interpreter.evaluate(ast.get());
-        return volt::valueToString(result);
+        claw::Value result = interpreter.evaluate(ast.get());
+        return claw::valueToString(result);
     } catch (...) {
         return "ERROR";
     }

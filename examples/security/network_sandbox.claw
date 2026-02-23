@@ -1,0 +1,10 @@
+print("Attempting network under network sandbox");
+let body = "";
+try {
+  body = tlsGet("https://example.com");
+  print("ok");
+} catch (e) {
+  print("blocked");
+}
+print("body.len=" + num(len(body)));
+

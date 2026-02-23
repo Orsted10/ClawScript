@@ -7,7 +7,7 @@
 #include <vector>
 #include <stdexcept>
 
-namespace volt {
+namespace claw {
 
 // Tree-walk interpreter
 class Evaluator {
@@ -50,4 +50,4 @@ public:
         : std::runtime_error(message), token(tok) {}
 };
 
-} // namespace volt
+} // namespace claw

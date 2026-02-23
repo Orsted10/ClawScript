@@ -2,7 +2,7 @@
 #include <sstream>
 #include <iostream>
 
-namespace volt {
+namespace claw {
 
 Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {}
 
@@ -50,6 +50,7 @@ StmtPtr Parser::statement() {
     if (match(TokenType::Throw)) return throwStatement();
     if (match(TokenType::Import)) return importStatement();
     if (match(TokenType::Class)) return classStatement();
+    if (match(TokenType::Switch)) return switchStatement();
     if (match(TokenType::LeftBrace)) return blockStatement();
     
     return expressionStatement();
@@ -327,6 +328,41 @@ StmtPtr Parser::classStatement() {
     return std::make_unique<ClassStmt>(name, std::move(superclass), std::move(methods));
 }
 
+StmtPtr Parser::switchStatement() {
+    Token keyword = previous();
+    consume(TokenType::LeftParen, "Expected '(' after 'switch'");
+    ExprPtr expr = expression();
+    consume(TokenType::RightParen, "Expected ')' after switch expression");
+    consume(TokenType::LeftBrace, "Expected '{' before switch body");
+    
+    std::vector<SwitchStmt::Case> cases;
+    
+    while (!check(TokenType::RightBrace) && !isAtEnd()) {
+        if (match(TokenType::Case)) {
+            ExprPtr matchExpr = expression();
+            consume(TokenType::Colon, "Expected ':' after case expression");
+            std::vector<StmtPtr> body;
+            while (!check(TokenType::RightBrace) && !check(TokenType::Case) && !check(TokenType::Default) && !isAtEnd()) {
+                body.push_back(statement());
+            }
+            cases.push_back(SwitchStmt::Case{false, std::move(matchExpr), std::move(body)});
+        } else if (match(TokenType::Default)) {
+            consume(TokenType::Colon, "Expected ':' after default");
+            std::vector<StmtPtr> body;
+            while (!check(TokenType::RightBrace) && !check(TokenType::Case) && !isAtEnd()) {
+                body.push_back(statement());
+            }
+            cases.push_back(SwitchStmt::Case{true, nullptr, std::move(body)});
+        } else {
+            error("Expected 'case' or 'default' in switch body");
+            break;
+        }
+    }
+    
+    consume(TokenType::RightBrace, "Expected '}' after switch body");
+    return std::make_unique<SwitchStmt>(keyword, std::move(expr), std::move(cases));
+}
+
 StmtPtr Parser::expressionStatement() {
     ExprPtr expr = expression();
     Token tok = expr->token; // Use the expression's own token
@@ -376,14 +412,30 @@ ExprPtr Parser::assignment() {
         error("Invalid assignment target");
     }
     
-    // Compound assignment: +=, -=, *=, /=
+    // Compound assignment: +=, -=, *=, /= and bitwise/shift variants
     if (match({TokenType::PlusEqual, TokenType::MinusEqual, 
-               TokenType::StarEqual, TokenType::SlashEqual})) {
+               TokenType::StarEqual, TokenType::SlashEqual,
+               TokenType::BitAndEqual, TokenType::BitOrEqual, TokenType::BitXorEqual,
+               TokenType::ShiftLeftEqual, TokenType::ShiftRightEqual})) {
         Token op = previous();
         ExprPtr value = assignment();
         
         if (auto* var = dynamic_cast<VariableExpr*>(expr.get())) {
             return std::make_unique<CompoundAssignExpr>(var->token, op, std::move(value));
+        }
+        if (auto* member = dynamic_cast<MemberExpr*>(expr.get())) {
+            auto raw = static_cast<MemberExpr*>(expr.release());
+            auto result = std::make_unique<CompoundMemberAssignExpr>(
+                raw->token, std::move(raw->object), raw->member, op, std::move(value));
+            delete raw;
+            return result;
+        }
+        if (auto* index = dynamic_cast<IndexExpr*>(expr.get())) {
+            auto raw = static_cast<IndexExpr*>(expr.release());
+            auto result = std::make_unique<CompoundIndexAssignExpr>(
+                raw->token, std::move(raw->object), std::move(raw->index), op, std::move(value));
+            delete raw;
+            return result;
         }
         
         error("Invalid compound assignment target");
@@ -420,11 +472,11 @@ ExprPtr Parser::logicalOr() {
 }
 
 ExprPtr Parser::logicalAnd() {
-    ExprPtr expr = equality();
+    ExprPtr expr = bitwiseOr();
     
     while (match(TokenType::And)) {
         Token op = previous();
-        ExprPtr right = equality();
+        ExprPtr right = bitwiseOr();
         expr = std::make_unique<LogicalExpr>(std::move(expr), op, std::move(right));
     }
     
@@ -444,12 +496,64 @@ ExprPtr Parser::equality() {
 }
 
 ExprPtr Parser::comparison() {
-    ExprPtr expr = term();
+    ExprPtr expr = shift();
     
     while (match({TokenType::Greater, TokenType::GreaterEqual,
                   TokenType::Less, TokenType::LessEqual})) {
         Token op = previous();
-        ExprPtr right = term();
+        ExprPtr right = shift();
+        expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
+    }
+    
+    return expr;
+}
+
+// Bitwise OR: |
+ExprPtr Parser::bitwiseOr() {
+    ExprPtr expr = bitwiseXor();
+    
+    while (match(TokenType::BitOr)) {
+        Token op = previous();
+        ExprPtr right = bitwiseXor();
+        expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
+    }
+    
+    return expr;
+}
+
+// Bitwise XOR: ^
+ExprPtr Parser::bitwiseXor() {
+    ExprPtr expr = bitwiseAnd();
+    
+    while (match(TokenType::BitXor)) {
+        Token op = previous();
+        ExprPtr right = bitwiseAnd();
+        expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
+    }
+    
+    return expr;
+}
+
+// Bitwise AND: &
+ExprPtr Parser::bitwiseAnd() {
+    ExprPtr expr = equality();
+    
+    while (match(TokenType::BitAnd)) {
+        Token op = previous();
+        ExprPtr right = equality();
+        expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
+    }
+    
+    return expr;
+}
+
+// Shift operators: <<, >>
+ExprPtr Parser::shift() {
+    ExprPtr expr = term();
+    
+    while (match({TokenType::ShiftLeft, TokenType::ShiftRight})) {
+        Token op = previous();
+        ExprPtr right = unary();
         expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
     }
     
@@ -481,22 +585,36 @@ ExprPtr Parser::factor() {
 }
 
 ExprPtr Parser::unary() {
-    // Prefix unary: !, -
-    if (match({TokenType::Bang, TokenType::Minus})) {
+    if (match({TokenType::Bang, TokenType::Minus, TokenType::BitNot})) {
         Token op = previous();
         ExprPtr right = unary();
         return std::make_unique<UnaryExpr>(op, std::move(right));
     }
     
-    // Prefix increment/decrement: ++x, --x
     if (match({TokenType::PlusPlus, TokenType::MinusMinus})) {
         Token op = previous();
-        // Next must be an identifier
-        if (match(TokenType::Identifier)) {
-            Token nameTok = previous();
-            return std::make_unique<UpdateExpr>(nameTok, op, true);
+        ExprPtr target = postfix();
+        if (!target) {
+            error("Invalid prefix operand");
+            return nullptr;
         }
-        error("Expected identifier after '" + std::string(op.lexeme) + "'");
+        if (auto* var = dynamic_cast<VariableExpr*>(target.get())) {
+            return std::make_unique<UpdateExpr>(var->token, op, true);
+        }
+        if (auto* member = dynamic_cast<MemberExpr*>(target.get())) {
+            // Steal underlying pointers to avoid double evaluation
+            auto raw = static_cast<MemberExpr*>(target.release());
+            auto result = std::make_unique<UpdateMemberExpr>(raw->token, std::move(raw->object), raw->member, op, true);
+            delete raw;
+            return result;
+        }
+        if (auto* index = dynamic_cast<IndexExpr*>(target.get())) {
+            auto raw = static_cast<IndexExpr*>(target.release());
+            auto result = std::make_unique<UpdateIndexExpr>(raw->token, std::move(raw->object), std::move(raw->index), op, true);
+            delete raw;
+            return result;
+        }
+        error("Invalid prefix operand");
         return nullptr;
     }
     
@@ -511,6 +629,18 @@ ExprPtr Parser::postfix() {
         Token op = previous();
         if (auto* var = dynamic_cast<VariableExpr*>(expr.get())) {
             return std::make_unique<UpdateExpr>(var->token, op, false);
+        }
+        if (auto* member = dynamic_cast<MemberExpr*>(expr.get())) {
+            auto raw = static_cast<MemberExpr*>(expr.release());
+            auto result = std::make_unique<UpdateMemberExpr>(raw->token, std::move(raw->object), raw->member, op, false);
+            delete raw;
+            return result;
+        }
+        if (auto* index = dynamic_cast<IndexExpr*>(expr.get())) {
+            auto raw = static_cast<IndexExpr*>(expr.release());
+            auto result = std::make_unique<UpdateIndexExpr>(raw->token, std::move(raw->object), std::move(raw->index), op, false);
+            delete raw;
+            return result;
         }
         error("Invalid postfix operand");
     }
@@ -832,4 +962,4 @@ void Parser::synchronize() {
     }
 }
 
-} // namespace volt
+} // namespace claw

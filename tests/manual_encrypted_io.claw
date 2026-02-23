@@ -1,0 +1,2 @@
+writeFileEnc("enc_test.bin", "hello secret", "correct horse battery staple");
+print(readFileEnc("enc_test.bin", "correct horse battery staple"));

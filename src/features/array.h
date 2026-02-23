@@ -5,21 +5,12 @@
 #include <string>
 #include <functional>
 
-namespace volt {
+namespace claw {
 
-/**
- * VoltArray - Native array implementation
- * 
- * Arrays in VoltScript are:
- * - Dynamic (can grow/shrink),
- * - Heterogeneous (can hold mixed types)
- * - Zero-indexed
- * - Have built-in methods (push, pop, length, etc.)
- */
-class VoltArray {
+class ClawArray {
 public:
-    VoltArray() = default;
-    explicit VoltArray(std::vector<Value> elements);
+    ClawArray() = default;
+    explicit ClawArray(std::vector<Value> elements);
     
     // Element access
     Value get(size_t index) const;
@@ -42,16 +33,16 @@ public:
     std::string toStringWithCycleDetection(std::set<const void*>& visited) const;
     
     // Functional methods for chaining
-    std::shared_ptr<VoltArray> map(std::function<Value(Value)> func) const;
-    std::shared_ptr<VoltArray> filter(std::function<bool(Value)> predicate) const;
+    std::shared_ptr<ClawArray> map(std::function<Value(Value)> func) const;
+    std::shared_ptr<ClawArray> filter(std::function<bool(Value)> predicate) const;
     Value reduce(std::function<Value(Value, Value)> reducer, Value initialValue) const;
     
     // Additional array methods
     std::string join(const std::string& separator = ", ") const;
-    std::shared_ptr<VoltArray> concat(const std::shared_ptr<VoltArray>& other) const;
-    std::shared_ptr<VoltArray> slice(int start, int end = -1) const;
-    std::shared_ptr<VoltArray> flat() const;
-    std::shared_ptr<VoltArray> flatMap(std::function<Value(Value)> func) const;
+    std::shared_ptr<ClawArray> concat(const std::shared_ptr<ClawArray>& other) const;
+    std::shared_ptr<ClawArray> slice(int start, int end = -1) const;
+    std::shared_ptr<ClawArray> flat() const;
+    std::shared_ptr<ClawArray> flatMap(std::function<Value(Value)> func) const;
     Value find(std::function<bool(Value)> predicate) const;
     bool some(std::function<bool(Value)> predicate) const;
     bool every(std::function<bool(Value)> predicate) const;
@@ -60,8 +51,8 @@ public:
     // Advanced array methods
     int indexOf(const Value& value) const;
     int lastIndexOf(const Value& value) const;
-    std::shared_ptr<VoltArray> sort(std::function<bool(const Value&, const Value&)> comparator = nullptr) const;
-    std::shared_ptr<VoltArray> splice(int start, int deleteCount = 0, const std::vector<Value>& items = {}) const;
+    std::shared_ptr<ClawArray> sort(std::function<bool(const Value&, const Value&)> comparator = nullptr) const;
+    std::shared_ptr<ClawArray> splice(int start, int deleteCount = 0, const std::vector<Value>& items = {}) const;
     Value shift();
     void unshift(const Value& value);
     void reserve(size_t n) { elements_.reserve(n); }
@@ -72,4 +63,4 @@ private:
     std::vector<Value> elements_;
 };
 
-} // namespace volt
+} // namespace claw

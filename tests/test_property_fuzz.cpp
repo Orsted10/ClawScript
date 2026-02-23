@@ -22,48 +22,56 @@ static std::string genProgram(std::mt19937& rng, int scale = 100) {
 }
 #
 TEST(PropertyFuzz, RandomProgramsNoCrash) {
-    std::vector<uint32_t> seeds = {12345u, 9876u, 42u, 777u, 2024u};
+    bool fast = std::getenv("CLAW_FAST_TESTS") != nullptr;
+    std::vector<uint32_t> seeds = fast ? std::vector<uint32_t>{12345u} : std::vector<uint32_t>{12345u, 9876u, 42u, 777u, 2024u};
     for (auto seed : seeds) {
         std::mt19937 rng(seed);
-        for (int n = 0; n < 60; n++) {
-            int scale = 50 + (n % 5) * 50; // 50..250
+        int outer = fast ? 5 : 60;
+        for (int n = 0; n < outer; n++) {
+            int scaleBase = fast ? 20 : 50;
+            int scaleStep = fast ? 20 : 50;
+            int scale = scaleBase + (n % 5) * scaleStep; // reduced in fast mode
             std::string src = genProgram(rng, scale);
-            volt::Lexer lexer(src);
+            claw::Lexer lexer(src);
             auto tokens = lexer.tokenize();
-            volt::Parser parser(tokens);
+            claw::Parser parser(tokens);
             auto statements = parser.parseProgram();
             ASSERT_FALSE(parser.hadError());
-            volt::Interpreter interpreter;
+            claw::Interpreter interpreter;
             EXPECT_NO_THROW(interpreter.execute(statements));
         }
     }
 }
 
 TEST(PropertyFuzz, RandomProgramsNoCrashVM) {
-    std::vector<uint32_t> seeds = {12345u, 9876u, 42u};
+    bool fast = std::getenv("CLAW_FAST_TESTS") != nullptr;
+    std::vector<uint32_t> seeds = fast ? std::vector<uint32_t>{12345u} : std::vector<uint32_t>{12345u, 9876u, 42u};
     for (auto seed : seeds) {
         std::mt19937 rng(seed);
-        for (int n = 0; n < 40; n++) {
-            int scale = 50 + (n % 4) * 50; // 50..200
+        int outer = fast ? 5 : 40;
+        for (int n = 0; n < outer; n++) {
+            int scaleBase = fast ? 20 : 50;
+            int scaleStep = fast ? 20 : 50;
+            int scale = scaleBase + (n % 4) * scaleStep; // reduced in fast mode
             std::string src = genProgram(rng, scale);
-            volt::Lexer lexer(src);
+            claw::Lexer lexer(src);
             auto tokens = lexer.tokenize();
-            volt::Parser parser(tokens);
+            claw::Parser parser(tokens);
             auto statements = parser.parseProgram();
             ASSERT_FALSE(parser.hadError());
-            volt::Interpreter interpreter;
+            claw::Interpreter interpreter;
             // Execute with interpreter to seed globals (classes/functions)
             EXPECT_NO_THROW(interpreter.execute(statements));
             // Compile and execute a simple final print to keep VM path active
-            std::string loop = "let m=0; for(let i=0;i<100;i=i+1){ m=m+i; } print m;";
-            volt::Lexer l2(loop);
+            std::string loop = fast ? "let m=0; for(let i=0;i<20;i=i+1){ m=m+i; } print m;" : "let m=0; for(let i=0;i<100;i=i+1){ m=m+i; } print m;";
+            claw::Lexer l2(loop);
             auto t2 = l2.tokenize();
-            volt::Parser p2(t2);
+            claw::Parser p2(t2);
             auto s2 = p2.parseProgram();
-            volt::Compiler comp;
+            claw::Compiler comp;
             auto chunk = comp.compile(s2);
-            volt::VM vm(interpreter);
-            EXPECT_EQ(vm.interpret(*chunk), volt::InterpretResult::Ok);
+            claw::VM vm(interpreter);
+            EXPECT_EQ(vm.interpret(*chunk), claw::InterpretResult::Ok);
         }
     }
 }

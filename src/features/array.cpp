@@ -1,4 +1,5 @@
 #include "array.h"
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
@@ -6,20 +7,24 @@
 #include <set>
 #include "observability/profiler.h"
 
-namespace volt {
+namespace claw {
 
-VoltArray::VoltArray(std::vector<Value> elements)
+ClawArray::ClawArray(std::vector<Value> elements)
     : elements_(std::move(elements)) {}
 
-Value VoltArray::get(size_t index) const {
+Value ClawArray::get(size_t index) const {
     if (index >= elements_.size()) {
         throw std::runtime_error("Array index out of bounds: " + 
                                 std::to_string(index));
     }
-    return elements_[index];
+    Value v = elements_[index];
+    if (diagnosticsEnabled()) {
+        std::cerr << "[ArrayGet] idx=" << index << " val=" << valueToString(v) << std::endl;
+    }
+    return v;
 }
 
-void VoltArray::set(size_t index, Value value) {
+void ClawArray::set(size_t index, Value value) {
     // Prevent integer overflow and unreasonable array sizes
     if (index >= 1000000) {  // Reasonable upper limit
         throw std::runtime_error("Array index too large: " + std::to_string(index));
@@ -29,7 +34,7 @@ void VoltArray::set(size_t index, Value value) {
         if (index >= elements_.size() + 10000) {  // Prevent massive allocations
             throw std::runtime_error("Array extension too large: " + std::to_string(index));
         }
-        elements_.resize(index + 1, volt::nilValue());
+        elements_.resize(index + 1, claw::nilValue());
         size_t newCap = elements_.capacity();
         if (newCap > oldCap) {
             size_t delta = (newCap - oldCap) * sizeof(Value);
@@ -40,7 +45,7 @@ void VoltArray::set(size_t index, Value value) {
     elements_[index] = value;
 }
 
-void VoltArray::push(Value value) {
+void ClawArray::push(Value value) {
     gcBarrierWrite(this, value);
     size_t oldCap = elements_.capacity();
     elements_.push_back(value);
@@ -51,20 +56,20 @@ void VoltArray::push(Value value) {
     }
 }
 
-Value VoltArray::pop() {
+Value ClawArray::pop() {
     if (elements_.empty()) {
-        return volt::nilValue();  // Return nil for empty array
+        return claw::nilValue();  // Return nil for empty array
     }
     Value last = elements_.back();
     elements_.pop_back();
     return last;
 }
 
-void VoltArray::reverse() {
+void ClawArray::reverse() {
     std::reverse(elements_.begin(), elements_.end());
 }
 
-void VoltArray::fill(Value v, size_t n) {
+void ClawArray::fill(Value v, size_t n) {
     gcBarrierWrite(this, v);
     elements_.clear();
     size_t oldCap = elements_.capacity();
@@ -77,12 +82,12 @@ void VoltArray::fill(Value v, size_t n) {
     elements_.insert(elements_.end(), n, v);
 }
 
-std::string VoltArray::toString() const {
+std::string ClawArray::toString() const {
     std::set<const void*> dummy_visited;
     return toStringWithCycleDetection(dummy_visited);
 }
 
-std::string VoltArray::toStringWithCycleDetection(std::set<const void*>& visited) const {
+std::string ClawArray::toStringWithCycleDetection(std::set<const void*>& visited) const {
     std::ostringstream oss;
     oss << "[";
     for (size_t i = 0; i < elements_.size(); i++) {
@@ -93,8 +98,8 @@ std::string VoltArray::toStringWithCycleDetection(std::set<const void*>& visited
     return oss.str();
 }
 
-std::shared_ptr<VoltArray> VoltArray::map(std::function<Value(Value)> func) const {
-    auto result = std::make_shared<VoltArray>();
+std::shared_ptr<ClawArray> ClawArray::map(std::function<Value(Value)> func) const {
+    auto result = std::make_shared<ClawArray>();
     result->elements_.reserve(elements_.size());  // Pre-allocate memory
     for (const auto& element : elements_) {
         result->elements_.push_back(func(element));
@@ -102,8 +107,8 @@ std::shared_ptr<VoltArray> VoltArray::map(std::function<Value(Value)> func) cons
     return result;
 }
 
-std::shared_ptr<VoltArray> VoltArray::filter(std::function<bool(Value)> predicate) const {
-    auto result = std::make_shared<VoltArray>();
+std::shared_ptr<ClawArray> ClawArray::filter(std::function<bool(Value)> predicate) const {
+    auto result = std::make_shared<ClawArray>();
     result->elements_.reserve(elements_.size() / 2);  // Conservative pre-allocation
     for (const auto& element : elements_) {
         if (predicate(element)) {
@@ -113,7 +118,7 @@ std::shared_ptr<VoltArray> VoltArray::filter(std::function<bool(Value)> predicat
     return result;
 }
 
-Value VoltArray::reduce(std::function<Value(Value, Value)> reducer, Value initialValue) const {
+Value ClawArray::reduce(std::function<Value(Value, Value)> reducer, Value initialValue) const {
     Value accumulator = initialValue;
     for (const auto& element : elements_) {
         accumulator = reducer(accumulator, element);
@@ -121,8 +126,8 @@ Value VoltArray::reduce(std::function<Value(Value, Value)> reducer, Value initia
     return accumulator;
 }
 
-std::shared_ptr<VoltArray> VoltArray::slice(int start, int end) const {
-    auto result = std::make_shared<VoltArray>();
+std::shared_ptr<ClawArray> ClawArray::slice(int start, int end) const {
+    auto result = std::make_shared<ClawArray>();
     
     // Handle negative indices
     if (start < 0) start = static_cast<int>(elements_.size()) + start;
@@ -141,15 +146,15 @@ std::shared_ptr<VoltArray> VoltArray::slice(int start, int end) const {
     return result;
 }
 
-std::shared_ptr<VoltArray> VoltArray::concat(const std::shared_ptr<VoltArray>& other) const {
-    auto result = std::make_shared<VoltArray>(elements_);
+std::shared_ptr<ClawArray> ClawArray::concat(const std::shared_ptr<ClawArray>& other) const {
+    auto result = std::make_shared<ClawArray>(elements_);
     for (const auto& element : other->elements()) {
         result->push(element);
     }
     return result;
 }
 
-std::string VoltArray::join(const std::string& separator) const {
+std::string ClawArray::join(const std::string& separator) const {
     std::ostringstream oss;
     for (size_t i = 0; i < elements_.size(); i++) {
         if (i > 0) oss << separator;
@@ -158,16 +163,16 @@ std::string VoltArray::join(const std::string& separator) const {
     return oss.str();
 }
 
-Value VoltArray::find(std::function<bool(Value)> predicate) const {
+Value ClawArray::find(std::function<bool(Value)> predicate) const {
     for (const auto& element : elements_) {
         if (predicate(element)) {
             return element;
         }
     }
-    return volt::nilValue(); // Return nil if not found
+    return claw::nilValue(); // Return nil if not found
 }
 
-bool VoltArray::some(std::function<bool(Value)> predicate) const {
+bool ClawArray::some(std::function<bool(Value)> predicate) const {
     for (const auto& element : elements_) {
         if (predicate(element)) {
             return true;
@@ -176,7 +181,7 @@ bool VoltArray::some(std::function<bool(Value)> predicate) const {
     return false;
 }
 
-bool VoltArray::every(std::function<bool(Value)> predicate) const {
+bool ClawArray::every(std::function<bool(Value)> predicate) const {
     for (const auto& element : elements_) {
         if (!predicate(element)) {
             return false;
@@ -185,13 +190,13 @@ bool VoltArray::every(std::function<bool(Value)> predicate) const {
     return true;
 }
 
-void VoltArray::forEach(std::function<void(Value)> func) const {
+void ClawArray::forEach(std::function<void(Value)> func) const {
     for (const auto& element : elements_) {
         func(element);
     }
 }
 
-int VoltArray::indexOf(const Value& value) const {
+int ClawArray::indexOf(const Value& value) const {
     for (size_t i = 0; i < elements_.size(); i++) {
         if (isEqual(elements_[i], value)) {
             return static_cast<int>(i);
@@ -200,7 +205,7 @@ int VoltArray::indexOf(const Value& value) const {
     return -1;
 }
 
-int VoltArray::lastIndexOf(const Value& value) const {
+int ClawArray::lastIndexOf(const Value& value) const {
     for (int i = static_cast<int>(elements_.size()) - 1; i >= 0; i--) {
         if (isEqual(elements_[i], value)) {
             return i;
@@ -209,8 +214,8 @@ int VoltArray::lastIndexOf(const Value& value) const {
     return -1;
 }
 
-std::shared_ptr<VoltArray> VoltArray::sort(std::function<bool(const Value&, const Value&)> comparator) const {
-    auto result = std::make_shared<VoltArray>(elements_);
+std::shared_ptr<ClawArray> ClawArray::sort(std::function<bool(const Value&, const Value&)> comparator) const {
+    auto result = std::make_shared<ClawArray>(elements_);
     
     if (comparator) {
         // Custom comparator
@@ -237,8 +242,8 @@ std::shared_ptr<VoltArray> VoltArray::sort(std::function<bool(const Value&, cons
     return result;
 }
 
-std::shared_ptr<VoltArray> VoltArray::splice(int start, int deleteCount, const std::vector<Value>& items) const {
-    auto result = std::make_shared<VoltArray>(elements_);
+std::shared_ptr<ClawArray> ClawArray::splice(int start, int deleteCount, const std::vector<Value>& items) const {
+    auto result = std::make_shared<ClawArray>(elements_);
     
     // Handle negative indices
     if (start < 0) start = static_cast<int>(elements_.size()) + start;
@@ -257,20 +262,20 @@ std::shared_ptr<VoltArray> VoltArray::splice(int start, int deleteCount, const s
     return result;
 }
 
-Value VoltArray::shift() {
-    if (elements_.empty()) return volt::nilValue();
+Value ClawArray::shift() {
+    if (elements_.empty()) return claw::nilValue();
     Value first = elements_[0];
     elements_.erase(elements_.begin());
     return first;
 }
 
-void VoltArray::unshift(const Value& value) {
+void ClawArray::unshift(const Value& value) {
     gcBarrierWrite(this, value);
     elements_.insert(elements_.begin(), value);
 }
 
-std::shared_ptr<VoltArray> VoltArray::flat() const {
-    auto result = std::make_shared<VoltArray>();
+std::shared_ptr<ClawArray> ClawArray::flat() const {
+    auto result = std::make_shared<ClawArray>();
     
     for (const auto& element : elements_) {
         if (isArray(element)) {
@@ -286,8 +291,8 @@ std::shared_ptr<VoltArray> VoltArray::flat() const {
     return result;
 }
 
-std::shared_ptr<VoltArray> VoltArray::flatMap(std::function<Value(Value)> func) const {
-    auto result = std::make_shared<VoltArray>();
+std::shared_ptr<ClawArray> ClawArray::flatMap(std::function<Value(Value)> func) const {
+    auto result = std::make_shared<ClawArray>();
     
     for (const auto& element : elements_) {
         Value mapped = func(element);
@@ -304,4 +309,4 @@ std::shared_ptr<VoltArray> VoltArray::flatMap(std::function<Value(Value)> func) 
     return result;
 }
 
-} // namespace volt
+} // namespace claw

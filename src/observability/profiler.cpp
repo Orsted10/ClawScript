@@ -5,7 +5,7 @@
  #include <chrono>
  #include <sstream>
  #include <iomanip>
- namespace volt {
+ namespace claw {
  static Profiler* g_profiler = nullptr;
  Profiler& Profiler::instance() {
      if (!g_profiler) g_profiler = new Profiler();
@@ -145,14 +145,14 @@
      }
      std::string html;
      html.reserve(1 << 16);
-     html.append("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>VoltScript Profile</title><style>");
+     html.append("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>ClawScript Profile</title><style>");
      html.append("body{font-family:Segoe UI,Arial,sans-serif;margin:16px}h1{margin:0 0 8px}h2{margin:16px 0 8px;font-size:16px} .flame{position:relative;border:1px solid #ccc;height:400px;background:#fafafa} .frame{position:absolute;height:22px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border:1px solid #fff;background:#fd7;padding:2px;font-size:12px}");
-     html.append("</style></head><body><h1>VoltScript Profile</h1>");
+     html.append("</style></head><body><h1>ClawScript Profile</h1>");
      buildTreeHtml(cpu, "CPU samples", "samples", html);
      buildTreeHtml(heap, "Heap allocations", "bytes", html);
      html.append("</body></html>");
      std::string outFile = path.empty() ? outPath_ : path;
-     if (outFile.empty()) outFile = "volt_profile.html";
+     if (outFile.empty()) outFile = "claw_profile.html";
      std::ofstream f(outFile, std::ios::binary);
      f.write(html.data(), static_cast<std::streamsize>(html.size()));
      // Also emit folded stacks for perf/FlameGraph integration
@@ -219,7 +219,7 @@
      addStacks(heap, heapProf);
      std::string base = path;
      std::string outFile = base.empty() ? outPath_ : base;
-     if (outFile.empty()) outFile = "volt_profile.json";
+     if (outFile.empty()) outFile = "claw_profile.json";
      auto pos = outFile.find_last_of('.');
      if (pos != std::string::npos) outFile.erase(pos);
      outFile += ".speedscope.json";

@@ -7,8 +7,9 @@
 #include <sstream>
 #include <string>
 #include <fstream>
+#include <gtest/gtest.h>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 
@@ -175,3 +176,57 @@ void testPerformanceUtils() {
 }
 
 } // anonymous namespace
+
+TEST(EncryptedIO, RoundTrip) {
+    ASSERT_EQ(runCode(R"(
+        writeFileEnc("enc_test.bin", "hello secret", "correct horse battery staple");
+        msg = readFileEnc("enc_test.bin", "correct horse battery staple");
+        print(msg);
+    )"), "SUCCESS");
+}
+
+TEST(EncryptedIO, SanityNew) {
+    ASSERT_EQ(runCode(R"(
+        print("ok");
+    )"), "SUCCESS");
+}
+
+TEST(TLSPrimitives2, GatingDisabled) {
+    ASSERT_EQ(runCode(R"(
+        print(tlsGet("https://example.com/"));
+    )"), "RUNTIME_ERROR: Network disabled by sandbox");
+}
+
+TEST(TLSPrimitives, HeadersOptional) {
+    std::string res = runCode(R"(
+        writeFile(".voltsec", "network=allow");
+        policyReload();
+        print(tlsGet("https://example.com/", {"User-Agent":"ClawTest"}));
+    )");
+    ASSERT_NE(res, "RUNTIME_ERROR: Network disabled by sandbox");
+}
+
+TEST(LogWrite2, MetadataRequiredPolicy) {
+    ASSERT_EQ(runCode(R"(
+        writeFile(".voltsec", "log.meta.required=true");
+        policyReload();
+        logWrite("no-meta");
+        print("done");
+    )"), "RUNTIME_ERROR: Log metadata required by policy");
+}
+
+TEST(LogWrite2, HmacAndMetadataWritten) {
+    std::string res = runCode(R"(
+        writeFile(".voltsec", "log.path=test_log.txt\nlog.hmac=abc123\noutput=allow");
+        policyReload();
+        logWrite("hello", {"a":1});
+    )");
+    ASSERT_EQ(res, "SUCCESS");
+    std::ifstream f("test_log.txt");
+    ASSERT_TRUE(f.good());
+    std::stringstream buf; buf << f.rdbuf();
+    std::string out = buf.str();
+    ASSERT_NE(out.find("hello|"), std::string::npos);
+    ASSERT_NE(out.find("{"), std::string::npos);
+    ASSERT_NE(out.find("}"), std::string::npos);
+}

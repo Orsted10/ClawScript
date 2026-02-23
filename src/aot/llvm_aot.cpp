@@ -1,5 +1,5 @@
 #include "llvm_aot.h"
-#ifdef VOLT_ENABLE_AOT
+#ifdef CLAW_ENABLE_AOT
 #include "features/string_pool.h"
 #include "interpreter/value.h"
 #include "interpreter/interpreter.h"
@@ -23,8 +23,8 @@
 #include <stdexcept>
 #endif
 
-namespace volt {
-#ifdef VOLT_ENABLE_AOT
+namespace claw {
+#ifdef CLAW_ENABLE_AOT
 
 static uint64_t toBits(double value) {
     uint64_t bits;
@@ -38,7 +38,7 @@ static double fromBits(uint64_t bits) {
     return value;
 }
 
-extern "C" int volt_aot_run(const uint8_t* code,
+extern "C" int claw_aot_run(const uint8_t* code,
                             uint64_t code_size,
                             const AotConstant* constants,
                             uint64_t constant_count) {
@@ -105,7 +105,7 @@ AotModule AotCompiler::compile(const std::string& name, const Chunk& chunk) {
         true,
         llvm::GlobalValue::PrivateLinkage,
         codeArray,
-        "volt_code");
+        "claw_code");
     codeGlobal->setAlignment(llvm::Align(1));
 
     auto codePtr = llvm::ConstantExpr::getPointerCast(codeGlobal, i8Ptr);
@@ -136,7 +136,7 @@ AotModule AotCompiler::compile(const std::string& name, const Chunk& chunk) {
                 true,
                 llvm::GlobalValue::PrivateLinkage,
                 strConst,
-                "volt_str");
+                "claw_str");
             strGlobal->setAlignment(llvm::Align(1));
             auto strPtr = llvm::ConstantExpr::getPointerCast(strGlobal, i8Ptr);
             payloadConst = llvm::ConstantExpr::getPtrToInt(strPtr, i64);
@@ -164,14 +164,14 @@ AotModule AotCompiler::compile(const std::string& name, const Chunk& chunk) {
             true,
             llvm::GlobalValue::PrivateLinkage,
             constArray,
-            "volt_consts");
+            "claw_consts");
         constGlobal->setAlignment(llvm::Align(8));
         constPtr = llvm::ConstantExpr::getPointerCast(constGlobal, constStructTy->getPointerTo());
         constCount = llvm::ConstantInt::get(i64, constEntries.size());
     }
 
     auto runTy = llvm::FunctionType::get(i32, {i8Ptr, i64, constStructTy->getPointerTo(), i64}, false);
-    auto runFn = module->getOrInsertFunction("volt_aot_run", runTy);
+    auto runFn = module->getOrInsertFunction("claw_aot_run", runTy);
 
     auto mainTy = llvm::FunctionType::get(i32, false);
     auto mainFn = llvm::Function::Create(mainTy, llvm::Function::ExternalLinkage, "main", module.get());
@@ -232,5 +232,5 @@ AotModule AotCompiler::compile(const std::string& name, const Chunk& chunk) {
     return result;
 }
 
-} // namespace volt
+} // namespace claw
 #endif

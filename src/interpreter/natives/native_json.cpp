@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace volt {
+namespace claw {
 
 class JSONParser {
 public:
@@ -303,4 +303,4 @@ void registerNativeJSON(const std::shared_ptr<Environment>& globals) {
     ));
 }
 
-} // namespace volt
+} // namespace claw

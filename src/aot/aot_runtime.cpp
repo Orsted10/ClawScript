@@ -3,8 +3,8 @@
 #include "features/string_pool.h"
 #include <cstring>
 
-extern "C" int volt_aot_run(const uint8_t* code, uint64_t codeSize, const volt::AotConstant* consts, uint64_t constCount) {
-    using namespace volt;
+extern "C" int claw_aot_run(const uint8_t* code, uint64_t codeSize, const claw::AotConstant* consts, uint64_t constCount) {
+    using namespace claw;
 
     Chunk chunk;
     for (uint64_t i = 0; i < codeSize; i++) {
@@ -34,4 +34,7 @@ extern "C" int volt_aot_run(const uint8_t* code, uint64_t codeSize, const volt::
     VM vm;
     auto result = vm.interpret(chunk);
     return result == InterpretResult::Ok ? 0 : 1;
+}
+extern "C" int volt_aot_run(const uint8_t* code, uint64_t codeSize, const claw::AotConstant* consts, uint64_t constCount) {
+    return claw_aot_run(code, codeSize, consts, constCount);
 }

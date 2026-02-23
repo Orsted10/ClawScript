@@ -8,17 +8,20 @@
 #include "chunk.h"
 #include "interpreter/value.h"
 #include "interpreter/environment.h"
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
 #include "jit/jit.h"
 #endif
 
-namespace volt {
+namespace claw {
 
 class Interpreter;
 
 struct RuntimeFlags {
     bool disableCallIC = false;
     bool icDiagnostics = false;
+    bool idsEnabled = false;
+    int idsStackMax = 64;
+    uint64_t idsAllocRateMax = 0;
 };
 extern RuntimeFlags gRuntimeFlags;
 
@@ -55,7 +58,7 @@ private:
         Value value;
     };
     struct PropertyInlineCacheEntry {
-        const VoltInstance* instance;
+        const ClawInstance* instance;
         const char* name;
         uint64_t version;
         Value value;
@@ -103,7 +106,7 @@ private:
     std::array<CallFrame, FRAMES_MAX> frames_;
     int frameCount_;
     std::vector<std::shared_ptr<VMUpvalue>> openUpvalues_;
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     JitEngine jit_;
 #endif
     
@@ -112,18 +115,19 @@ private:
     uint64_t globalVersion_;
     std::unordered_map<const uint8_t*, GlobalInlineCache> globalInlineCache_;
     std::unordered_map<const uint8_t*, std::vector<PropertyInlineCacheEntry>> propertyInlineCache_;
-    std::unordered_map<const VoltInstance*, uint64_t> instanceVersions_;
+    std::unordered_map<const ClawInstance*, uint64_t> instanceVersions_;
     std::unordered_map<const uint8_t*, CallInlineCache> callInlineCache_;
     std::unordered_map<const VMFunction*, std::atomic<uint32_t>> functionHotness_;
     std::unordered_map<const uint8_t*, std::atomic<uint32_t>> loopHotness_;
-#ifndef VOLT_DISABLE_IC_DIAGNOSTICS
+#ifndef CLAW_DISABLE_IC_DIAGNOSTICS
     std::unordered_map<const uint8_t*, uint32_t> propertyICMissCount_;
     std::unordered_set<const uint8_t*> propertyICMegamorphic_;
 #endif
     const uint8_t* lastPropertySiteIp_ = nullptr;
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     JitConfig jitConfig_;
 #endif
+    std::unique_ptr<Interpreter> ownedInterpreter_;
 public:
     void forEachRoot(const std::function<void(Value)>& fn) const;
     uint8_t apiReadByte();
@@ -157,11 +161,11 @@ public:
     int apiTryCallCached(const uint8_t* siteIp, uint8_t argCount);
     uint32_t apiGetFunctionHotness(const VMFunction* fn);
     uint32_t apiGetLoopHotness(const uint8_t* ip);
-#ifdef VOLT_ENABLE_JIT
+#ifdef CLAW_ENABLE_JIT
     bool apiHasBaseline(const VMFunction* fn);
 #endif
     const uint8_t* apiGetLastPropertySiteIp() const { return lastPropertySiteIp_; }
-#ifndef VOLT_DISABLE_IC_DIAGNOSTICS
+#ifndef CLAW_DISABLE_IC_DIAGNOSTICS
     uint32_t apiGetPropertyMisses(const uint8_t* siteIp) const {
         auto it = propertyICMissCount_.find(siteIp);
         return it == propertyICMissCount_.end() ? 0u : it->second;
@@ -172,4 +176,4 @@ public:
 #endif
 };
 
-} // namespace volt
+} // namespace claw

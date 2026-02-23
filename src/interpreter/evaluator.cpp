@@ -3,7 +3,7 @@
 #include <sstream>
 #include "features/string_pool.h"
 
-namespace volt {
+namespace claw {
 
 Evaluator::Evaluator() 
     : environment_(std::make_shared<Environment>()) {}
@@ -206,4 +206,4 @@ void Evaluator::checkNumberOperands(const Token& op, const Value& left, const Va
     throw RuntimeError(op, "Operands must be numbers");
 }
 
-} // namespace volt
+} // namespace claw

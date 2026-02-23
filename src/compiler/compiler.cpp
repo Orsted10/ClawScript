@@ -1,8 +1,10 @@
 #include "compiler.h"
 #include "features/string_pool.h"
 #include <iostream>
+#include <cmath>
+#include <cstdint>
 
-namespace volt {
+namespace claw {
 
 Compiler::Compiler() : currentLine_(0), scopeDepth_(0), enclosing_(nullptr) {}
 Compiler::Compiler(Compiler* enclosing) : currentLine_(0), scopeDepth_(0), enclosing_(enclosing) {}
@@ -71,6 +73,11 @@ Value Compiler::visitBinaryExpr(BinaryExpr* expr) {
         case TokenType::Minus: emitOp(OpCode::Subtract); break;
         case TokenType::Star:  emitOp(OpCode::Multiply); break;
         case TokenType::Slash: emitOp(OpCode::Divide); break;
+        case TokenType::BitAnd:       emitOp(OpCode::BitAnd); break;
+        case TokenType::BitOr:        emitOp(OpCode::BitOr); break;
+        case TokenType::BitXor:       emitOp(OpCode::BitXor); break;
+        case TokenType::ShiftLeft:    emitOp(OpCode::ShiftLeft); break;
+        case TokenType::ShiftRight:   emitOp(OpCode::ShiftRight); break;
         case TokenType::Greater:      emitOp(OpCode::Greater); break;
         case TokenType::GreaterEqual: {
             emitOp(OpCode::Less);
@@ -117,14 +124,22 @@ Value Compiler::visitGroupingExpr(GroupingExpr* expr) {
 }
 
 Value Compiler::visitCallExpr(CallExpr* expr) {
+    if (auto* var = dynamic_cast<VariableExpr*>(expr->callee.get())) {
+        if (var->token.lexeme == std::string_view("num") && expr->arguments.size() == 1) {
+            if (auto* lit = dynamic_cast<LiteralExpr*>(expr->arguments[0].get())) {
+                if (lit->type == LiteralExpr::Type::Number) {
+                    expr->arguments[0]->accept(*this);
+                    return nilValue();
+                }
+            }
+        }
+    }
     expr->callee->accept(*this);
-    
     uint8_t argCount = 0;
     for (const auto& argument : expr->arguments) {
         argument->accept(*this);
         argCount++;
     }
-    
     emitOp(OpCode::Call);
     emitByte(argCount);
     return nilValue();
@@ -149,12 +164,258 @@ Value Compiler::visitAssignExpr(AssignExpr* expr) {
     return nilValue();
 }
 
-Value Compiler::visitCompoundAssignExpr(CompoundAssignExpr* expr) { return nilValue(); }
-Value Compiler::visitUpdateExpr(UpdateExpr* expr) { return nilValue(); }
-Value Compiler::visitTernaryExpr(TernaryExpr* expr) { return nilValue(); }
+Value Compiler::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
+    // Load current variable value
+    int local = resolveLocal(expr->name);
+    int upv = -1;
+    if (local != -1) {
+        emitOp(OpCode::GetLocal);
+        emitByte(static_cast<uint8_t>(local));
+    } else if ((upv = resolveUpvalue(expr->name)) != -1) {
+        emitOp(OpCode::GetUpvalue);
+        emitByte(static_cast<uint8_t>(upv));
+    } else {
+        emitOp(OpCode::GetGlobal);
+        auto sv = StringPool::intern(expr->name);
+        emitByte(makeConstant(stringValue(sv.data())));
+    }
+    // Operand
+    expr->value->accept(*this);
+    // Operation
+    switch (expr->op.type) {
+        case TokenType::PlusEqual:        emitOp(OpCode::Add); break;
+        case TokenType::MinusEqual:       emitOp(OpCode::Subtract); break;
+        case TokenType::StarEqual:        emitOp(OpCode::Multiply); break;
+        case TokenType::SlashEqual:       emitOp(OpCode::Divide); break;
+        case TokenType::BitAndEqual:      emitOp(OpCode::BitAnd); break;
+        case TokenType::BitOrEqual:       emitOp(OpCode::BitOr); break;
+        case TokenType::BitXorEqual:      emitOp(OpCode::BitXor); break;
+        case TokenType::ShiftLeftEqual:   emitOp(OpCode::ShiftLeft); break;
+        case TokenType::ShiftRightEqual:  emitOp(OpCode::ShiftRight); break;
+        default: break;
+    }
+    // Store back
+    if (local != -1) {
+        emitOp(OpCode::SetLocal);
+        emitByte(static_cast<uint8_t>(local));
+    } else if (upv != -1) {
+        emitOp(OpCode::SetUpvalue);
+        emitByte(static_cast<uint8_t>(upv));
+    } else {
+        emitOp(OpCode::SetGlobal);
+        auto sv = StringPool::intern(expr->name);
+        emitByte(makeConstant(stringValue(sv.data())));
+    }
+    return nilValue();
+}
+Value Compiler::visitCompoundMemberAssignExpr(CompoundMemberAssignExpr* expr) {
+    beginScope();
+    std::string tmpObj = std::string("$tmp_o_") + std::to_string(reinterpret_cast<std::uintptr_t>(expr));
+    addLocal(tmpObj);
+    int objSlot = resolveLocal(tmpObj);
+    emitOp(OpCode::Nil);
+    expr->object->accept(*this);
+    emitOp(OpCode::SetLocal);
+    emitByte(static_cast<uint8_t>(objSlot));
+    emitOp(OpCode::Pop);
+    std::string tmpRhs = std::string("$tmp_rhs_") + std::to_string(reinterpret_cast<std::uintptr_t>(expr));
+    addLocal(tmpRhs);
+    int rhsSlot = resolveLocal(tmpRhs);
+    emitOp(OpCode::Nil);
+    expr->value->accept(*this);
+    emitOp(OpCode::SetLocal);
+    emitByte(static_cast<uint8_t>(rhsSlot));
+    emitOp(OpCode::Pop);
+    auto svName = StringPool::intern(expr->member);
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(objSlot));
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(rhsSlot));
+    emitOp(OpCode::EnsurePropertyDefault);
+    emitByte(makeConstant(stringValue(svName.data())));
+    switch (expr->op.type) {
+        case TokenType::PlusEqual:        emitByte(0); break;
+        case TokenType::MinusEqual:       emitByte(1); break;
+        case TokenType::StarEqual:        emitByte(2); break;
+        case TokenType::SlashEqual:       emitByte(3); break;
+        case TokenType::BitAndEqual:      emitByte(4); break;
+        case TokenType::BitOrEqual:       emitByte(5); break;
+        case TokenType::BitXorEqual:      emitByte(6); break;
+        case TokenType::ShiftLeftEqual:   emitByte(7); break;
+        case TokenType::ShiftRightEqual:  emitByte(8); break;
+        default:                           emitByte(255); break;
+    }
+    emitOp(OpCode::Pop);
+    emitOp(OpCode::Pop);
+    std::string tmpRes = std::string("$tmp_r_") + std::to_string(reinterpret_cast<std::uintptr_t>(expr));
+    addLocal(tmpRes);
+    int resSlot = resolveLocal(tmpRes);
+    emitOp(OpCode::Nil);
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(objSlot));
+    emitOp(OpCode::GetProperty);
+    emitByte(makeConstant(stringValue(svName.data())));
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(rhsSlot));
+    switch (expr->op.type) {
+        case TokenType::PlusEqual:        emitOp(OpCode::Add); break;
+        case TokenType::MinusEqual:       emitOp(OpCode::Subtract); break;
+        case TokenType::StarEqual:        emitOp(OpCode::Multiply); break;
+        case TokenType::SlashEqual:       emitOp(OpCode::Divide); break;
+        case TokenType::BitAndEqual:      emitOp(OpCode::BitAnd); break;
+        case TokenType::BitOrEqual:       emitOp(OpCode::BitOr); break;
+        case TokenType::BitXorEqual:      emitOp(OpCode::BitXor); break;
+        case TokenType::ShiftLeftEqual:   emitOp(OpCode::ShiftLeft); break;
+        case TokenType::ShiftRightEqual:  emitOp(OpCode::ShiftRight); break;
+        default: break;
+    }
+    emitOp(OpCode::SetLocal);
+    emitByte(static_cast<uint8_t>(resSlot));
+    emitOp(OpCode::Pop);
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(objSlot));
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(resSlot));
+    emitOp(OpCode::SetProperty);
+    emitByte(makeConstant(stringValue(svName.data())));
+    endScope();
+    return nilValue();
+}
+Value Compiler::visitCompoundIndexAssignExpr(CompoundIndexAssignExpr* expr) {
+    beginScope();
+    // Allocate locals and stash values once
+    std::string tmpObj = std::string("$tmp_o_") + std::to_string(reinterpret_cast<std::uintptr_t>(expr));
+    addLocal(tmpObj);
+    int objSlot = resolveLocal(tmpObj);
+    emitOp(OpCode::Nil);
+    expr->object->accept(*this);
+    emitOp(OpCode::SetLocal);
+    emitByte(static_cast<uint8_t>(objSlot));
+    emitOp(OpCode::Pop);
+    std::string tmpIdx = std::string("$tmp_i_") + std::to_string(reinterpret_cast<std::uintptr_t>(expr));
+    addLocal(tmpIdx);
+    int idxSlot = resolveLocal(tmpIdx);
+    emitOp(OpCode::Nil);
+    expr->index->accept(*this);
+    emitOp(OpCode::SetLocal);
+    emitByte(static_cast<uint8_t>(idxSlot));
+    emitOp(OpCode::Pop);
+    std::string tmpRhs = std::string("$tmp_rhs_") + std::to_string(reinterpret_cast<std::uintptr_t>(expr));
+    addLocal(tmpRhs);
+    int rhsSlot = resolveLocal(tmpRhs);
+    emitOp(OpCode::Nil);
+    expr->value->accept(*this);
+    emitOp(OpCode::SetLocal);
+    emitByte(static_cast<uint8_t>(rhsSlot));
+    emitOp(OpCode::Pop);
+    // Ensure default for missing hash keys
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(objSlot));
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(idxSlot));
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(rhsSlot));
+    emitOp(OpCode::EnsureIndexDefault);
+    switch (expr->op.type) {
+        case TokenType::PlusEqual:        emitByte(0); break;
+        case TokenType::MinusEqual:       emitByte(1); break;
+        case TokenType::StarEqual:        emitByte(2); break;
+        case TokenType::SlashEqual:       emitByte(3); break;
+        case TokenType::BitAndEqual:      emitByte(4); break;
+        case TokenType::BitOrEqual:       emitByte(5); break;
+        case TokenType::BitXorEqual:      emitByte(6); break;
+        case TokenType::ShiftLeftEqual:   emitByte(7); break;
+        case TokenType::ShiftRightEqual:  emitByte(8); break;
+        default:                           emitByte(255); break;
+    }
+    // Clear the temporary stack triplet [obj, idx, rhs] used by EnsureIndexDefault
+    emitOp(OpCode::Pop);
+    emitOp(OpCode::Pop);
+    emitOp(OpCode::Pop);
+    // Allocate result slot before computing to ensure it resides below eval stack
+    std::string tmpRes = std::string("$tmp_r_") + std::to_string(reinterpret_cast<std::uintptr_t>(expr));
+    addLocal(tmpRes);
+    int resSlot = resolveLocal(tmpRes);
+    emitOp(OpCode::Nil);
+    // Load current value at index, apply operation with RHS
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(objSlot));
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(idxSlot));
+    emitOp(OpCode::GetIndex);
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(rhsSlot));
+    switch (expr->op.type) {
+        case TokenType::PlusEqual:        emitOp(OpCode::Add); break;
+        case TokenType::MinusEqual:       emitOp(OpCode::Subtract); break;
+        case TokenType::StarEqual:        emitOp(OpCode::Multiply); break;
+        case TokenType::SlashEqual:       emitOp(OpCode::Divide); break;
+        case TokenType::BitAndEqual:      emitOp(OpCode::BitAnd); break;
+        case TokenType::BitOrEqual:       emitOp(OpCode::BitOr); break;
+        case TokenType::BitXorEqual:      emitOp(OpCode::BitXor); break;
+        case TokenType::ShiftLeftEqual:   emitOp(OpCode::ShiftLeft); break;
+        case TokenType::ShiftRightEqual:  emitOp(OpCode::ShiftRight); break;
+        default: break;
+    }
+    emitOp(OpCode::SetLocal);
+    emitByte(static_cast<uint8_t>(resSlot));
+    emitOp(OpCode::Pop);
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(objSlot));
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(idxSlot));
+    emitOp(OpCode::GetLocal);
+    emitByte(static_cast<uint8_t>(resSlot));
+    emitOp(OpCode::SetIndex);
+    endScope();
+    return nilValue();
+}
+Value Compiler::visitUpdateExpr(UpdateExpr* expr) {
+    int slot = resolveLocal(expr->name);
+    if (slot != -1) {
+        emitOp(OpCode::GetLocal);
+        emitByte(static_cast<uint8_t>(slot));
+        emitOp(OpCode::Constant);
+        emitByte(makeConstant(numberToValue(1.0)));
+        if (expr->op.type == TokenType::PlusPlus) {
+            emitOp(OpCode::Add);
+        } else {
+            emitOp(OpCode::Subtract);
+        }
+        emitOp(OpCode::SetLocal);
+        emitByte(static_cast<uint8_t>(slot));
+        return nilValue();
+    }
+    return nilValue();
+}
+Value Compiler::visitUpdateMemberExpr(UpdateMemberExpr* expr) { return nilValue(); }
+Value Compiler::visitUpdateIndexExpr(UpdateIndexExpr* expr) { return nilValue(); }
+Value Compiler::visitTernaryExpr(TernaryExpr* expr) {
+    expr->condition->accept(*this);
+    int elseJump = emitJump(OpCode::JumpIfFalse);
+    emitOp(OpCode::Pop);
+    expr->thenBranch->accept(*this);
+    int endJump = emitJump(OpCode::Jump);
+    patchJump(elseJump);
+    emitOp(OpCode::Pop);
+    expr->elseBranch->accept(*this);
+    patchJump(endJump);
+    return nilValue();
+}
 Value Compiler::visitArrayExpr(ArrayExpr* expr) { return nilValue(); }
-Value Compiler::visitIndexExpr(IndexExpr* expr) { return nilValue(); }
-Value Compiler::visitIndexAssignExpr(IndexAssignExpr* expr) { return nilValue(); }
+Value Compiler::visitIndexExpr(IndexExpr* expr) {
+    expr->object->accept(*this);
+    expr->index->accept(*this);
+    emitOp(OpCode::GetIndex);
+    return nilValue();
+}
+Value Compiler::visitIndexAssignExpr(IndexAssignExpr* expr) {
+    expr->object->accept(*this);
+    expr->index->accept(*this);
+    expr->value->accept(*this);
+    emitOp(OpCode::SetIndex);
+    return nilValue();
+}
 Value Compiler::visitHashMapExpr(HashMapExpr* expr) { return nilValue(); }
 Value Compiler::visitMemberExpr(MemberExpr* expr) {
     expr->object->accept(*this);
@@ -221,16 +482,23 @@ void Compiler::visitPrintStmt(PrintStmt* stmt) {
 }
 
 void Compiler::visitLetStmt(LetStmt* stmt) {
-    if (stmt->initializer) {
-        stmt->initializer->accept(*this);
-    } else {
-        emitOp(OpCode::Nil);
-    }
-    
     std::string_view name = stmt->token.lexeme;
     if (scopeDepth_ > 0) {
         addLocal(name);
+        int slot = resolveLocal(name);
+        emitOp(OpCode::Nil);
+        if (stmt->initializer) {
+            stmt->initializer->accept(*this);
+            emitOp(OpCode::SetLocal);
+            emitByte(static_cast<uint8_t>(slot));
+            emitOp(OpCode::Pop);
+        }
     } else {
+        if (stmt->initializer) {
+            stmt->initializer->accept(*this);
+        } else {
+            emitOp(OpCode::Nil);
+        }
         emitOp(OpCode::DefineGlobal);
         auto sv = StringPool::intern(name);
         emitByte(makeConstant(stringValue(sv.data())));
@@ -276,7 +544,7 @@ void Compiler::visitWhileStmt(WhileStmt* stmt) {
     patchJump(exitJump);
     emitOp(OpCode::Pop);
 }
-void Compiler::visitRunUntilStmt(RunUntilStmt* stmt) {}
+void Compiler::visitRunUntilStmt(RunUntilStmt*) {}
 void Compiler::visitForStmt(ForStmt* stmt) {
     beginScope();
     if (stmt->initializer) {
@@ -404,12 +672,13 @@ void Compiler::visitReturnStmt(ReturnStmt* stmt) {
     }
     emitOp(OpCode::Return);
 }
-void Compiler::visitBreakStmt(BreakStmt* stmt) {}
-void Compiler::visitContinueStmt(ContinueStmt* stmt) {}
-void Compiler::visitTryStmt(TryStmt* stmt) {}
-void Compiler::visitThrowStmt(ThrowStmt* stmt) {}
-void Compiler::visitImportStmt(ImportStmt* stmt) {}
-void Compiler::visitClassStmt(ClassStmt* stmt) {}
+void Compiler::visitBreakStmt(BreakStmt*) {}
+void Compiler::visitContinueStmt(ContinueStmt*) {}
+void Compiler::visitTryStmt(TryStmt*) {}
+void Compiler::visitThrowStmt(ThrowStmt*) {}
+void Compiler::visitImportStmt(ImportStmt*) {}
+void Compiler::visitClassStmt(ClassStmt*) {}
+void Compiler::visitSwitchStmt(SwitchStmt*) {}
 
 // Private helpers
 
@@ -558,4 +827,4 @@ void Compiler::error(Token token, const std::string& message) {
     std::cerr << "[line " << token.line << "] Error: " << message << std::endl;
 }
 
-} // namespace volt
+} // namespace claw

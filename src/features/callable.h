@@ -5,7 +5,7 @@
 #include <memory>
 #include <functional>  // ← ADD THIS!
 
-namespace volt {
+namespace claw {
 
 // Forward declarations
 class Interpreter;
@@ -43,13 +43,13 @@ public:
  * These are functions written in VoltScript itself (using 'fn' keyword).
  * They capture their surrounding environment to support closures.
  */
-class VoltFunction : public Callable {
+class ClawFunction : public Callable {
 public:
-    VoltFunction(struct FnStmt* declaration, 
+    ClawFunction(struct FnStmt* declaration, 
                  std::shared_ptr<Environment> closure,
                  bool isInitializer = false);
     
-    std::shared_ptr<VoltFunction> bind(std::shared_ptr<class VoltInstance> instance);
+    std::shared_ptr<ClawFunction> bind(std::shared_ptr<class ClawInstance> instance);
     
     Value call(Interpreter& interpreter, 
               const std::vector<Value>& arguments) override;
@@ -87,4 +87,4 @@ private:
     std::string name_;
 };
 
-} // namespace volt
+} // namespace claw

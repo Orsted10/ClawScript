@@ -6,14 +6,13 @@
 #include <set>
 #include <cstring>
 
-namespace volt {
+namespace claw {
 
-// Forward declarations
 class Callable;
-class VoltArray;
-struct VoltHashMap;
-class VoltClass;
-class VoltInstance;
+class ClawArray;
+struct ClawHashMap;
+class ClawClass;
+class ClawInstance;
 class Chunk;
 struct VMFunction;
 struct VMClosure;
@@ -127,10 +126,10 @@ inline void* asObjectPtr(Value v) {
 
 // Object Value creators using global registries
 Value callableValue(std::shared_ptr<Callable> fn);
-Value arrayValue(std::shared_ptr<VoltArray> arr);
-Value hashMapValue(std::shared_ptr<VoltHashMap> map);
-Value classValue(std::shared_ptr<VoltClass> cls);
-Value instanceValue(std::shared_ptr<VoltInstance> inst);
+Value arrayValue(std::shared_ptr<ClawArray> arr);
+Value hashMapValue(std::shared_ptr<ClawHashMap> map);
+Value classValue(std::shared_ptr<ClawClass> cls);
+Value instanceValue(std::shared_ptr<ClawInstance> inst);
 Value vmFunctionValue(std::shared_ptr<VMFunction> fn);
 Value vmClosureValue(std::shared_ptr<VMClosure> closure);
 
@@ -139,6 +138,7 @@ bool isTruthy(Value v);
 bool isEqual(Value v1, Value v2);
 std::string valueToString(const Value& v);
 std::string valueToStringWithCycleDetection(const Value& v, std::set<const void*>& visited);
+bool diagnosticsEnabled();
 
 // Specialized object checks (to be refined)
 bool isCallable(Value v);
@@ -149,10 +149,10 @@ bool isInstance(Value v);
 bool isVMFunction(Value v);
 bool isVMClosure(Value v);
 
-std::shared_ptr<VoltArray> asArray(Value v);
-std::shared_ptr<VoltHashMap> asHashMap(Value v);
-std::shared_ptr<VoltClass> asClass(Value v);
-std::shared_ptr<VoltInstance> asInstance(Value v);
+std::shared_ptr<ClawArray> asArray(Value v);
+std::shared_ptr<ClawHashMap> asHashMap(Value v);
+std::shared_ptr<ClawClass> asClass(Value v);
+std::shared_ptr<ClawInstance> asInstance(Value v);
 std::shared_ptr<Callable> asCallable(Value v);
 std::shared_ptr<VMFunction> asVMFunction(Value v);
 std::shared_ptr<VMClosure> asVMClosure(Value v);
@@ -163,13 +163,15 @@ void gcRegisterVM(class VM* vm);
 void gcUnregisterVM(class VM* vm);
 void gcBarrierWrite(const void* parent, Value child);
 void gcMaybeCollect();
-std::shared_ptr<VoltArray> gcAcquireArrayFromPool();
-void gcReleaseArrayToPool(std::shared_ptr<VoltArray> arr);
-std::shared_ptr<VoltHashMap> gcAcquireHashMapFromPool();
-void gcReleaseHashMapToPool(std::shared_ptr<VoltHashMap> map);
+std::shared_ptr<ClawArray> gcAcquireArrayFromPool();
+void gcReleaseArrayToPool(std::shared_ptr<ClawArray> arr);
+std::shared_ptr<ClawHashMap> gcAcquireHashMapFromPool();
+void gcReleaseHashMapToPool(std::shared_ptr<ClawHashMap> map);
 void gcEphemeralFrameEnter();
 void gcEphemeralFrameLeave();
 void gcEphemeralEscape(Value v);
+void gcEphemeralEscapeDeep(Value v);
 void gcSetBenchmarkMode(bool enable);
+uint64_t gcGetYoungAllocations();
 
-} // namespace volt
+} // namespace claw

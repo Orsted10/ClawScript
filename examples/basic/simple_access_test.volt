@@ -1,5 +1,0 @@
-// Even simpler test - just access the map method
-numbers = [1, 2, 3];
-mapper = numbers.map;
-print "Got mapper";
-print mapper;

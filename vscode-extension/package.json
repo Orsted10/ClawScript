@@ -1,17 +1,17 @@
 {
-  "name": "volt-language",
-  "displayName": "VoltScript",
-  "version": "0.1.0",
+  "name": "claw-language",
+  "displayName": "ClawScript",
+  "version": "1.0.0",
   "publisher": "volt",
   "engines": { "vscode": "^1.80.0" },
   "categories": ["Programming Languages"],
   "activationEvents": [
-    "onLanguage:volt"
+    "onLanguage:claw"
   ],
   "main": "./extension.js",
   "contributes": {
     "languages": [
-      { "id": "volt", "aliases": ["VoltScript", "volt"], "extensions": [".volt"], "configuration": "./language-configuration.json" }
+      { "id": "claw", "aliases": ["ClawScript", "claw"], "extensions": [".claw"], "configuration": "./language-configuration.json" }
     ]
   },
   "dependencies": {

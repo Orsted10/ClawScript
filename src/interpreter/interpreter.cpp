@@ -14,6 +14,7 @@
 #include "interpreter/natives/native_io.h"
 #include "interpreter/natives/native_time.h"
 #include "interpreter/natives/native_json.h"
+#include "interpreter/natives/native_security.h"
 #include "interpreter/gc_alloc.h"
 #include <memory>
 #include <sstream>
@@ -26,20 +27,23 @@
 #include <cstdio>
 #include "observability/profiler.h"
 
-namespace volt {
+namespace claw {
 
 Interpreter::Interpreter()
     : environment_(std::make_shared<Environment>()),
       globals_(environment_) {
     // Set up all the built-in functions that come with VoltScript
-    const char* benchMode = std::getenv("VOLT_BENCHMARK_MODE");
+    const char* benchMode = std::getenv("CLAW_BENCHMARK_MODE");
+    if (!benchMode) benchMode = std::getenv("VOLT_BENCHMARK_MODE");
     if (benchMode && std::string(benchMode) == "1") {
         gcSetBenchmarkMode(true);
     } else {
         gcSetBenchmarkMode(false);
     }
-    const char* envProf = std::getenv("VOLT_PROFILE");
-    const char* envHz = std::getenv("VOLT_PROFILE_HZ");
+    const char* envProf = std::getenv("CLAW_PROFILE");
+    if (!envProf) envProf = std::getenv("VOLT_PROFILE");
+    const char* envHz = std::getenv("CLAW_PROFILE_HZ");
+    if (!envHz) envHz = std::getenv("VOLT_PROFILE_HZ");
     if (envProf && *envProf && !profilerEnabled()) {
         int hz = 100;
         if (envHz && *envHz) {
@@ -104,6 +108,7 @@ void Interpreter::defineNatives() {
     // ==================== JSON HANDLING (NEW FOR v0.7.5) ====================
     
     registerNativeJSON(globals_);
+    registerNativeSecurity(globals_, *this);
     
     
     // type(val) - get type of value as string
@@ -336,7 +341,7 @@ void Interpreter::defineNatives() {
             auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
             
             // Return an object with result and execution time
-            auto resultMap = std::make_shared<VoltHashMap>();
+            auto resultMap = std::make_shared<ClawHashMap>();
             resultMap->set("result", result);
             resultMap->set("timeMicroseconds", numberToValue(static_cast<double>(duration.count())));
             resultMap->set("timeMilliseconds", numberToValue(static_cast<double>(duration.count()) / 1000.0));
@@ -379,6 +384,9 @@ void Interpreter::visitExprStmt(ExprStmt* stmt) {
 
 void Interpreter::visitPrintStmt(PrintStmt* stmt) {
     Value value = evaluate(stmt->expr.get());
+    if (!globals_->canOutput()) {
+        throwRuntimeError(stmt->token, ErrorCode::RUNTIME_ERROR, "Output disabled by sandbox");
+    }
     std::cout << valueToString(value) << "\n";
 }
 
@@ -489,7 +497,7 @@ void Interpreter::visitForStmt(ForStmt* stmt) {
 
 void Interpreter::visitFnStmt(FnStmt* stmt) {
     // Create a function object that captures the current environment
-    auto function = std::make_shared<VoltFunction>(stmt, environment_);
+    auto function = std::make_shared<ClawFunction>(stmt, environment_);
     
     // Define the function in the current scope
     environment_->define(stmt->name, function);
@@ -585,6 +593,37 @@ void Interpreter::visitImportStmt(ImportStmt* stmt) {
     }
 }
 
+void Interpreter::visitSwitchStmt(SwitchStmt* stmt) {
+    Value switchVal = evaluate(stmt->expression.get());
+    
+    int startIndex = -1;
+    int defaultIndex = -1;
+    for (int i = 0; i < static_cast<int>(stmt->cases.size()); ++i) {
+        const auto& c = stmt->cases[i];
+        if (c.isDefault) {
+            defaultIndex = i;
+            continue;
+        }
+        Value caseVal = evaluate(c.match.get());
+        if (isEqual(switchVal, caseVal)) {
+            startIndex = i;
+            break;
+        }
+    }
+    
+    if (startIndex == -1) startIndex = defaultIndex;
+    if (startIndex == -1) return;
+    
+    for (int i = startIndex; i < static_cast<int>(stmt->cases.size()); ++i) {
+        const auto& c = stmt->cases[i];
+        try {
+            executeBlock(c.body, environment_);
+        } catch (const BreakException&) {
+            return;
+        }
+    }
+}
+
 // ========================================
 // EXPRESSION EVALUATION
 // ========================================
@@ -613,7 +652,7 @@ Value Interpreter::visitLiteralExpr(LiteralExpr* expr) {
 Value Interpreter::visitVariableExpr(VariableExpr* expr) {
     try {
         return environment_->get(expr->name);
-    } catch (const VoltError& e) {
+    } catch (const ClawError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
 }
@@ -627,6 +666,11 @@ Value Interpreter::visitUnaryExpr(UnaryExpr* expr) {
             return numberToValue(-asNumber(right));
         case TokenType::Bang:
             return boolValue(!isTruthy(right));
+        case TokenType::BitNot: {
+            checkNumberOperand(expr->op, right);
+            auto v = static_cast<int64_t>(asNumber(right));
+            return numberToValue(static_cast<double>(~v));
+        }
         default:
             throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown unary operator");
     }
@@ -689,6 +733,46 @@ Value Interpreter::visitBinaryExpr(BinaryExpr* expr) {
             return boolValue(isEqual(left, right));
         case TokenType::BangEqual:
             return boolValue(!isEqual(left, right));
+        
+        // Bitwise operations (integers via truncation)
+        case TokenType::BitAnd: {
+            checkNumberOperands(expr->op, left, right);
+            auto lv = static_cast<int64_t>(asNumber(left));
+            auto rv = static_cast<int64_t>(asNumber(right));
+            return numberToValue(static_cast<double>(lv & rv));
+        }
+        case TokenType::BitOr: {
+            checkNumberOperands(expr->op, left, right);
+            auto lv = static_cast<int64_t>(asNumber(left));
+            auto rv = static_cast<int64_t>(asNumber(right));
+            return numberToValue(static_cast<double>(lv | rv));
+        }
+        case TokenType::BitXor: {
+            checkNumberOperands(expr->op, left, right);
+            auto lv = static_cast<int64_t>(asNumber(left));
+            auto rv = static_cast<int64_t>(asNumber(right));
+            return numberToValue(static_cast<double>(lv ^ rv));
+        }
+        case TokenType::ShiftLeft: {
+            checkNumberOperands(expr->op, left, right);
+            auto lv = static_cast<int64_t>(asNumber(left));
+            auto sh = static_cast<int>(asNumber(right));
+            if (sh < 0) {
+                throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+            }
+            sh &= 63; // limit to width
+            return numberToValue(static_cast<double>(lv << sh));
+        }
+        case TokenType::ShiftRight: {
+            checkNumberOperands(expr->op, left, right);
+            auto lv = static_cast<int64_t>(asNumber(left));
+            auto sh = static_cast<int>(asNumber(right));
+            if (sh < 0) {
+                throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+            }
+            sh &= 63; // limit to width
+            return numberToValue(static_cast<double>(lv >> sh));
+        }
             
         default:
             throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown binary operator");
@@ -766,7 +850,7 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
     Value current;
     try {
         current = environment_->get(expr->name);
-    } catch (const VoltError& e) {
+    } catch (const ClawError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
     
@@ -802,13 +886,56 @@ Value Interpreter::visitCompoundAssignExpr(CompoundAssignExpr* expr) {
             }
             result = numberToValue(asNumber(current) / asNumber(operand));
             break;
+        case TokenType::BitAndEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto rv = static_cast<int64_t>(asNumber(operand));
+            result = numberToValue(static_cast<double>(lv & rv));
+            break;
+        }
+        case TokenType::BitOrEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto rv = static_cast<int64_t>(asNumber(operand));
+            result = numberToValue(static_cast<double>(lv | rv));
+            break;
+        }
+        case TokenType::BitXorEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto rv = static_cast<int64_t>(asNumber(operand));
+            result = numberToValue(static_cast<double>(lv ^ rv));
+            break;
+        }
+        case TokenType::ShiftLeftEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto sh = static_cast<int>(asNumber(operand));
+            if (sh < 0) {
+                throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+            }
+            sh &= 63;
+            result = numberToValue(static_cast<double>(lv << sh));
+            break;
+        }
+        case TokenType::ShiftRightEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto sh = static_cast<int>(asNumber(operand));
+            if (sh < 0) {
+                throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+            }
+            sh &= 63;
+            result = numberToValue(static_cast<double>(lv >> sh));
+            break;
+        }
         default:
             throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown compound assignment operator");
     }
     
     try {
         environment_->assign(expr->name, result);
-    } catch (const VoltError& e) {
+    } catch (const ClawError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
     return result;
@@ -818,7 +945,7 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     Value current;
     try {
         current = environment_->get(expr->name);
-    } catch (const VoltError& e) {
+    } catch (const ClawError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
     
@@ -836,12 +963,93 @@ Value Interpreter::visitUpdateExpr(UpdateExpr* expr) {
     
     try {
         environment_->assign(expr->name, numberToValue(newValue));
-    } catch (const VoltError& e) {
+    } catch (const ClawError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
     
     // Return old value for postfix, new value for prefix
     return expr->prefix ? numberToValue(newValue) : numberToValue(oldValue);
+}
+
+Value Interpreter::visitUpdateMemberExpr(UpdateMemberExpr* expr) {
+    Value object = evaluate(expr->object.get());
+    
+    // Hash map field
+    if (isHashMap(object)) {
+        auto map = asHashMap(object);
+        Value cur = map->get(expr->member);
+        if (!isNumber(cur)) {
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operand must be a number for increment/decrement");
+        }
+        double oldVal = asNumber(cur);
+        double newVal = (expr->op.type == TokenType::PlusPlus) ? (oldVal + 1) : (oldVal - 1);
+        map->set(expr->member, numberToValue(newVal));
+        return expr->prefix ? numberToValue(newVal) : numberToValue(oldVal);
+    }
+    
+    // Class instance field
+    if (isInstance(object)) {
+        auto inst = asInstance(object);
+        Value cur = inst->get(expr->nameTok);
+        if (!isNumber(cur)) {
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operand must be a number for increment/decrement");
+        }
+        double oldVal = asNumber(cur);
+        double newVal = (expr->op.type == TokenType::PlusPlus) ? (oldVal + 1) : (oldVal - 1);
+        inst->set(expr->nameTok, numberToValue(newVal));
+        return expr->prefix ? numberToValue(newVal) : numberToValue(oldVal);
+    }
+    
+    throwRuntimeError(expr->token, ErrorCode::RUNTIME_ERROR, "Invalid object for member update");
+}
+
+Value Interpreter::visitUpdateIndexExpr(UpdateIndexExpr* expr) {
+    Value object = evaluate(expr->object.get());
+    Value index = evaluate(expr->index.get());
+    
+    // Array index
+    if (isArray(object)) {
+        auto array = asArray(object);
+        if (!isNumber(index)) {
+            throwRuntimeError(expr->token, ErrorCode::TYPE_MISMATCH, "Array index must be a number");
+        }
+        int idx = static_cast<int>(asNumber(index));
+        if (idx < 0 || idx >= array->length()) {
+            throwRuntimeError(expr->token, ErrorCode::INDEX_OUT_OF_BOUNDS,
+                "Index " + std::to_string(idx) + " out of bounds [0, " + std::to_string(array->length() - 1) + "]");
+        }
+        Value cur = array->get(idx);
+        if (!isNumber(cur)) {
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operand must be a number for increment/decrement");
+        }
+        double oldVal = asNumber(cur);
+        double newVal = (expr->op.type == TokenType::PlusPlus) ? (oldVal + 1) : (oldVal - 1);
+        array->set(idx, numberToValue(newVal));
+        return expr->prefix ? numberToValue(newVal) : numberToValue(oldVal);
+    }
+    
+    // Hash map index
+    if (isHashMap(object)) {
+        auto map = asHashMap(object);
+        std::string key;
+        if (isString(index)) key = asString(index);
+        else if (isNumber(index)) key = std::to_string(asNumber(index));
+        else if (isNil(index)) key = "nil";
+        else if (isBool(index)) key = asBool(index) ? "true" : "false";
+        else {
+            throwRuntimeError(expr->token, ErrorCode::TYPE_MISMATCH, "Hash map index must be a string, number, boolean, or nil");
+        }
+        Value cur = map->get(key);
+        if (!isNumber(cur)) {
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operand must be a number for increment/decrement");
+        }
+        double oldVal = asNumber(cur);
+        double newVal = (expr->op.type == TokenType::PlusPlus) ? (oldVal + 1) : (oldVal - 1);
+        map->set(key, numberToValue(newVal));
+        return expr->prefix ? numberToValue(newVal) : numberToValue(oldVal);
+    }
+    
+    throwRuntimeError(expr->token, ErrorCode::NOT_INDEXABLE, "Can only index arrays and hash maps");
 }
 
 Value Interpreter::visitSetExpr(SetExpr* expr) {
@@ -863,7 +1071,7 @@ Value Interpreter::visitSetExpr(SetExpr* expr) {
 Value Interpreter::visitThisExpr(ThisExpr* expr) {
     try {
         return environment_->get("this");
-    } catch (const VoltError& e) {
+    } catch (const ClawError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
 }
@@ -893,7 +1101,7 @@ Value Interpreter::visitSuperExpr(SuperExpr* expr) {
 
         // 4. Bind instance to method
         return callableValue(method->bind(instance));
-    } catch (const VoltError& e) {
+    } catch (const ClawError& e) {
         throwRuntimeError(expr->token, e.code, e.what());
     }
 }
@@ -1034,6 +1242,304 @@ Value Interpreter::visitIndexAssignExpr(IndexAssignExpr* expr) {
     throwRuntimeError(expr->token, ErrorCode::NOT_INDEXABLE, "Can only index arrays and hash maps");
 }
 
+Value Interpreter::visitCompoundMemberAssignExpr(CompoundMemberAssignExpr* expr) {
+    Value object = evaluate(expr->object.get());
+    Value operand = evaluate(expr->value.get());
+    Value current;
+    bool isMap = false;
+    if (isHashMap(object)) {
+        auto map = asHashMap(object);
+        current = map->get(expr->member);
+        isMap = true;
+    } else if (isInstance(object)) {
+        auto inst = asInstance(object);
+        current = inst->get(expr->nameTok);
+    } else {
+        throwRuntimeError(expr->token, ErrorCode::RUNTIME_ERROR, "Invalid object for member compound assignment");
+    }
+    
+    Value result = nilValue();
+    switch (expr->op.type) {
+        case TokenType::PlusEqual:
+            if (isNumber(current) && isNumber(operand)) {
+                result = numberToValue(asNumber(current) + asNumber(operand));
+            } else if (isString(current) && isString(operand)) {
+                auto sv = StringPool::intern(asString(current) + asString(operand));
+                result = stringValue(sv.data());
+            } else if (isString(current) && isNumber(operand)) {
+                auto sv = StringPool::intern(asString(current) + valueToString(operand));
+                result = stringValue(sv.data());
+            } else {
+                throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operands must be compatible for +=");
+            }
+            break;
+        case TokenType::MinusEqual:
+            checkNumberOperands(expr->op, current, operand);
+            result = numberToValue(asNumber(current) - asNumber(operand));
+            break;
+        case TokenType::StarEqual:
+            checkNumberOperands(expr->op, current, operand);
+            result = numberToValue(asNumber(current) * asNumber(operand));
+            break;
+        case TokenType::SlashEqual:
+            checkNumberOperands(expr->op, current, operand);
+            if (asNumber(operand) == 0.0) {
+                throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
+            }
+            result = numberToValue(asNumber(current) / asNumber(operand));
+            break;
+        case TokenType::BitAndEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto rv = static_cast<int64_t>(asNumber(operand));
+            result = numberToValue(static_cast<double>(lv & rv));
+            break;
+        }
+        case TokenType::BitOrEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto rv = static_cast<int64_t>(asNumber(operand));
+            result = numberToValue(static_cast<double>(lv | rv));
+            break;
+        }
+        case TokenType::BitXorEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto rv = static_cast<int64_t>(asNumber(operand));
+            result = numberToValue(static_cast<double>(lv ^ rv));
+            break;
+        }
+        case TokenType::ShiftLeftEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto sh = static_cast<int>(asNumber(operand));
+            if (sh < 0) {
+                throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+            }
+            sh &= 63;
+            result = numberToValue(static_cast<double>(lv << sh));
+            break;
+        }
+        case TokenType::ShiftRightEqual: {
+            checkNumberOperands(expr->op, current, operand);
+            auto lv = static_cast<int64_t>(asNumber(current));
+            auto sh = static_cast<int>(asNumber(operand));
+            if (sh < 0) {
+                throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+            }
+            sh &= 63;
+            result = numberToValue(static_cast<double>(lv >> sh));
+            break;
+        }
+        default:
+            throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown compound assignment operator");
+    }
+    
+    if (isMap) {
+        asHashMap(object)->set(expr->member, result);
+    } else {
+        asInstance(object)->set(expr->nameTok, result);
+    }
+    return result;
+}
+
+Value Interpreter::visitCompoundIndexAssignExpr(CompoundIndexAssignExpr* expr) {
+    Value object = evaluate(expr->object.get());
+    Value index = evaluate(expr->index.get());
+    Value operand = evaluate(expr->value.get());
+    
+    if (isArray(object)) {
+        auto array = asArray(object);
+        if (!isNumber(index)) {
+            throwRuntimeError(expr->token, ErrorCode::TYPE_MISMATCH, "Array index must be a number");
+        }
+        int idx = static_cast<int>(asNumber(index));
+        if (idx < 0 || idx >= array->length()) {
+            throwRuntimeError(expr->token, ErrorCode::INDEX_OUT_OF_BOUNDS,
+                "Index " + std::to_string(idx) + " out of bounds [0, " + std::to_string(array->length() - 1) + "]");
+        }
+        Value current = array->get(idx);
+        Value result = nilValue();
+        switch (expr->op.type) {
+            case TokenType::PlusEqual:
+                if (isNumber(current) && isNumber(operand)) {
+                    result = numberToValue(asNumber(current) + asNumber(operand));
+                } else if (isString(current) && isString(operand)) {
+                    auto sv = StringPool::intern(asString(current) + asString(operand));
+                    result = stringValue(sv.data());
+                } else if (isString(current) && isNumber(operand)) {
+                    auto sv = StringPool::intern(asString(current) + valueToString(operand));
+                    result = stringValue(sv.data());
+                } else {
+                    throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operands must be compatible for +=");
+                }
+                break;
+            case TokenType::MinusEqual:
+                checkNumberOperands(expr->op, current, operand);
+                result = numberToValue(asNumber(current) - asNumber(operand));
+                break;
+            case TokenType::StarEqual:
+                checkNumberOperands(expr->op, current, operand);
+                result = numberToValue(asNumber(current) * asNumber(operand));
+                break;
+            case TokenType::SlashEqual:
+                checkNumberOperands(expr->op, current, operand);
+                if (asNumber(operand) == 0.0) {
+                    throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
+                }
+                result = numberToValue(asNumber(current) / asNumber(operand));
+                break;
+            case TokenType::BitAndEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto rv = static_cast<int64_t>(asNumber(operand));
+                result = numberToValue(static_cast<double>(lv & rv));
+                break;
+            }
+            case TokenType::BitOrEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto rv = static_cast<int64_t>(asNumber(operand));
+                result = numberToValue(static_cast<double>(lv | rv));
+                break;
+            }
+            case TokenType::BitXorEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto rv = static_cast<int64_t>(asNumber(operand));
+                result = numberToValue(static_cast<double>(lv ^ rv));
+                break;
+            }
+            case TokenType::ShiftLeftEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto sh = static_cast<int>(asNumber(operand));
+                if (sh < 0) {
+                    throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+                }
+                sh &= 63;
+                result = numberToValue(static_cast<double>(lv << sh));
+                break;
+            }
+            case TokenType::ShiftRightEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto sh = static_cast<int>(asNumber(operand));
+                if (sh < 0) {
+                    throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+                }
+                sh &= 63;
+                result = numberToValue(static_cast<double>(lv >> sh));
+                break;
+            }
+            default:
+                throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown compound assignment operator");
+        }
+        array->set(idx, result);
+        return result;
+    }
+    
+    if (isHashMap(object)) {
+        auto map = asHashMap(object);
+        std::string key;
+        if (isString(index)) {
+            key = asString(index);
+        } else if (isNumber(index)) {
+            if (asNumber(index) == static_cast<long long>(asNumber(index))) {
+                key = std::to_string(static_cast<long long>(asNumber(index)));
+            } else {
+                key = std::to_string(asNumber(index));
+            }
+        } else if (isNil(index)) {
+            key = "nil";
+        } else if (isBool(index)) {
+            key = asBool(index) ? "true" : "false";
+        } else {
+            throwRuntimeError(expr->token, ErrorCode::TYPE_MISMATCH, "Hash map index must be a string, number, boolean, or nil");
+        }
+        Value current = map->get(key);
+        Value result = nilValue();
+        switch (expr->op.type) {
+            case TokenType::PlusEqual:
+                if (isNumber(current) && isNumber(operand)) {
+                    result = numberToValue(asNumber(current) + asNumber(operand));
+                } else if (isString(current) && isString(operand)) {
+                    auto sv = StringPool::intern(asString(current) + asString(operand));
+                    result = stringValue(sv.data());
+                } else if (isString(current) && isNumber(operand)) {
+                    auto sv = StringPool::intern(asString(current) + valueToString(operand));
+                    result = stringValue(sv.data());
+                } else {
+                    throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Operands must be compatible for +=");
+                }
+                break;
+            case TokenType::MinusEqual:
+                checkNumberOperands(expr->op, current, operand);
+                result = numberToValue(asNumber(current) - asNumber(operand));
+                break;
+            case TokenType::StarEqual:
+                checkNumberOperands(expr->op, current, operand);
+                result = numberToValue(asNumber(current) * asNumber(operand));
+                break;
+            case TokenType::SlashEqual:
+                checkNumberOperands(expr->op, current, operand);
+                if (asNumber(operand) == 0.0) {
+                    throwRuntimeError(expr->op, ErrorCode::DIVISION_BY_ZERO, "Division by zero");
+                }
+                result = numberToValue(asNumber(current) / asNumber(operand));
+                break;
+            case TokenType::BitAndEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto rv = static_cast<int64_t>(asNumber(operand));
+                result = numberToValue(static_cast<double>(lv & rv));
+                break;
+            }
+            case TokenType::BitOrEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto rv = static_cast<int64_t>(asNumber(operand));
+                result = numberToValue(static_cast<double>(lv | rv));
+                break;
+            }
+            case TokenType::BitXorEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto rv = static_cast<int64_t>(asNumber(operand));
+                result = numberToValue(static_cast<double>(lv ^ rv));
+                break;
+            }
+            case TokenType::ShiftLeftEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto sh = static_cast<int>(asNumber(operand));
+                if (sh < 0) {
+                    throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+                }
+                sh &= 63;
+                result = numberToValue(static_cast<double>(lv << sh));
+                break;
+            }
+            case TokenType::ShiftRightEqual: {
+                checkNumberOperands(expr->op, current, operand);
+                auto lv = static_cast<int64_t>(asNumber(current));
+                auto sh = static_cast<int>(asNumber(operand));
+                if (sh < 0) {
+                    throwRuntimeError(expr->op, ErrorCode::RUNTIME_ERROR, "Shift count must be non-negative");
+                }
+                sh &= 63;
+                result = numberToValue(static_cast<double>(lv >> sh));
+                break;
+            }
+            default:
+                throwRuntimeError(expr->op, ErrorCode::TYPE_MISMATCH, "Unknown compound assignment operator");
+        }
+        map->set(key, result);
+        return result;
+    }
+    
+    throwRuntimeError(expr->token, ErrorCode::NOT_INDEXABLE, "Can only index arrays and hash maps");
+}
 Value Interpreter::visitMemberExpr(MemberExpr* expr) {
     Value object = evaluate(expr->object.get());
     
@@ -1096,7 +1602,7 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                     }
                     
                     auto function = asCallable(args[0]);
-                    auto newArray = std::make_shared<VoltArray>();
+                    auto newArray = std::make_shared<ClawArray>();
                     
                     for (size_t i = 0; i < array->size(); ++i) {
                         std::vector<Value> callArgs = { array->get(static_cast<int>(i)) };
@@ -1119,7 +1625,7 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
                     }
                     
                     auto function = asCallable(args[0]);
-                    auto newArray = std::make_shared<VoltArray>();
+                    auto newArray = std::make_shared<ClawArray>();
                     
                     for (size_t i = 0; i < array->size(); ++i) {
                         Value item = array->get(static_cast<int>(i));
@@ -1285,7 +1791,7 @@ Value Interpreter::visitMemberExpr(MemberExpr* expr) {
 
 
 void Interpreter::visitClassStmt(ClassStmt* stmt) {
-    std::shared_ptr<VoltClass> superclass = nullptr;
+    std::shared_ptr<ClawClass> superclass = nullptr;
     if (stmt->superclass) {
         Value super = evaluate(stmt->superclass.get());
         if (!isClass(super)) {
@@ -1304,13 +1810,13 @@ void Interpreter::visitClassStmt(ClassStmt* stmt) {
         environment_->define("super", classValue(superclass));
     }
 
-    std::unordered_map<std::string, std::shared_ptr<VoltFunction>> methods;
+    std::unordered_map<std::string, std::shared_ptr<ClawFunction>> methods;
     for (auto& method : stmt->methods) {
-        auto function = std::make_shared<VoltFunction>(method.get(), environment_, method->name == "init");
+        auto function = std::make_shared<ClawFunction>(method.get(), environment_, method->name == "init");
         methods[method->name] = function;
     }
 
-    auto cls = std::make_shared<VoltClass>(stmt->name, superclass, std::move(methods));
+    auto cls = std::make_shared<ClawClass>(stmt->name, superclass, std::move(methods));
 
     if (superclass) {
         environment_ = oldEnv;
@@ -1412,4 +1918,4 @@ void Interpreter::checkNumberOperands(const Token& op, const Value& left, const 
     throwRuntimeError(op, ErrorCode::TYPE_MISMATCH, "Operands must be numbers");
 }
 
-} // namespace volt
+} // namespace claw

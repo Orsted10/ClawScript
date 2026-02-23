@@ -1,8 +1,8 @@
 #pragma once
 
-namespace volt {
-    constexpr const char* VOLT_VERSION = "@PROJECT_VERSION@";
-    constexpr int VOLT_VERSION_MAJOR = @PROJECT_VERSION_MAJOR@;
-    constexpr int VOLT_VERSION_MINOR = @PROJECT_VERSION_MINOR@;
-    constexpr int VOLT_VERSION_PATCH = @PROJECT_VERSION_PATCH@;
-} // namespace volt
+namespace claw {
+    constexpr const char* CLAW_VERSION = "@PROJECT_VERSION@";
+    constexpr int CLAW_VERSION_MAJOR = @PROJECT_VERSION_MAJOR@;
+    constexpr int CLAW_VERSION_MINOR = @PROJECT_VERSION_MINOR@;
+    constexpr int CLAW_VERSION_PATCH = @PROJECT_VERSION_PATCH@;
+} // namespace claw

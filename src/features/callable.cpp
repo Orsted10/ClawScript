@@ -6,24 +6,24 @@
 #include "class.h"
 #include <sstream>
 
-namespace volt {
+namespace claw {
 
 // ========================================
-// VoltFunction (User-defined functions)
+// ClawFunction (User-defined functions)
 // ========================================
 
-VoltFunction::VoltFunction(FnStmt* declaration, 
+ClawFunction::ClawFunction(FnStmt* declaration, 
                            std::shared_ptr<Environment> closure,
                            bool isInitializer)
     : declaration_(declaration), closure_(closure), isInitializer_(isInitializer) {}
 
-std::shared_ptr<VoltFunction> VoltFunction::bind(std::shared_ptr<VoltInstance> instance) {
+std::shared_ptr<ClawFunction> ClawFunction::bind(std::shared_ptr<ClawInstance> instance) {
     auto environment = std::make_shared<Environment>(closure_);
     environment->define("this", instanceValue(instance));
-    return std::make_shared<VoltFunction>(declaration_, environment, isInitializer_);
+    return std::make_shared<ClawFunction>(declaration_, environment, isInitializer_);
 }
 
-Value VoltFunction::call(Interpreter& interpreter, 
+Value ClawFunction::call(Interpreter& interpreter, 
                         const std::vector<Value>& arguments) {
     // Create a new environment for this function call
     // The closure is the parent (so we can access captured variables)
@@ -66,11 +66,11 @@ Value VoltFunction::call(Interpreter& interpreter,
     return nilValue();
 }
 
-int VoltFunction::arity() const {
+int ClawFunction::arity() const {
     return static_cast<int>(declaration_->parameters.size());
 }
 
-std::string VoltFunction::toString() const {
+std::string ClawFunction::toString() const {
     return "<fn " + declaration_->name + ">";
 }
 
@@ -110,4 +110,4 @@ std::string NativeFunction::toString() const {
     return "<native fn " + name_ + ">";
 }
 
-} // namespace volt
+} // namespace claw

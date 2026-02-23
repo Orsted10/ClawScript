@@ -1,0 +1,5 @@
+// Test array creation and printing without indexing
+arr = [10, 20, 30];
+print "Created array";
+print arr;  // This might cause the crash
+print "Done";

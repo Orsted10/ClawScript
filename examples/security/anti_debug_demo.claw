@@ -1,0 +1,5 @@
+print("anti-debug demo");
+let enforced = antiDebugEnforce(true);
+print("enforced=" + (enforced ? "yes" : "no"));
+print("dbg=" + (isDebuggerPresent() ? "yes" : "no"));
+

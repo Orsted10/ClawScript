@@ -4,7 +4,7 @@
 #include "vm/chunk.h"
 #include <vector>
 
-namespace volt {
+namespace claw {
 
 /**
  * @brief Compiles AST nodes into Bytecode Chunks
@@ -27,7 +27,11 @@ public:
     Value visitCallExpr(CallExpr* expr) override;
     Value visitAssignExpr(AssignExpr* expr) override;
     Value visitCompoundAssignExpr(CompoundAssignExpr* expr) override;
+    Value visitCompoundMemberAssignExpr(CompoundMemberAssignExpr* expr) override;
+    Value visitCompoundIndexAssignExpr(CompoundIndexAssignExpr* expr) override;
     Value visitUpdateExpr(UpdateExpr* expr) override;
+    Value visitUpdateMemberExpr(UpdateMemberExpr* expr) override;
+    Value visitUpdateIndexExpr(UpdateIndexExpr* expr) override;
     Value visitTernaryExpr(TernaryExpr* expr) override;
     Value visitArrayExpr(ArrayExpr* expr) override;
     Value visitIndexExpr(IndexExpr* expr) override;
@@ -56,6 +60,7 @@ public:
     void visitThrowStmt(ThrowStmt* stmt) override;
     void visitImportStmt(ImportStmt* stmt) override;
     void visitClassStmt(ClassStmt* stmt) override;
+    void visitSwitchStmt(SwitchStmt* stmt) override;
 
 private:
     struct Local {
@@ -96,4 +101,4 @@ private:
     Compiler* enclosing_;
 };
 
-} // namespace volt
+} // namespace claw

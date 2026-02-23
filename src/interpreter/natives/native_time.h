@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
 
-namespace volt {
+namespace claw {
 class Environment;
 
 void registerNativeTime(const std::shared_ptr<Environment>& globals);
-} // namespace volt
+} // namespace claw

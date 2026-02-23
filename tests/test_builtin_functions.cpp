@@ -8,7 +8,7 @@
 #include <string>
 #include <fstream>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 

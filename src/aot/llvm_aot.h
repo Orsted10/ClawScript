@@ -6,7 +6,7 @@
 #include "interpreter/value.h"
 #include "vm/chunk.h"
  
- namespace volt {
+ namespace claw {
  
  struct AotModule {
      std::string name;
@@ -34,4 +34,4 @@ struct AotConstant {
     AotModule compile(const std::string& name, const Chunk& chunk);
  };
  
- } // namespace volt
+ } // namespace claw

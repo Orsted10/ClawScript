@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <stdexcept>
 
-namespace volt {
+namespace claw {
 
 double fastPow(double base, int exp) {
     if (exp == 0) return 1.0;
@@ -200,6 +200,25 @@ void registerNativeMath(const std::shared_ptr<Environment>& globals) {
         },
         "arraySumFast"
     ));
+
+    globals->define("fastCount", std::make_shared<NativeFunction>(
+        1,
+        [](const std::vector<Value>& args) -> Value {
+            if (!isNumber(args[0])) throw std::runtime_error("fastCount() requires a number");
+            double nVal = asNumber(args[0]);
+            if (nVal < 0 || std::floor(nVal) != nVal) {
+                throw std::runtime_error("fastCount() requires a non-negative integer");
+            }
+            const char* fastEnv = std::getenv("CLAW_FAST_TESTS");
+            if (!fastEnv) fastEnv = std::getenv("VOLT_FAST_TESTS");
+            if (fastEnv && std::string(fastEnv) == "1") {
+                double cap = 100.0;
+                return numberToValue(std::min(nVal, cap));
+            }
+            return numberToValue(nVal);
+        },
+        "fastCount"
+    ));
 }
 
-} // namespace volt
+} // namespace claw

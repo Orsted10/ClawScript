@@ -6,7 +6,7 @@
 #include <iostream>
 #include "errors.h"
 
-namespace volt {
+namespace claw {
 
 struct StackFrame {
     std::string function_name;
@@ -54,6 +54,6 @@ private:
     std::vector<StackFrame> frames;
 };
 
-} // namespace volt
+} // namespace claw
 
 #endif // VOLT_STACK_TRACE_H

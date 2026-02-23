@@ -7,13 +7,13 @@
 #include "lexer/token.h"
 #include "formatter.h"
 
-using namespace volt;
+using namespace claw;
 
-static std::vector<std::filesystem::path> collectVoltFiles(const std::filesystem::path& root) {
+static std::vector<std::filesystem::path> collectClawFiles(const std::filesystem::path& root) {
     std::vector<std::filesystem::path> files;
     for (auto& p : std::filesystem::recursive_directory_iterator(root)) {
         if (!p.is_regular_file()) continue;
-        if (p.path().extension() == ".volt") files.push_back(p.path());
+        if (p.path().extension() == ".claw") files.push_back(p.path());
     }
     return files;
 }
@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
             start = arg.substr(7);
         }
     }
-    auto files = collectVoltFiles(start);
+    auto files = collectClawFiles(start);
     bool anyChanged = false;
     for (const auto& file : files) {
         std::ifstream in(file.string(), std::ios::binary);

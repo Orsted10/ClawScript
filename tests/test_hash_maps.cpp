@@ -4,7 +4,7 @@
 #include "interpreter.h"
 #include <sstream>
 
-using namespace volt;
+using namespace claw;
 
 namespace {
 
@@ -367,6 +367,146 @@ TEST(HashMap, CounterPattern) {
     
     std::string output = runCode(code);
     EXPECT_EQ(output, "2\n1\n0\n");
+}
+
+TEST(HashMap, CompoundMemberPlus) {
+    std::string code = R"(
+        let m = {"a": 1};
+        m.a += 2;
+        print m.a;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "3\n");
+}
+
+TEST(HashMap, CompoundMemberMinus) {
+    std::string code = R"(
+        let m = {"a": 10};
+        m.a -= 4;
+        print m.a;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "6\n");
+}
+
+TEST(HashMap, CompoundMemberMultiply) {
+    std::string code = R"(
+        let m = {"a": 7};
+        m.a *= 3;
+        print m.a;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "21\n");
+}
+
+TEST(HashMap, CompoundMemberDivide) {
+    std::string code = R"(
+        let m = {"a": 18};
+        m.a /= 6;
+        print m.a;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "3\n");
+}
+
+TEST(HashMap, CompoundMemberXor) {
+    std::string code = R"(
+        let m = {"a": 5};
+        m.a ^= 3;
+        print m.a;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "6\n");
+}
+
+TEST(HashMap, CompoundMemberShiftLeft) {
+    std::string code = R"(
+        let m = {"a": 2};
+        m.a <<= 3;
+        print m.a;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "16\n");
+}
+
+TEST(HashMap, CompoundMemberShiftRight) {
+    std::string code = R"(
+        let m = {"a": 16};
+        m.a >>= 2;
+        print m.a;
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "4\n");
+}
+
+TEST(HashMap, CompoundIndexBitOr) {
+    std::string code = R"(
+        let m = {"k": 2};
+        m["k"] |= 1;
+        print m["k"];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "3\n");
+}
+
+TEST(HashMap, CompoundIndexMinus) {
+    std::string code = R"(
+        let m = {"k": 10};
+        m["k"] -= 4;
+        print m["k"];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "6\n");
+}
+
+TEST(HashMap, CompoundIndexMultiply) {
+    std::string code = R"(
+        let m = {"k": 7};
+        m["k"] *= 3;
+        print m["k"];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "21\n");
+}
+
+TEST(HashMap, CompoundIndexDivide) {
+    std::string code = R"(
+        let m = {"k": 18};
+        m["k"] /= 6;
+        print m["k"];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "3\n");
+}
+
+TEST(HashMap, CompoundIndexXor) {
+    std::string code = R"(
+        let m = {"k": 5};
+        m["k"] ^= 3;
+        print m["k"];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "6\n");
+}
+
+TEST(HashMap, CompoundIndexShiftLeft) {
+    std::string code = R"(
+        let m = {"k": 2};
+        m["k"] <<= 3;
+        print m["k"];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "16\n");
+}
+
+TEST(HashMap, CompoundIndexShiftRight) {
+    std::string code = R"(
+        let m = {"k": 16};
+        m["k"] >>= 2;
+        print m["k"];
+    )";
+    std::string output = runCode(code);
+    EXPECT_EQ(output, "4\n");
 }
 
 // ==================== ERROR CASES ====================

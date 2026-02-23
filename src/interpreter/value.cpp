@@ -15,25 +15,25 @@
 #include "observability/profiler.h"
 #include "vm/vm.h"
 
-namespace volt {
+namespace claw {
 
 // Thread-local set to track visited objects for cycle detection during string conversion
 thread_local std::set<const void*> visitedObjects;
 
 // Global registries to keep shared_ptr lifetimes while storing raw pointers in Values
 static std::unordered_map<void*, std::shared_ptr<Callable>> g_callableRegistry;
-static std::unordered_map<void*, std::shared_ptr<VoltArray>> g_arrayRegistry;
-static std::unordered_map<void*, std::shared_ptr<VoltHashMap>> g_hashMapRegistry;
-static std::unordered_map<void*, std::shared_ptr<VoltClass>> g_classRegistry;
-static std::unordered_map<void*, std::shared_ptr<VoltInstance>> g_instanceRegistry;
+static std::unordered_map<void*, std::shared_ptr<ClawArray>> g_arrayRegistry;
+static std::unordered_map<void*, std::shared_ptr<ClawHashMap>> g_hashMapRegistry;
+static std::unordered_map<void*, std::shared_ptr<ClawClass>> g_classRegistry;
+static std::unordered_map<void*, std::shared_ptr<ClawInstance>> g_instanceRegistry;
 static std::unordered_map<void*, std::shared_ptr<VMFunction>> g_vmFunctionRegistry;
 static std::unordered_map<void*, std::shared_ptr<VMClosure>> g_vmClosureRegistry;
 static std::unordered_map<void*, uint8_t> g_objectGeneration;
 static std::unordered_set<const void*> g_rememberedSet;
 static std::vector<class VM*> g_vmRegistry;
 static std::atomic<uint64_t> g_youngAllocations{0};
-static std::vector<std::shared_ptr<VoltArray>> g_arrayPool;
-static std::vector<std::shared_ptr<VoltHashMap>> g_hashMapPool;
+static std::vector<std::shared_ptr<ClawArray>> g_arrayPool;
+static std::vector<std::shared_ptr<ClawHashMap>> g_hashMapPool;
 static thread_local std::vector<std::vector<void*>> g_ephemeralStack;
 static std::atomic<bool> g_benchmarkMode{false};
 
@@ -190,38 +190,38 @@ Value callableValue(std::shared_ptr<Callable> fn) {
     profilerRecordAlloc(sizeof(Callable), "callable");
     return objectValue(p);
 }
-Value arrayValue(std::shared_ptr<VoltArray> arr) {
+Value arrayValue(std::shared_ptr<ClawArray> arr) {
     void* p = arr.get();
     g_arrayRegistry[p] = std::move(arr);
     g_objectGeneration[p] = 0;
     if (!g_ephemeralStack.empty()) g_ephemeralStack.back().push_back(p);
     gcMaybeCollect();
-    profilerRecordAlloc(sizeof(VoltArray), "array");
+    profilerRecordAlloc(sizeof(ClawArray), "array");
     return objectValue(p);
 }
-Value hashMapValue(std::shared_ptr<VoltHashMap> map) {
+Value hashMapValue(std::shared_ptr<ClawHashMap> map) {
     void* p = map.get();
     g_hashMapRegistry[p] = std::move(map);
     g_objectGeneration[p] = 0;
     if (!g_ephemeralStack.empty()) g_ephemeralStack.back().push_back(p);
     gcMaybeCollect();
-    profilerRecordAlloc(sizeof(VoltHashMap), "hashmap");
+    profilerRecordAlloc(sizeof(ClawHashMap), "hashmap");
     return objectValue(p);
 }
-Value classValue(std::shared_ptr<VoltClass> cls) {
+Value classValue(std::shared_ptr<ClawClass> cls) {
     void* p = cls.get();
     g_classRegistry[p] = std::move(cls);
     g_objectGeneration[p] = 0;
     gcMaybeCollect();
-    profilerRecordAlloc(sizeof(VoltClass), "class");
+    profilerRecordAlloc(sizeof(ClawClass), "class");
     return objectValue(p);
 }
-Value instanceValue(std::shared_ptr<VoltInstance> inst) {
+Value instanceValue(std::shared_ptr<ClawInstance> inst) {
     void* p = inst.get();
     g_instanceRegistry[p] = std::move(inst);
     g_objectGeneration[p] = 0;
     gcMaybeCollect();
-    profilerRecordAlloc(sizeof(VoltInstance), "instance");
+    profilerRecordAlloc(sizeof(ClawInstance), "instance");
     return objectValue(p);
 }
 Value vmFunctionValue(std::shared_ptr<VMFunction> fn) {
@@ -288,16 +288,15 @@ std::string valueToStringWithCycleDetection(const Value& v, std::set<const void*
         std::ostringstream oss;
         double num = asNumber(v);
         if (std::floor(num) == num) {
-            oss << static_cast<long long>(num);
+            oss << std::fixed << std::setprecision(0) << num;
+            return oss.str();
         } else {
             oss << std::fixed << std::setprecision(6) << num;
             std::string str = oss.str();
-            // Remove trailing zeros
             str.erase(str.find_last_not_of('0') + 1, std::string::npos);
-            if (str.back() == '.') str.pop_back();
+            if (!str.empty() && str.back() == '.') str.pop_back();
             return str;
         }
-        return oss.str();
     } else if (isString(v)) {
         return asString(v);
     } else if (isBool(v)) {
@@ -346,6 +345,7 @@ std::string valueToStringWithCycleDetection(const Value& v, std::set<const void*
     }
     return "unknown";
 }
+bool diagnosticsEnabled() { return gRuntimeFlags.icDiagnostics; }
 
 bool isCallable(Value v) { return isObject(v) && g_callableRegistry.count(asObjectPtr(v)) > 0; }
 bool isArray(Value v) { return isObject(v) && g_arrayRegistry.count(asObjectPtr(v)) > 0; }
@@ -355,10 +355,10 @@ bool isInstance(Value v) { return isObject(v) && g_instanceRegistry.count(asObje
 bool isVMFunction(Value v) { return isObject(v) && g_vmFunctionRegistry.count(asObjectPtr(v)) > 0; }
 bool isVMClosure(Value v) { return isObject(v) && g_vmClosureRegistry.count(asObjectPtr(v)) > 0; }
 
-std::shared_ptr<VoltArray> asArray(Value v) { auto it = g_arrayRegistry.find(asObjectPtr(v)); return it != g_arrayRegistry.end() ? it->second : nullptr; }
-std::shared_ptr<VoltHashMap> asHashMap(Value v) { auto it = g_hashMapRegistry.find(asObjectPtr(v)); return it != g_hashMapRegistry.end() ? it->second : nullptr; }
-std::shared_ptr<VoltClass> asClass(Value v) { auto it = g_classRegistry.find(asObjectPtr(v)); return it != g_classRegistry.end() ? it->second : nullptr; }
-std::shared_ptr<VoltInstance> asInstance(Value v) { auto it = g_instanceRegistry.find(asObjectPtr(v)); return it != g_instanceRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<ClawArray> asArray(Value v) { auto it = g_arrayRegistry.find(asObjectPtr(v)); return it != g_arrayRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<ClawHashMap> asHashMap(Value v) { auto it = g_hashMapRegistry.find(asObjectPtr(v)); return it != g_hashMapRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<ClawClass> asClass(Value v) { auto it = g_classRegistry.find(asObjectPtr(v)); return it != g_classRegistry.end() ? it->second : nullptr; }
+std::shared_ptr<ClawInstance> asInstance(Value v) { auto it = g_instanceRegistry.find(asObjectPtr(v)); return it != g_instanceRegistry.end() ? it->second : nullptr; }
 std::shared_ptr<Callable> asCallable(Value v) { auto it = g_callableRegistry.find(asObjectPtr(v)); return it != g_callableRegistry.end() ? it->second : nullptr; }
 std::shared_ptr<VMFunction> asVMFunction(Value v) { auto it = g_vmFunctionRegistry.find(asObjectPtr(v)); return it != g_vmFunctionRegistry.end() ? it->second : nullptr; }
 std::shared_ptr<VMClosure> asVMClosure(Value v) { auto it = g_vmClosureRegistry.find(asObjectPtr(v)); return it != g_vmClosureRegistry.end() ? it->second : nullptr; }
@@ -372,7 +372,7 @@ static void gcMarkVMRoots(VM* vm) {
     for (auto v : roots) gcMark(v);
 }
 
-std::shared_ptr<VoltArray> gcAcquireArrayFromPool() {
+std::shared_ptr<ClawArray> gcAcquireArrayFromPool() {
     if (!g_arrayPool.empty()) {
         auto a = std::move(g_arrayPool.back());
         g_arrayPool.pop_back();
@@ -380,13 +380,13 @@ std::shared_ptr<VoltArray> gcAcquireArrayFromPool() {
     }
     return nullptr;
 }
-void gcReleaseArrayToPool(std::shared_ptr<VoltArray> arr) {
+void gcReleaseArrayToPool(std::shared_ptr<ClawArray> arr) {
     if (arr) {
         arr->fill(nilValue(), 0);
         g_arrayPool.push_back(std::move(arr));
     }
 }
-std::shared_ptr<VoltHashMap> gcAcquireHashMapFromPool() {
+std::shared_ptr<ClawHashMap> gcAcquireHashMapFromPool() {
     if (!g_hashMapPool.empty()) {
         auto m = std::move(g_hashMapPool.back());
         g_hashMapPool.pop_back();
@@ -394,7 +394,7 @@ std::shared_ptr<VoltHashMap> gcAcquireHashMapFromPool() {
     }
     return nullptr;
 }
-void gcReleaseHashMapToPool(std::shared_ptr<VoltHashMap> map) {
+void gcReleaseHashMapToPool(std::shared_ptr<ClawHashMap> map) {
     if (map) {
         map->clear();
         g_hashMapPool.push_back(std::move(map));
@@ -409,6 +409,31 @@ void gcEphemeralEscape(Value v) {
     auto& top = g_ephemeralStack.back();
     for (auto it = top.begin(); it != top.end(); ++it) {
         if (*it == p) { top.erase(it); break; }
+    }
+}
+void gcEphemeralEscapeDeep(Value v) {
+    if (g_ephemeralStack.empty()) return;
+    if (!isObject(v)) return;
+    void* p = asObjectPtr(v);
+    auto& top = g_ephemeralStack.back();
+    for (auto it = top.begin(); it != top.end(); ++it) {
+        if (*it == p) { top.erase(it); break; }
+    }
+    auto ait = g_arrayRegistry.find(p);
+    if (ait != g_arrayRegistry.end()) {
+        const auto& elems = ait->second->elements();
+        for (const auto& e : elems) gcEphemeralEscapeDeep(e);
+        return;
+    }
+    auto mit = g_hashMapRegistry.find(p);
+    if (mit != g_hashMapRegistry.end()) {
+        for (const auto& kv : mit->second->data) gcEphemeralEscapeDeep(kv.second);
+        return;
+    }
+    auto iit = g_instanceRegistry.find(p);
+    if (iit != g_instanceRegistry.end()) {
+        iit->second->forEachField([](Value v){ gcEphemeralEscapeDeep(v); });
+        return;
     }
 }
 void gcEphemeralFrameLeave() {
@@ -436,5 +461,6 @@ void gcEphemeralFrameLeave() {
 }
 
 void gcSetBenchmarkMode(bool enable) { g_benchmarkMode.store(enable, std::memory_order_relaxed); }
+uint64_t gcGetYoungAllocations() { return g_youngAllocations.load(std::memory_order_relaxed); }
 
-} // namespace volt
+} // namespace claw
