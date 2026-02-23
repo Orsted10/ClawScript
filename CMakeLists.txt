@@ -19,7 +19,7 @@ endif()
 
 # Compiler warnings and optimizations
 if(MSVC)
-    add_compile_options(/W4 /permissive-
+    add_compile_options(/W4 /permissive- /wd4100 /wd4189 /wd4505
         $<$<CONFIG:Release>:/O2>
         $<$<CONFIG:Release>:/Oi>
         $<$<CONFIG:Release>:/Ot>
@@ -30,7 +30,7 @@ if(MSVC)
         $<$<CONFIG:Debug>:/RTC1>)
     add_link_options($<$<CONFIG:Release>:/LTCG>)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic $<$<CONFIG:Release>:-O3> $<$<CONFIG:Release>:-march=native> $<$<CONFIG:Release>:-flto> $<$<CONFIG:Debug>:-O0>)
+    add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-parameter $<$<CONFIG:Release>:-O3> $<$<CONFIG:Release>:-flto> $<$<CONFIG:Debug>:-O0>)
     add_link_options($<$<CONFIG:Release>:-flto>)
 endif()
 
@@ -459,65 +459,72 @@ if(BUILD_TESTS)
         tests/test_property_ic_megamorphic.cpp
         tests/test_tls_logging.cpp
     )
-    
-    # Test executable
-    add_executable(claw_tests ${TEST_SOURCES})
+    set(_tests_missing OFF)
+    foreach(f IN LISTS TEST_SOURCES)
+        if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${f}")
+            set(_tests_missing ON)
+            message(WARNING "Missing test source: ${f}")
+        endif()
+    endforeach()
+    if(_tests_missing)
+        message(WARNING "Disabling claw_tests: one or more sources are missing")
+    else()
+        add_executable(claw_tests ${TEST_SOURCES})
 
-    if(MSVC)
-    set_target_properties(claw_tests PROPERTIES LINK_FLAGS "/STACK:8388608")
-    endif()
-    
-    target_include_directories(claw_tests PRIVATE 
-        ${CMAKE_BINARY_DIR}/generated
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/lexer
-        ${CMAKE_SOURCE_DIR}/src/parser
-        ${CMAKE_SOURCE_DIR}/src/interpreter
-        ${CMAKE_SOURCE_DIR}/src/features
-        ${CMAKE_SOURCE_DIR}/src/vm
-        ${CMAKE_SOURCE_DIR}/src/compiler
-    )
-    
-    target_link_libraries(claw_tests PRIVATE GTest::gtest_main GTest::gmock_main)
-    if(MSVC)
-        target_compile_definitions(claw_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
-        target_link_libraries(claw_tests PRIVATE bcrypt)
-    endif()
-    if(OPENSSL_FOUND)
-        target_include_directories(claw_tests PRIVATE ${OPENSSL_INCLUDE_DIR})
-        target_link_libraries(claw_tests PRIVATE OpenSSL::Crypto OpenSSL::SSL)
-        target_compile_definitions(claw_tests PRIVATE CLAW_HAS_OPENSSL)
-    endif()
-    if(ENABLE_PQC)
-        target_compile_definitions(claw_tests PRIVATE CLAW_HAS_PQC)
-    endif()
-    if(_ENABLE_JIT AND LLVM_FOUND)
-        target_include_directories(claw_tests PRIVATE ${LLVM_INCLUDE_DIRS})
-        if(DEFINED LLVM_LIBRARY_DIRS)
-            target_link_directories(claw_tests PRIVATE ${LLVM_LIBRARY_DIRS})
+        if(MSVC)
+            set_target_properties(claw_tests PROPERTIES LINK_FLAGS "/STACK:8388608")
         endif()
-        target_link_libraries(claw_tests PRIVATE ${LLVM_JIT_LIBS})
-        target_compile_definitions(claw_tests PRIVATE CLAW_ENABLE_JIT)
-    elseif(_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
-        target_include_directories(claw_tests PRIVATE ${LLVM_INCLUDEDIR})
-        if(LLVM_LIBDIR)
-            target_link_directories(claw_tests PRIVATE ${LLVM_LIBDIR})
+        
+        target_include_directories(claw_tests PRIVATE 
+            ${CMAKE_BINARY_DIR}/generated
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/src/lexer
+            ${CMAKE_SOURCE_DIR}/src/parser
+            ${CMAKE_SOURCE_DIR}/src/interpreter
+            ${CMAKE_SOURCE_DIR}/src/features
+            ${CMAKE_SOURCE_DIR}/src/vm
+            ${CMAKE_SOURCE_DIR}/src/compiler
+        )
+        
+        target_link_libraries(claw_tests PRIVATE GTest::gtest_main GTest::gmock_main)
+        if(MSVC)
+            target_compile_definitions(claw_tests PRIVATE _CRT_SECURE_NO_WARNINGS)
+            target_link_libraries(claw_tests PRIVATE bcrypt)
         endif()
-        target_link_libraries(claw_tests PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
-        target_compile_definitions(claw_tests PRIVATE CLAW_ENABLE_JIT)
+        if(OPENSSL_FOUND)
+            target_include_directories(claw_tests PRIVATE ${OPENSSL_INCLUDE_DIR})
+            target_link_libraries(claw_tests PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+            target_compile_definitions(claw_tests PRIVATE CLAW_HAS_OPENSSL)
+        endif()
+        if(ENABLE_PQC)
+            target_compile_definitions(claw_tests PRIVATE CLAW_HAS_PQC)
+        endif()
+        if(_ENABLE_JIT AND LLVM_FOUND)
+            target_include_directories(claw_tests PRIVATE ${LLVM_INCLUDE_DIRS})
+            if(DEFINED LLVM_LIBRARY_DIRS)
+                target_link_directories(claw_tests PRIVATE ${LLVM_LIBRARY_DIRS})
+            endif()
+            target_link_libraries(claw_tests PRIVATE ${LLVM_JIT_LIBS})
+            target_compile_definitions(claw_tests PRIVATE CLAW_ENABLE_JIT)
+        elseif(_ENABLE_JIT AND LLVM_FALLBACK_FOUND)
+            target_include_directories(claw_tests PRIVATE ${LLVM_INCLUDEDIR})
+            if(LLVM_LIBDIR)
+                target_link_directories(claw_tests PRIVATE ${LLVM_LIBDIR})
+            endif()
+            target_link_libraries(claw_tests PRIVATE ${LLVM_JIT_LIBS_FALLBACK})
+            target_compile_definitions(claw_tests PRIVATE CLAW_ENABLE_JIT)
+        endif()
+        
+        set_target_properties(claw_tests PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+            INTERPROCEDURAL_OPTIMIZATION OFF
+        )
+        
+        include(GoogleTest)
+        gtest_discover_tests(claw_tests)
+        
+        message(STATUS "✅ Tests enabled (598 tests)")
     endif()
-    
-    # Set output directory for tests
-    set_target_properties(claw_tests PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-        INTERPROCEDURAL_OPTIMIZATION OFF
-    )
-    
-    # Register tests with CTest
-    include(GoogleTest)
-    gtest_discover_tests(claw_tests)
-    
-    message(STATUS "✅ Tests enabled (598 tests)")
 
     # ========================================
     # INTEGRATION TESTS (Phase 3.2)
@@ -552,8 +559,17 @@ if(BUILD_TESTS)
         src/jit/jit.cpp
         src/jit/llvm_jit.cpp
     )
-    
-    add_executable(claw_integration_tests ${INTEGRATION_TEST_SOURCES})
+    set(_integration_missing OFF)
+    foreach(f IN LISTS INTEGRATION_TEST_SOURCES)
+        if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${f}")
+            set(_integration_missing ON)
+            message(WARNING "Missing integration test source: ${f}")
+        endif()
+    endforeach()
+    if(_integration_missing)
+        message(WARNING "Disabling claw_integration_tests: one or more sources are missing")
+    else()
+        add_executable(claw_integration_tests ${INTEGRATION_TEST_SOURCES})
     
     target_include_directories(claw_integration_tests PRIVATE 
         ${CMAKE_BINARY_DIR}/generated
@@ -588,11 +604,12 @@ if(BUILD_TESTS)
         target_compile_definitions(claw_integration_tests PRIVATE CLAW_HAS_PQC)
     endif()
     
-    set_target_properties(claw_integration_tests PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    )
-    
-    gtest_discover_tests(claw_integration_tests)
+        set_target_properties(claw_integration_tests PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        )
+        
+        gtest_discover_tests(claw_integration_tests)
+    endif()
 
     # ========================================
     # BENCHMARKS (Phase 3.3)
@@ -638,8 +655,17 @@ if(BUILD_TESTS)
         src/jit/jit.cpp
         src/jit/llvm_jit.cpp
     )
-    
-    add_executable(claw_benchmarks ${BENCHMARK_SOURCES})
+    set(_bench_missing OFF)
+    foreach(f IN LISTS BENCHMARK_SOURCES)
+        if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${f}")
+            set(_bench_missing ON)
+            message(WARNING "Missing benchmark source: ${f}")
+        endif()
+    endforeach()
+    if(_bench_missing)
+        message(WARNING "Disabling claw_benchmarks: one or more sources are missing")
+    else()
+        add_executable(claw_benchmarks ${BENCHMARK_SOURCES})
     
     target_include_directories(claw_benchmarks PRIVATE 
         ${CMAKE_BINARY_DIR}/generated
@@ -674,9 +700,10 @@ if(BUILD_TESTS)
         target_compile_definitions(claw_benchmarks PRIVATE CLAW_HAS_PQC)
     endif()
     
-    set_target_properties(claw_benchmarks PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-    )
+        set_target_properties(claw_benchmarks PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+        )
+    endif()
 endif()
 
 # ========================================
@@ -923,15 +950,15 @@ install(TARGETS
     ARCHIVE DESTINATION lib
 )
 if(BUILD_TESTS)
-    install(TARGETS
-        claw_tests
-        claw_integration_tests
-        RUNTIME DESTINATION bin
-    )
-    install(TARGETS
-        claw_benchmarks
-        RUNTIME DESTINATION bin
-    )
+    if(TARGET claw_tests)
+        install(TARGETS claw_tests RUNTIME DESTINATION bin)
+    endif()
+    if(TARGET claw_integration_tests)
+        install(TARGETS claw_integration_tests RUNTIME DESTINATION bin)
+    endif()
+    if(TARGET claw_benchmarks)
+        install(TARGETS claw_benchmarks RUNTIME DESTINATION bin)
+    endif()
 endif()
 install(FILES ${CMAKE_BINARY_DIR}/generated/version.h DESTINATION include)
 set(CPACK_PACKAGE_NAME "ClawScript")

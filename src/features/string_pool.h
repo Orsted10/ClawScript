@@ -26,6 +26,9 @@ public:
     static std::string_view intern(std::string_view str) {
         return getInstance().internImpl(str);
     }
+    static std::string_view intern(const char* str) {
+        return getInstance().internImpl(std::string_view(str ? str : ""));
+    }
 
     // Statistics
     size_t size() const { return pool_.size(); }

@@ -32,15 +32,17 @@ jobs:
         if: startsWith(matrix.os, 'macos')
         run: |
           brew update
-          brew install gcovr llvm || true
+          brew install gcovr llvm openssl@3 || true
           echo "CC=/usr/bin/clang" >> $GITHUB_ENV
           echo "CXX=/usr/bin/clang++" >> $GITHUB_ENV
+          echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
 
       - name: Configure
         run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTS=ON \
+          cmake -S "${{ github.workspace }}" -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_TESTS=ON \
             ${{ startsWith(matrix.os, 'ubuntu') && '-DENABLE_COVERAGE=ON' || '' }} \
-            ${{ (startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')) && '-DENABLE_CLANG_TIDY=ON' || '' }}
+            ${{ (startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')) && '-DENABLE_CLANG_TIDY=ON' || '' }} \
+            ${{ startsWith(matrix.os, 'macos') && format('-DOPENSSL_ROOT_DIR={0}', env.OPENSSL_ROOT_DIR) || '' }}
 
       - name: Build
         run: cmake --build build --config ${{ matrix.build_type }} -- -j 2

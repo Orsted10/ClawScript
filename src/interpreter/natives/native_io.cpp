@@ -20,6 +20,8 @@
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include <openssl/ssl.h>
+#include <openssl/bio.h>
 #endif
 
 namespace claw {
@@ -674,7 +676,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             std::vector<std::pair<std::string,std::string>> headers;
             if (args.size() >= 2) {
                 if (!isHashMap(args[1])) throw std::runtime_error("tlsGet headers must be a map");
-                auto* m = asHashMap(args[1]);
+                auto m = asHashMap(args[1]);
                 m->forEachKV([&](std::string_view k, Value v){
                     headers.emplace_back(std::string(k), valueToString(v));
                 });
@@ -698,7 +700,9 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             }
             OpenSSL_init_ssl(0, nullptr);
             SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+            #ifdef TLS1_3_VERSION
             SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
+            #endif
             BIO* bio = BIO_new_ssl_connect(ctx);
             std::string hp = host + ":" + std::to_string(port);
             BIO_set_conn_hostname(bio, hp.c_str());
@@ -753,7 +757,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             std::vector<std::pair<std::string,std::string>> headers;
             if (args.size() >= 3) {
                 if (!isHashMap(args[2])) throw std::runtime_error("tlsPost headers must be a map");
-                auto* m = asHashMap(args[2]);
+                auto m = asHashMap(args[2]);
                 m->forEachKV([&](std::string_view k, Value v){
                     headers.emplace_back(std::string(k), valueToString(v));
                 });
@@ -777,7 +781,9 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             }
             OpenSSL_init_ssl(0, nullptr);
             SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+            #ifdef TLS1_3_VERSION
             SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
+            #endif
             BIO* bio = BIO_new_ssl_connect(ctx);
             std::string hp = host + ":" + std::to_string(port);
             BIO_set_conn_hostname(bio, hp.c_str());
@@ -800,8 +806,17 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
                 << "Connection: close\r\n"
                 << "Content-Length: " << body.size() << "\r\n";
             bool hasCT = false;
+            auto iequals = [](const std::string& a, const std::string& b){
+                if (a.size() != b.size()) return false;
+                for (size_t i = 0; i < a.size(); ++i) {
+                    unsigned char ca = static_cast<unsigned char>(a[i]);
+                    unsigned char cb = static_cast<unsigned char>(b[i]);
+                    if (std::tolower(ca) != std::tolower(cb)) return false;
+                }
+                return true;
+            };
             for (auto& kv : headers) {
-                if (_stricmp(kv.first.c_str(), "Content-Type") == 0) hasCT = true;
+                if (iequals(kv.first, "Content-Type")) hasCT = true;
                 req << kv.first << ": " << kv.second << "\r\n";
             }
             if (!hasCT) req << "Content-Type: application/octet-stream\r\n";
