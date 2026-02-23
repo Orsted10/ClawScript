@@ -1,0 +1,116 @@
+name: Release v1.0.0
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install NSIS (for Windows installer)
+        run: choco install nsis -y
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
+      - name: Package (CPack via CMake)
+        run: |
+          cmake --build build --config Release --target package
+          New-Item -ItemType Directory -Path artifacts -Force
+          Copy-Item build\*.zip artifacts\ -ErrorAction SilentlyContinue
+          Copy-Item build\*.tgz artifacts\ -ErrorAction SilentlyContinue
+          Copy-Item build\*.tar.gz artifacts\ -ErrorAction SilentlyContinue
+          Copy-Item build\*.exe artifacts\ -ErrorAction SilentlyContinue
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clawscript-windows-packages
+          path: artifacts
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build g++ clang llvm tar gzip
+      - name: Configure
+        run: cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
+      - name: Package (CPack via CMake)
+        run: |
+          cmake --build build --config Release --target package
+          mkdir -p artifacts
+          cp build/*.zip artifacts/ || true
+          cp build/*.tgz artifacts/ || true
+          cp build/*.tar.gz artifacts/ || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clawscript-linux-packages
+          path: artifacts
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: |
+          brew update
+          brew install cmake ninja || true
+      - name: Configure
+        run: cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --target claw claw_runtime claw_fmt claw_lsp
+      - name: Package (CPack via CMake)
+        run: |
+          cmake --build build --config Release --target package
+          mkdir -p artifacts
+          cp build/*.zip artifacts/ || true
+          cp build/*.tgz artifacts/ || true
+          cp build/*.tar.gz artifacts/ || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clawscript-macos-packages
+          path: artifacts
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-linux, build-macos]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ClawScript ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Download Windows packages
+        uses: actions/download-artifact@v4
+        with:
+          name: clawscript-windows-packages
+          path: release_artifacts/windows
+      - name: Download Linux packages
+        uses: actions/download-artifact@v4
+        with:
+          name: clawscript-linux-packages
+          path: release_artifacts/linux
+      - name: Download macOS packages
+        uses: actions/download-artifact@v4
+        with:
+          name: clawscript-macos-packages
+          path: release_artifacts/macos
+      - name: Upload assets to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release_artifacts/**/*.zip
+            release_artifacts/**/*.exe
+            release_artifacts/**/*.tgz
+            release_artifacts/**/*.tar.gz
