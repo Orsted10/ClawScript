@@ -74,7 +74,7 @@ if(NOT _ENABLE_AOT)
     list(REMOVE_ITEM CLAW_SOURCES ${CLAW_AOT_SOURCES})
 endif()
 if(NOT _ENABLE_JIT)
-    list(FILTER CLAW_SOURCES EXCLUDE REGEX ".*/jit/.*")
+    list(FILTER CLAW_SOURCES EXCLUDE REGEX ".*/jit/llvm_jit\\.cpp$")
 endif()
 
 if(_ENABLE_AOT)
