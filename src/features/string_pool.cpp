@@ -1,4 +1,5 @@
 #include "string_pool.h"
+#include <mutex>
 
 namespace claw {
 
