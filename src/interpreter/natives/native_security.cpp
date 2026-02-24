@@ -225,6 +225,7 @@ void registerNativeSecurity(const std::shared_ptr<Environment>& globals, Interpr
             std::string magic(5, '\0');
             f.read(magic.data(), 5);
             if (magic != "VENC1") throw std::runtime_error("Invalid encrypted file format");
+            std::string src;
 #ifdef _WIN32
             std::vector<uint8_t> salt(16), nonce(12), tag(16);
             f.read(reinterpret_cast<char*>(salt.data()), (std::streamsize)salt.size());
@@ -234,7 +235,7 @@ void registerNativeSecurity(const std::shared_ptr<Environment>& globals, Interpr
             auto key = kdf_win(pass, salt, 100000, 32);
             std::vector<uint8_t> aad(magic.begin(), magic.end());
             auto pt = aes_gcm_dec_win(key, nonce, aad, ct, tag);
-            std::string src(pt.begin(), pt.end());
+            src.assign(reinterpret_cast<const char*>(pt.data()), pt.size());
 #elif defined(CLAW_HAS_OPENSSL)
             std::vector<uint8_t> salt(16), nonce(12), tag(16);
             f.read(reinterpret_cast<char*>(salt.data()), (std::streamsize)salt.size());
@@ -244,7 +245,7 @@ void registerNativeSecurity(const std::shared_ptr<Environment>& globals, Interpr
             auto key = kdf_openssl(pass, salt, 100000, 32);
             std::vector<uint8_t> aad(magic.begin(), magic.end());
             auto pt = aes_gcm_dec_openssl(key, nonce, aad, ct, tag);
-            std::string src(pt.begin(), pt.end());
+            src.assign(reinterpret_cast<const char*>(pt.data()), pt.size());
 #else
             throw std::runtime_error("Encrypted I/O not supported on this platform");
 #endif

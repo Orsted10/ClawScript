@@ -9,6 +9,7 @@
 #include "features/class.h"
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 #include <stdexcept>
 #include <vector>
 
