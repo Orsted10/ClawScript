@@ -677,9 +677,10 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             if (args.size() >= 2) {
                 if (!isHashMap(args[1])) throw std::runtime_error("tlsGet headers must be a map");
                 auto m = asHashMap(args[1]);
-                m->forEachKV([&](std::string_view k, Value v){
-                    headers.emplace_back(std::string(k), valueToString(v));
-                });
+                headers.reserve(m->data.size());
+                for (const auto& kv : m->data) {
+                    headers.emplace_back(kv.first, valueToString(kv.second));
+                }
             }
 #endif
 #ifndef CLAW_HAS_OPENSSL
@@ -698,7 +699,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
                 host = hostport.substr(0, colon);
                 port = std::stoi(hostport.substr(colon + 1));
             }
-            OpenSSL_init_ssl(0, nullptr);
+            OPENSSL_init_ssl(0, nullptr);
             SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
             #ifdef TLS1_3_VERSION
             SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
@@ -758,9 +759,10 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
             if (args.size() >= 3) {
                 if (!isHashMap(args[2])) throw std::runtime_error("tlsPost headers must be a map");
                 auto m = asHashMap(args[2]);
-                m->forEachKV([&](std::string_view k, Value v){
-                    headers.emplace_back(std::string(k), valueToString(v));
-                });
+                headers.reserve(m->data.size());
+                for (const auto& kv : m->data) {
+                    headers.emplace_back(kv.first, valueToString(kv.second));
+                }
             }
 #endif
 #ifndef CLAW_HAS_OPENSSL
@@ -779,7 +781,7 @@ void registerNativeIO(const std::shared_ptr<Environment>& globals) {
                 host = hostport.substr(0, colon);
                 port = std::stoi(hostport.substr(colon + 1));
             }
-            OpenSSL_init_ssl(0, nullptr);
+            OPENSSL_init_ssl(0, nullptr);
             SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
             #ifdef TLS1_3_VERSION
             SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
